@@ -5,11 +5,13 @@
 % thing in a 
 clear
 close all
+addpath('functions')
+addpath('models')
 clc
 volts2mu = 1;
 TOL = 0.01;
 trun = 800*40e-6;
-ref_f = 1.5;
+ref_f = 3;
 ref_0 = 0;
 umax = 5;
 
@@ -42,7 +44,7 @@ NsNd = Ns+Nd;
 sys.InputDelay=Nd;
 
 % Scale system states:
-[uss_0, uss_f, ~, ~, xss]   = yss2uss(PLANT, 2, 0);
+[uss_0, uss_f, ~, ~, xss]   = yss2uss(PLANT, ref_f, 0);
 dcgain_sys = 1/(PLANT.c*xss);
 x0 = xss*0;
 
@@ -50,7 +52,7 @@ x0 = xss*0;
 % 3). LQR generation gain.        
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
-N_mpc = 12;
+N_mpc = 8;
 slr   = 0.05;
 
 % Pull out open-loop pole-zero information.
@@ -83,57 +85,119 @@ mpcProb0 = condensedMPCprob(sys_recyc, N_mpc, Q1, Qp, R1);
 mpcProb0.Ainq = [eye(N_mpc); -eye(N_mpc)];
 mpcProb0.binq = [zeros(2*N_mpc, 1)+slr];
 
-%%
-clc
-[Q,R,S,KK] = inverseLQR_cross_weight(sys, K_temp);
+%
+% clc
+% [Q,R,S,KK] = inverseLQR_cross_weight(sys, K_temp);
 
 %%
+S = randn(size(sys_recyc.b,1),1);
+%%
+close all
 clc
-R = 10000;
-if 0
-    a = [0 2 2;
-        3 3 3;
-        4 4 4];
-    b = [0 0 1]';
-    c = [1 0 0];
-    sys = ss(a, b, c, 0, Ts);
-    Q1 = eye(3)*2;
-    R = 1;
-    % Qp = eye(3)*4;
-    Qp = dare(a,b,Q1,R);
-    mp1 = sparseMPCprob2(sys, 10, Q1, Qp, R);
-    x00 = ones(3,1);
-else
-    S = randn(size(sys_recyc.b,1),1);
-   mp1 = sparseMPCprob2(sys_recyc, 100, Q1, Qp, R, S); 
+R = 100;
+N_mpc = 10;
+N_mpc_s = [6, 8, 10, 12];
+N_mpc_s = [10,30];
+leg_tits = {}
+for iter = 1:length(N_mpc_s)
+    N_mpc = N_mpc_s(iter);
+    
+    mp1 = sparseMPCprob(sys_recyc, N_mpc, Q1, Qp, R, S); 
     x00 = SSTools.getXss(sys_recyc);   
-   sys = sys_recyc;
+    sys = sys_recyc;
+
+
+    leg_tits{iter} = sprintf('N=%d', N_mpc);
+    mp1.add_U_constraint('box', [-slr, slr]);
+
+    UX = mp1.solve(x00);
+
+    u = UX(1:mp1.nu*mp1.N_mpc);
+    X = UX(mp1.nu*mp1.N_mpc+1:end);
+    X = reshape(X, mp1.ns, []);
+    y_sparse = sys.c*X;
+
+    if 0
+        K = dlqr(sys.a, sys.b, Q1, R, S);
+        syscl = ss(sys.a-sys.b*K, sys.b, sys.c, 0, Ts);
+        y = initial(syscl, x00);
+
+        plot(y)
+        hold on
+        plot(y_sparse, '--')
+    end
+    %
+    clc
+    trun = 400*Ts;
+    mpcProb1 = mp1;
+    sim('MPC_fp')
+    y1 = y_mpcDist; u1 = u_mpcDist; du1=du_mpcDist;
+
+
+    figure(10); hold on
+    plot(y1.Time, y1.Data)
+
+
+    figure(11); hold on
+    plot(u1.Time, u1.Data)
+
+    figure(12); hold on
+    plot(du1.Time, du1.Data)
+
+    [p1, freqs] = fft_spec(du1.Data, Ts);
+    figure(13); 
+    semilogx(freqs, p1, '--')
+    hold on
+
+    kcut1 = find(freqs < 400, 1, 'last')
+    pwer=[];
+    j = 1;
+    for k=kcut1:length(freqs)
+
+        p1_wind = p1(k:end);
+        L = length(p1_wind);
+        pwer(j) = sum(p1_wind.*conj(p1_wind))*L;
+        j=j+1;
+    end
+
+    figure(14); hold on
+    plot(freqs(kcut1:end), pwer, '--')
+    drawnow()
 end
 
+for k=10:14
+    
+   figure(k)
+   legend(leg_tits)
+end
 
-mp1.add_U_constraint('slew', [-.01, .01])
+tilefigs
+%%
+mpcProb1 = condensedMPCprob(sys_recyc, N_mpc, Q1, Qp, R, S);
 
-UX = mp1.solve(x00);
+clc
+I = eye(N_mpc);
+mpcProb1.Ainq = [I; -I];
+mpcProb1.binq = [zeros(N_mpc, 1)+slr];
+mpcProb1.binq = [mpcProb1.binq; mpcProb1.binq];
+sim('MPC_fp')
 
-u = UX(1:mp1.nu*mp1.N_mpc);
-X = UX(mp1.nu*mp1.N_mpc+1:end);
-X = reshape(X, mp1.ns, []);
-y_sparse = sys.c*X;
 
-
-K = dlqr(sys.a, sys.b, Q1, R, S);
-
-syscl = ss(sys.a-sys.b*K, sys.b, sys.c, 0, Ts);
-
-y = initial(syscl, x00);
-
-plot(y)
+figure(10)
 hold on
-plot(y_sparse, '--')
+plot(y_mpcDist.Time, y_mpcDist.Data, '--')
+title('y(t)')
 
+figure(11)
+hold on
+plot(u_mpcDist.Time, u_mpcDist.Data, '--')
+title('u(t)')
 
+figure(12)
+hold on
+plot(du_mpcDist.Time, du_mpcDist.Data, '--')
+title('delta u(t)')
 
-
-
-
-
+figure(13)
+plot(du1.Data-du_mpcDist.Data)
+title('error in delta u(t)')

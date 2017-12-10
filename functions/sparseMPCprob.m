@@ -1,4 +1,4 @@
-classdef sparseMPCprob2 < handle
+classdef sparseMPCprob < handle
 %         H;
 %         M;
 %         Ainq;
@@ -24,11 +24,12 @@ classdef sparseMPCprob2 < handle
         kappa;
         ns;
         nu;
-        
+        qpopts;
+        n_warmstart;
     end
     
     methods
-        function obj = sparseMPCprob2(sys,N, Q,Qp, R, S)
+        function obj = sparseMPCprob(sys,N, Q,Qp, R, S)
             if ~exist('S', 'var')
                 ns = size(sys.b,1);
                 nu = size(sys.b, 2);
@@ -44,13 +45,16 @@ classdef sparseMPCprob2 < handle
             obj.kappa = cond(H);
             obj.ns = size(sys.b,1);
             obj.nu = size(sys.b,2);
+            obj.qpopts = optimset('Display', 'off');
+            obj.n_warmstart = (obj.N_mpc+1)*obj.ns + obj.N_mpc*obj.nu;
         end
         
-        function [U, X] = solve(obj, xk_1)
+        function [U, X] = solve(self, xk_1)
             
-            beq_xk = obj.beq;
-            beq_xk(1:obj.ns) = xk_1;
-            UX = mpcSolve_local(obj.H, obj.Ainq, obj.binq, obj.Aeq, beq_xk);
+            beq_xk = self.beq;
+            beq_xk(1:self.ns) = xk_1;
+            UX = mpcSolve_local(self.H, self.Ainq, self.binq,...
+                self.Aeq, beq_xk, self.qpopts);
             
             % Split the solution into controls and states.
             U = UX(1:self.nu*self.N_mpc);
@@ -89,10 +93,10 @@ classdef sparseMPCprob2 < handle
     
 end
 
-function UX = mpcSolve_local(H, Ainq,binq, Aeq, beq)
+function UX = mpcSolve_local(H, Ainq,binq, Aeq, beq, qpopts)
 
     f  = zeros(size(H,2),1);
-    UX = quadprog(H, f, Ainq, binq, Aeq, beq);
+    UX = quadprog(H, f, Ainq, binq, Aeq, beq, [], [], [], qpopts);
 end
 
 
