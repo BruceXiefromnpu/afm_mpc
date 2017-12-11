@@ -13,28 +13,26 @@ refTrajName      = 'ref_traj_track.csv';
 outputDataName = 'exp01outputBOTH.csv';
 % Build data paths
 
-expDataRoot     = fullfile(pwd, 'data');  % base path for exp. data
-modelPath       = pwd;  % for simulink simulations
+
+% PATH_sim_model       = pwd;  % for simulink simulations
 
 % ---- Paths for shuffling data to labview and back. ------
 %labview reads data here
-controlDataPath = fullfile(expDataRoot, controlParamName); 
+controlDataPath = fullfile(PATH_step_exp, controlParamName); 
 % labview saves experimental results/data here
-dataOut_path    = fullfile(expDataRoot, outputDataName); 
+dataOut_path    = fullfile(PATH_step_exp, outputDataName); 
 % labview reads desired trajectory here
-refTrajPath     = fullfile(expDataRoot, refTrajName); 
+refTrajPath     = fullfile(PATH_step_exp, refTrajName); 
 % location of the vi which runs the experiment.
 vipath ='C:\Users\arnold\Documents\labview\ACC2017_archive\play_AFMss_integral_trajTrack.vi';
 
 
 % ---------- Load Parametric Models  -----------
-expName       = ['22-Jun-2016_exp01']; 
-modFitPath    = [expName, '.mat'];
+modFitPath    = 'x-axis_sines_info_out_12-10-2017-04.mat';
 
-load(modFitPath, 'modelFit')
-FitNum    = 'HighFidelity7';
+load(fullfile(PATH_sysid, modFitPath), 'modelFit')
+FitNum    = 'sys12';
 
-%%
 
 TOL = .01;
 umax = 10;
@@ -42,7 +40,7 @@ umax = 10;
 SYS = modelFit.(FitNum);
 Ts  = SYS.Ts;
 Nd  = SYS.InputDelay;
-
+%%
 %--------------------------------------------------------------------------
 % Build models 
 % We will create three systems here:
@@ -72,7 +70,7 @@ C_delay(end) = 1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
 %                  Design reference "trajectory"                          %
-%                                 %
+%                                                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % We will track two setpoints. Number of samples for each setpoint is 800.
@@ -80,15 +78,11 @@ N1    = 800;
 N2    = 1600;
 trun = Ts*N2;
 
-ref_f_1 = 1.6; % 1.5 to hit slew rate, 1.4 doesn't  
-ref_f_2 = -1.4;
+ref_f_1 = 1.0; % 1.5 to hit slew rate, 1.4 doesn't  
 ref_0 = 0;
-t1 = [0:1:N1]'*Ts;
-t2 = [N1+1:1:N2]'*Ts;
+t = [0:1:N1]'*Ts;
 
-% concatenate the two legs together
-t = [t1;t2];
-yref = [0*t1+ref_f_1; 0*t2+ref_f_2];
+yref = [0*t + ref_f_1];
 
 ref_traj.signals.values = yref;
 ref_traj.time           = t;
@@ -104,8 +98,17 @@ ref_traj.time           = t;
 pstyle = 'b';
 p_int = 0.7; % integrator pole location
 gam_s = [1.16, 1.16, 1, 1, 1]; % factors to increase cmplx mode freqs by
-alp_s = [.7 .7 .7 .7, .7]; % desired damping of cmplx modes
+alp_s = [.85 .7 .7 .7, .7]; % desired damping of cmplx modes
 rho_s = [1.2, 1]; % factors to shift real modes by
+
+p_sort = sort_by_w(pole(SYS));
+z_sort = sort_by_w(zero(SYS));
+p1 = p_sort(1); z1 = z_sort(1);
+wp1 = abs(log(p1))/Ts;
+wz1 = abs(log(z1))/Ts;
+
+rho_s(1) = wz1/wp1
+
 % fdbk is a class which computes the gain and also stores the data used to
 % generate K with. 
 Kfdbk = fdbk(sys_designK_aug, 'gams', gam_s, 'pint', p_int, 'alps',...
@@ -141,11 +144,11 @@ x0_delay = x0_full(Ns+1:end);
 x0_int   = uss_0 -ref_0*Nbar+K*x0_full;
 
 NoiseP = 0;
-sim(fullfile(modelPath, 'AFM_SS_linearFDBK_obs_IMPLEMENT_outer_integral'));
+sim(fullfile(PATH_sim_models, 'AFM_SS_linearFDBK_obs_IMPLEMENT_outer_integral.slx'));
 y_linear = yplant; 
 u_linear = u_full;
 
-linOpts = stepExpOpts('pstyle', '--k', 'TOL', TOL, 'y_ref', ref_f_1,...
+linOpts = stepExpOpts('pstyle', '--r', 'TOL', TOL, 'y_ref', ref_f_1,...
                       'controller', Kfdbk, 'name',  'Simulation');
 
 sim_exp = stepExp(y_linear, u_linear, linOpts);
@@ -200,5 +203,5 @@ systems.sys_obs = sys_obs;
 systems.PLANT   = PLANT;
 systems.sys_designK_aug = sys_designK_aug;
 systems.Kfdbk = Kfdbk;
-save(fullfile(expDataRoot, '09_12_2016_linfdbk_slewproblem_trk2.mat'), 'afm_exp', 'sim_exp',...
+save(fullfile(PATH_step_expt, '09_12_2016_linfdbk_slewproblem_trk2.mat'), 'afm_exp', 'sim_exp',...
       'systems')
