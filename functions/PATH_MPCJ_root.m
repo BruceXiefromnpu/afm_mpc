@@ -1,12 +1,8 @@
-function [ PATH ] = PATH_experimental()
+function [ PATH ] = PATH_MPCJ_root()
 % PATH constant to where all experimental data is stored for the 
 % MPC journal paper.
 
-if ispc
-    PATH = 'C:\Users\arnold\Documents\Matlab';
-else
-    PATH = '/home/arnold/matlab/afm_mpc_journal';
-end
+PATH = fullfile(getMatPath, 'afm_mpc_journal');
 
 end
 
