@@ -24,7 +24,7 @@ load(modFitPath, 'modelFit')
 
 
 sys = ltiFit(modFitPath, 'SS02').sys;
-Nd = 10;
+Nd = 0;
 sys.InputDelay = Nd;
 Ts = sys.Ts;
 PLANT = sys;
@@ -43,8 +43,10 @@ Ns = length(sys.b);
 NsNd = Ns+Nd;
 sys.InputDelay=Nd;
 
-% Scale system states:
 
+[uss_0, uss_f, ~, ~, xss]   = yss2uss(PLANT, ref_f, 0);
+dcgain_sys = 1/(PLANT.c*xss);
+x0 = xss*0;
 
 %
 % 3). LQR generation gain.        
@@ -70,23 +72,11 @@ K_temp = place(sys.a, sys.b, P_x);
 [Q0, R1, KKK] = inverseLQR(sys, K_temp);
 R1 = 1000;
 
-% [~, Nx, Nu] = getNbar(sys_recyc, [KKK, 0]);
+% Q = blkdiag(Q_nodelay1, zeros(Nd,Nd));
 
-sys = absorbDelay(sys);
 sys_recyc = SSTools.deltaUkSys(sys);
-% sys_recyc = absorbDelay(sys_recyc);
-PLANT = absorbDelay(PLANT);
-
-
-[Nx, Nu] = SSTools.getNxNu(sys_recyc);
-uss_0 = ref_0*Nu;
-
-x0 = Nx*ref_0;
-x0 = x0(1:end-1);
-
 Ns_mpc = size(sys_recyc.B, 1);
-
-Q0 = blkdiag(Q0, zeros(Nd,Nd));
+[~, Nx, Nu] = getNbar(sys_recyc, [KKK, 0]);
 Q1 = blkdiag(Q0, 0);
 
 Qp = dare(sys_recyc.a, sys_recyc.b, Q1, R1); 
@@ -100,16 +90,16 @@ mpcProb0.binq = [zeros(2*N_mpc, 1)+slr];
 % [Q,R,S,KK] = inverseLQR_cross_weight(sys, K_temp);
 
 %%
-ref_f = 2.2
+ref_f = 2.
 S = randn(size(sys_recyc.b,1),1);
 S = ones(size(sys_recyc.b,1),1);
 %
 close all
 clc
-R = 10;
+R = 5;
 N_mpc = 10;
 N_mpc_s = [6, 8, 10, 12];
-N_mpc_s = [5,6, 12,30];
+N_mpc_s = [5,6, 30];
 leg_tits = {}
 for iter = 1:length(N_mpc_s)
     N_mpc = N_mpc_s(iter);

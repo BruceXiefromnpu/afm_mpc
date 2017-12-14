@@ -4,24 +4,24 @@ clear
 % load('/home/arnold/matlab/publications/afmMPC/feb27_2017_exp01_yr_1p0.mat')
 addpath('functions')
 addpath(genpath('../vanoverschee'))
-dat = csvread('/media/labserver/sysID/out_12_06.csv');
+dat = csvread(fullfile(PATH_sysid, '/out_12_06.csv'));
 dat = dat';
 size(dat)
 
 dataPath = fullfile(getMatPath, 'publications', 'afmMPC');
 
-modelFitPath = '/media/labserver/sysID/x-axis_sines_info_out_12-10-2017-04.mat';
+modelFitPath = fullfile(PATH_sysid, 'x-axis_sines_info_out_12-10-2017-04.mat');
 load(modelFitPath);
-w_s_x = modelFit.frf.w_s;
-Gx_frf = modelFit.frf.G_frf;
-% load(fullfile(dataPath, 'mimo_modelData.mat'))
+w_s_xx = modelFit.frf.w_s;
+Gxx_frf = modelFit.frf.G_frf;
+load(fullfile(dataPath, 'mimo_modelData.mat'))
 %%
 u = dat(2:end, 1);
 y = dat(2:end, 2);
 y = y - mean(y);
 u = u - mean(u);
-y = y(1000:end);
-u = u(1000:end);
+y = y(20000:end);
+u = u(20000:end);
 % plot(dat(:,1))
 
 
@@ -38,26 +38,32 @@ size(y)
 size(u)
 
 
-[A,B,C,D,K,R,~,s] = subid(y, u, 190, 12);
-
+[A,B,C,D,K,R,~,s] = subid(y, u, 100, 12);
+%
 sys = ss(A, B, C, D*0, Ts);
-sys.InputDelay = nd-1;
+sys.InputDelay = nd;
 
 z = zero(sys);
 gg = zpk([], z(1:2), 1, Ts);
-sys = minreal(ss(gg)*sys/dcgain(gg), .01);
-[A, B, C] = ssdata(sys);
+sys = minreal(ss(gg)*sys/dcgain(gg));
 
-F1 = figure(1); clf
-frfBode(Gx_frf, w_s_x/2/pi, F1, '-k', 'Hz')
+% [A, B, C] = ssdata(sys);
+
+F1 = figure(100); clf
+frfBode(Gxx_frf, w_s_xx/2/pi, F1, '-k', 'Hz')
 
 
-[~,~,ws] = bode(sys, {w_s_x(1), w_s_x(end)});
+[~,~,ws] = bode(sys, {w_s_xx(1), w_s_xx(end)});
 
 frfBode(sys, ws/2/pi, F1, '--r', 'Hz')
 plotPZ_freqs(sys, F1, 0)
 isstable(sys)
-%
+
+
+    
+        
+    
+
 % figure(2)
 % plot(s)
 % 
@@ -79,6 +85,11 @@ pzplot(syscl, 'r')
 hold on
 pzplot(sys, 'b')
 legend('closed loop', 'open loop')
+
+F2 = figure(300);
+frfBode(Gxx_frf, w_s_xx/2/pi, F2, 'k', 'Hz')
+frfBode(PLANT_init_x, w_s_xx/2/pi, F2, '--r', 'Hz')
+plotPZ_freqs(PLANT_init_x, F2, 0)
 %%
 Fs = 1/Ts;
 Ws = Fs*2*pi;
@@ -101,10 +112,10 @@ semilogx(freqs, 20*log10(abs(Y./U)))
 
 %%
 
-modelFit.sys12 = sys;
+modelFit.sys12_3 = sys;
 modelFit.Gamma_w = K;
-modelFit.Qw = Qw;
-
+modelFit.Qw3 = Qw;
+modelFit.Rw3 = R;
 
 save(modelFitPath, 'modelFit')
 
