@@ -57,13 +57,16 @@ classdef sparseMPCprob < handle
                 self.Aeq, beq_xk, self.qpopts);
             
             % Split the solution into controls and states.
-            U = UX(1:self.nu*self.N_mpc);
+            U = UX(1:self.nu*self.N_mpc)';
             X = UX(self.nu*self.N_mpc+1:end);
             X = reshape(X, self.ns, []);
         end
         
         function self = add_U_constraint(self, type, bnds)
-            
+            % Add an input constraint to the MpcPRoblem instance.
+            % type: 'box' forms a box constraint on u between bnds(1) and
+            % bnds(2)
+            % type: symmetric 'slew' slew rate constraint. bnds is scalar
             if strcmp('box', type) & length(bnds)==1
                 bnds = [-bnds, bnds];
                 fprintf('Type box constraint indicated but only one bound found\n')
@@ -98,9 +101,6 @@ function UX = mpcSolve_local(H, Ainq,binq, Aeq, beq, qpopts)
     f  = zeros(size(H,2),1);
     UX = quadprog(H, f, Ainq, binq, Aeq, beq, [], [], [], qpopts);
 end
-
-
-
 
 
 function [H, Aeq, beq] = clqrProblem_local(sys, N, Q, R, Qp, S)

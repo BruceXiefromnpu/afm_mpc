@@ -53,7 +53,7 @@ x0 = xss*0;
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
 N_mpc = 8;
-slr   = 0.05;
+du_max   = 0.05;
 
 % Pull out open-loop pole-zero information.
 [wp_real_x, wz_real_x] = w_zp_real(sys);
@@ -69,21 +69,21 @@ P_x    = getCharDes(sys, gams_x, pint_x, zeta_x, rhos_x, .25);
 K_temp = place(sys.a, sys.b, P_x);
 
 %-----------------------------------------------------
-[Q0, R1, KKK] = inverseLQR(sys, K_temp);
+[Q0, R1, K_lqr] = inverseLQR(sys, K_temp);
 R1 = 1000;
 
 % Q = blkdiag(Q_nodelay1, zeros(Nd,Nd));
 
 sys_recyc = SSTools.deltaUkSys(sys);
 Ns_mpc = size(sys_recyc.B, 1);
-[~, Nx, Nu] = getNbar(sys_recyc, [KKK, 0]);
+[~, Nx, Nu] = getNbar(sys_recyc, [K_lqr, 0]);
 Q1 = blkdiag(Q0, 0);
-
+K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R1);
 Qp = dare(sys_recyc.a, sys_recyc.b, Q1, R1); 
 
 mpcProb0 = condensedMPCprob(sys_recyc, N_mpc, Q1, Qp, R1);
 mpcProb0.Ainq = [eye(N_mpc); -eye(N_mpc)];
-mpcProb0.binq = [zeros(2*N_mpc, 1)+slr];
+mpcProb0.binq = [zeros(2*N_mpc, 1)+du_max];
 
 %
 % clc
@@ -101,6 +101,7 @@ N_mpc = 10;
 N_mpc_s = [6, 8, 10, 12];
 N_mpc_s = [5,6, 30];
 leg_tits = {}
+mpc_on=0;
 for iter = 1:length(N_mpc_s)
     N_mpc = N_mpc_s(iter);
     
@@ -110,7 +111,7 @@ for iter = 1:length(N_mpc_s)
 
 
     leg_tits{iter} = sprintf('N=%d', N_mpc);
-    mp1.add_U_constraint('box', [-slr, slr]);
+    mp1.add_U_constraint('box', [-du_max, du_max]);
 
     UX = mp1.solve(x00);
 
@@ -148,7 +149,7 @@ for iter = 1:length(N_mpc_s)
     plot(du1.Time, du1.Data)
     title('du(t)')
 
-    [p1, freqs] = fft_spec(du1.Data, Ts);
+    [p1, freqs] = power_spectrum(du1.Data, Ts);
     figure(13); 
     semilogx(freqs, p1, '--')
     hold on
@@ -169,6 +170,7 @@ for iter = 1:length(N_mpc_s)
     plot(freqs(kcut1:end), pwer, '--')
     drawnow()
     title('bandlimited energy')
+    xlabel('freq')
     tilefigs
 end
 
@@ -185,7 +187,7 @@ mpcProb1 = condensedMPCprob(sys_recyc, N_mpc, Q1, Qp, R, S);
 clc
 I = eye(N_mpc);
 mpcProb1.Ainq = [I; -I];
-mpcProb1.binq = [zeros(N_mpc, 1)+slr];
+mpcProb1.binq = [zeros(N_mpc, 1)+du_max];
 mpcProb1.binq = [mpcProb1.binq; mpcProb1.binq];
 sim('MPC_fp')
 

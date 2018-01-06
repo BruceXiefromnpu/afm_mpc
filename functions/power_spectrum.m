@@ -1,4 +1,4 @@
-function [P1, freqs] = fft_spec(x, Ts )
+function [P1, freqs] = power_spectrum(x, Ts )
 %FFT_SPEC Summary of this function goes here
 %   Detailed explanation goes here
 
