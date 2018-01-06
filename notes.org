@@ -5,7 +5,7 @@
 #+PROPERTY: SAVE_AS projects/mpc_j.html
 #+OPTIONS: tex:t
 #+STARTUP: latexpreview
-#+OPTIONS: toc:nil
+
 * Quantifying the time savings (if any) of MPC and d-rated linear feedback
 I have been trying to figure out how to quantify the time savings (if any) of using MPC vs a de-rated, saturated linear feedback. The basic idea is:
 
@@ -40,7 +40,34 @@ Part of the point of Figure [[fig:opt_set]] is to verify that my intuition is ge
 
 The idea here is to basically look in depth at a vertical cross section of Figure [[fig:maxsplin]]. 
 
-this
+My first attempt at this is shown in [[fig:linmaxset_comp]]. What this figure shows is what happens when we choose max setpoints
+$$
+ref_{max} = [1, 2, 3, 4.8]
+$$
+
+Recall that by specifying a maximum setpoint size we want to be able to visit, this implies a "smaller" feedback gain $K$ (or larger $\gamma$). 
+
+#+caption: Comparison of max setpoints. Generated with [[file:compare_maximum_ref.m]]
+#+name: fig:linmaxset_comp
+[[file:figures/cp_clqropt_vs_linmaxset_TS-s.svg]]
+
+This doesn't look so good (for me). It might look more compelling if I plot it as percentage increase over CLQR. This is shown in Figure [[fig:perc_clqr]].
+
+
+#+caption: The same data from [[fig:linmaxset_comp]] but shown as a percentage increase instead.
+#+name: fig:perc_clqr
+[[file:figures/perc_increase_lin_over_clqr.svg]]    
+
+It is intersting (and in my opinion odd) that there is such a wild variation in the percentage increase in time, from essentiall 0% up to almost 60%. On the one hand, this is what I expect for values of $\gamma$ there are near there stability boundary. In that case, the resulting saturated linear trajectory starts to decay in quality. But the part I find especially odd is the huge increase in the $\gamma=9035$ plot for setpoints around 2. It is clear (I think)  that we are not near the stability boundary for that value of $\gamma$, so why does the settle time increase so dramitically, and then fall back? 
+
+I should plot a few of the output trajectories to investigate a little further. Such a comparison is shown below in Figure [[fig:cp_traj]].
+
+#+caption: comparison of two trajectories. The dotted lines are the CLQR optimal trajectory for setpoints $r_{ref}=2.11$ and $r_{ref}=2.91$ for $\gamma=9035$.
+#+name: fig:cp_traj
+[[file:figures/cp_traj.svg]]
+
+This is essentially as you would expect given the results of [[fig:perc_clqr]]. The question is, WHY does this occur? 
+
 * Footnotes
 
 [fn:time] Of course, we might also think about comparing to the *time-optimal* trajectory for each setpoint. That is something that should be done at some point, but it will require some caveats. The most pressing caveat is that we must delete the slow real pole-zero pair before computing the time-trajectory, because the time-optimal trajectory requires that the states be at steady state. If we don't do this, then the resulting time-optimal trajectory will have a comparitively very slow settling time.

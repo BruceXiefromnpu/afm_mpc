@@ -138,176 +138,50 @@ gam_s = linspace(100, 20000, 5);
 % gamma_s = [100, 500, 1000, 5000, 10000];
 settle_times_opt_save = cell(1, length(gamma_s));
 opt_trajs_save = cell(1, length(gamma_s));
-
+%%
 hands = [];
+F200 = figure(200); hold on
 colrs = get(gca, 'colororder');
-
+load_opt = 0;
 for iter = 1:length(gam_s)
     gamma = gam_s(iter);
-    [traj_s, settle_times_opt] = opt_traj_gen(Q1, gamma, N_traj, sys_recyc, ...
-                            ref_s, 0, 'uMax', du_max, 'verbose', 0);
-    settle_times_opt_save{iter} = settle_times_opt;
-    opt_trajs_save{iter} = traj_s;
+    if load_opt
+        [traj_s, settle_times_opt] = opt_traj_gen(Q1, gamma, N_traj, sys_recyc, ...
+                                ref_s, 0, 'uMax', du_max, 'verbose', 0);
+        settle_times_opt_save{iter} = settle_times_opt;
+        opt_trajs_save{iter} = traj_s;
+    end
+    change_current_figure(F200); 
+    hands(iter) = plot(ref_s, settle_times_opt_save{iter}*1000, 'LineWidth', 2);
 
-    figure(200); hold on
-    hands(iter) = plot(ref_s, settle_times_opt*1000, 'LineWidth', 2);
     set(hands(iter), 'DisplayName', sprintf('$\\gamma = %.0f$', gamma),...
-        'Color', colrs(iter));
-    leg = legend(hands,  'interpreter', 'latex');
-    ylabel('settle time [ms]', 'FontSize', 16))
-    xlabel('setpoint', 'FontSize', 16))
+        'Color', colrs(iter, :));
+    leg = legend(hands);
+    set(leg, 'interpreter', 'latex');
+    ylabel('settle time [ms]', 'FontSize', 16)
+    xlabel('setpoint', 'FontSize', 16)
     drawnow()
     grid on
 end
-%%
+
 leg.FontSize = 16;
 leg.Location = 'Northwest';
 
-
-for i=1:5
-   set(hands(i), 'DisplayName',  sprintf('$\\gamma = %.0f$', gam_s(i)))
-    
+%%
+saveon = 1;
+clqr_opt_data.opt_trajs_save = opt_trajs_save;
+clqr_opt_data.settle_times_opt_save = settle_times_opt_save;
+if saveon
+    saveas(F200, 'figures/opttraj_setpoint_vs_ts.svg')
+    save('data/clqr_opt_data.mat', 'clqr_opt_data');
 end
 
 
 %%
-saveas(gcf, 'figures/opttraj_setpoint_vs_ts.png')
-%%
-
-
-
-% upd = textprogressbar(length(gam_s));
-% prg = CmdLineProgressBar('iters done\n');
-upd = progressbar(length(gam_s));
-F1 = figure(1); clf;
-F2 = figure(2); clf; hold on;
-colrs = get(gca, 'colororder');
-ylabel('settle time [ms]')
-xlabel('ref_f')
-reverseStr = '';
-
-
-for gam_iter = 7:7
-%     1:length(gam_s)
-    gamma = gam_s(gam_iter);
-    sim_struct.K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, gamma);
-    [ref_max, t_settle_s] = find_ref_max(sim_struct, ref_s,...
-                            'verbose', 1, 'fig_base', 10*gam_iter);
-    
-    change_current_figure(F2);
-    k_max = find(t_settle_s == 0, 1, 'first') -1;
-    plot(ref_s(1:k_max), t_settle_s(1:k_max)*1e3)
-    ylim([0, 10])
-    max_setpoints_linear(gam_iter) = ref_max;
-
-    if exist('hlin', 'var')
-        delete(hlin)
-        drawnow()
-    end
-
-    change_current_figure(F1)
-    hlin = plot(gam_s(1:gam_iter), max_setpoints_linear(1:gam_iter),...
-        '-o', 'Color', colrs(1,:), 'LineWidth', 2);
-    drawnow()
-    hold on
-
-    upd(gam_iter);
-%     keyboard
-end
-
-hlin.DisplayName = 'LQR lin + sat';
-%%
-% ----------------------- Same thing, but for MPC ----------------------- %
-
-sim_struct.mpc_on = 1;
-% upd = textprogressbar(length(gam_s));
-
-% N_mpc = 8;
-N_mpc_s = [4, 8, 12, 16, 20];
-max_setpoints_mpc = repmat(0*gam_s, length(N_mpc_s), 1);
-
-
-F20 = figure(20); clf; hold on;
-colrs = get(gca, 'colororder');
-ylabel('settle time [ms]')
-xlabel('ref_f')
-
-
-hmpc_s = [];
-for mpc_iter = 1:length(N_mpc_s)
-    N_mpc = N_mpc_s(mpc_iter);
-    colr = colrs(mpc_iter+1, :);
-    start_str = sprintf('N = %.0f', N_mpc);
-    upd = progressbar(length(gam_s), 'bar_len', 25, 'start_str', start_str);
-    
-    % Inititalize the progress bar.
-    upd(0)
-    for gam_iter = 1:length(gam_s)
-        gamma = gam_s(gam_iter);
-
-        % -------------- Update the MPC parameters ---------------------- %
-        % must re-compute terminal cost when gamma changes!
-        Qp = dare(sys_recyc.a, sys_recyc.b, Q1, gamma); 
-        % sim_struct.mpcProb1 = sparseMPCprob(sys_recyc, N_mpc, Q1, Qp, gamma);
-        sim_struct.mpcProb1 = condensedMPCprob(sys_recyc, N_mpc, Q1, Qp, gamma);
-        sim_struct.mpcProb1.add_U_constraint('box', [-du_max, du_max]);
-
-        sim_struct.K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, gamma)*0;
-
-        [ref_max, t_settle_s] = find_ref_max(sim_struct, ref_s,...
-                            'verbose', 1, 'fig_base', 10*gam_iter);
-
-        
-        change_current_figure(F20);
-        k_max = find(t_settle_s == 0, 1, 'first') -1;
-        plot(ref_s(1:k_max), t_settle_s(1:k_max)*1e3)
-        ylim([0, 10])
-        
-        max_setpoints_mpc(mpc_iter, gam_iter) = ref_max;
-        
-        if length(hmpc_s) == mpc_iter
-            delete(hmpc_s(mpc_iter))
-        end
-
-        figure(F1);
-        hmpc_s(mpc_iter) = plot(gam_s(1:gam_iter), max_setpoints_mpc(mpc_iter, 1:gam_iter),...
-                            '-o', 'Color', colr, 'LineWidth', 2);
-
-        upd(gam_iter)
-        drawnow()
-
-        
-    end
- 
-    leg_str = sprintf('MPC, N=%.0f', N_mpc);
-    set(hmpc_s(mpc_iter), 'DisplayName', leg_str);
-    
-    legend([hlin, hmpc_s]);
-    xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 16);
-    ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 16);
-    drawnow()
-end
-%%
-% hmpc.DisplayName = 'MPC';
-% legend([hlin, hmpc])
-
-xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 16)
-ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 16)
-
-
-ylim([0, 5.1])
-
-max_ref_data.gam_s = gam_s;
-max_ref_data.ref_range = ref_range;
-max_ref_data.ref_step = ref_step;
-max_ref_data.sim_struct = sim_struct;
-max_ref_data.max_setpoints_mpc = max_setpoints_mpc;
-max_ref_data.max_setpoints_lin = max_setpoints_linear;
-title('with delay')
-save('max_ref_data_dalay.mat', 'max_ref_data')
-saveas(F1, 'max_ref_delay.fig')
-
-
+% Now load in the data generated by build_max_setpoints.m
+load('data/max_ref_data_dalay.mat')
+gam_s = max_ref_data.gam_s;
+max_setpoints_linear = max_ref_data.max_setpoints_lin;
 %%
 % Now, lets ask the question: Take a set of LINEAR LQR controllers
 % parameterized by gamma. Then for each K(gamma), we now have a maximum
@@ -315,11 +189,25 @@ saveas(F1, 'max_ref_delay.fig')
 % plot the settling time vs setpoint size. I expect to find that settling
 % time decreases as max-setpoint decreases. 
 
+F400 = figure(400); clf
+ylabel('Settle-time perc. increase', 'FontSize', 16)
+xlabel('setpoint', 'FontSize', 16)
+hands_perc = [];
+grid on
 
+F300 = figure(300); clf
+hands = [];
+hands(1) = plot(ref_s, settle_times_opt_save{1}*1000, 'LineWidth', 2,...
+                'Color', colrs(1, :));
+set(hands(1), 'DisplayName', 'CLQR opt')
 
-rmax_s = [1, 2, 3, 4.8];
+ylabel('settle time [ms]', 'FontSize', 16)
+xlabel('setpoint', 'FontSize', 16)
+grid
+
+rmax_s = [1, 2.1, 4.8];
 subs = [221, 222, 223, 224];
-figure(100)
+% figure(100)
 for rmax_iter = 1:length(rmax_s)
 % 1. linear guy
 %     rmax = 1.0;
@@ -337,6 +225,7 @@ for rmax_iter = 1:length(rmax_s)
     t_settle_lin_s = zeros(1, kk);
     k_ref = find(ref_s == max_setpoints_linear(kk), 1, 'first');
     labs = [];
+
     for k=1:k_ref
         mpc_on = 0;
         ref_f = ref_s(k);
@@ -346,68 +235,175 @@ for rmax_iter = 1:length(rmax_s)
         [t_settle, k_s] = settle_time(y1.time, y1.Data, ref_f, 0.01*ref_f,...
                                       [], [], 30);
 
+        
         t_settle_lin_s(k) = t_settle;
-        figure(101); hold on
-        plot(y1.Time, y1.Data)
+        if k == 22 && rmax_iter == 3
+            figure(500); 
+            set(gcf, 'Position', [-971 66 876 939]);
+            
+            subplot(321);
+            plot(y1.time, y1.Data, 'Color', colrs(rmax_iter+1, :),...
+                'LineWidth', 2)
+            hold on
+            opt = opt_trajs_save{iter};
+            yopt = opt.Y_vec_s;
+            plot(yopt{k}.Time, yopt{k}.Data, '--', 'Color', colrs(1,:),...
+                'LineWidth', 2)
+            ylabel('y(t)')
+            % U
+            subplot(323)
+            plot(u_mpcDist.Time, u_mpcDist.Data, 'Color', colrs(rmax_iter+1, :),...
+                'LineWidth', 2)
+            hold on
+            uopt = opt.U_vec_s{k};
+            uopt.Data = cumsum(uopt.Data);
+            plot(uopt.Time, uopt.Data, '--', 'Color', colrs(1,:),...
+                'LineWidth', 2)
+            xlabel('time')
+            ylabel('u')
+            
+            % DU
+            subplot(325)
+            plot(du_mpcDist.Time, du_mpcDist.Data, 'Color', colrs(rmax_iter+1, :),...
+                'LineWidth', 2)
+            hold on
+            duopt = opt.U_vec_s{k};
+            plot(duopt.Time, duopt.Data, '--', 'Color', colrs(1,:),...
+                'LineWidth', 2)
+            xlabel('time')
+            ylabel('du')
+
+        elseif  k == 30 && rmax_iter == 3
+            
+            figure(500); 
+            subplot(322)
+            plot(y1.time, y1.Data, 'Color', colrs(rmax_iter+1, :),...
+                'LineWidth', 2)
+            hold on
+             opt = opt_trajs_save{iter};
+            yopt = opt.Y_vec_s;
+            plot(yopt{k}.Time, yopt{k}.Data, '--', 'Color', colrs(1,:),...
+                'LineWidth', 2)
+            ylabel('y(t)')
+            
+            % U
+            subplot(324)
+            plot(u_mpcDist.Time, u_mpcDist.Data, 'Color', colrs(rmax_iter+1, :),...
+                'LineWidth', 2)
+            hold on
+            uopt = opt.U_vec_s{k};
+            uopt.Data = cumsum(uopt.Data);
+            plot(uopt.Time, uopt.Data, '--', 'Color', colrs(1,:),...
+                'LineWidth', 2)
+            xlabel('time')
+            ylabel('u(t)')
+
+            % DU
+            subplot(326)
+            plot(du_mpcDist.Time, du_mpcDist.Data, 'Color', colrs(rmax_iter+1, :),...
+                'LineWidth', 2)
+            hold on
+            duopt = opt.U_vec_s{k};
+            plot(duopt.Time, duopt.Data, '--', 'Color', colrs(1,:),...
+                'LineWidth', 2)
+            xlabel('time')
+            ylabel('du')
+            
+        end
+            
+%         figure(101); hold on
+%         plot(y1.Time, y1.Data)
     end
 
     clc
-    figure(100)
-    subplot(subs(rmax_iter)); 
+    figure(F300)
+%     subplot(subs(rmax_iter)); 
     hold on
-    p1 = plot(ref_s(1:k_ref), t_settle_lin_s);
-    p1.DisplayName = sprintf('linear: gam=%.1f', gamma);
+    hands(rmax_iter+1) = plot(ref_s(1:k_ref), t_settle_lin_s*1000,...
+                    'LineWidth', 2, 'Color', colrs(rmax_iter+1, :));
 
-    labs(1) = p1;
+    leg_str = sprintf('linear: $\\gamma=%.0f$, $r_{max}=%.1f$', gamma, rmax);
+    set(hands(rmax_iter+1), 'DisplayName', leg_str);
+    leg = legend(hands);
+    set(leg, 'interpreter', 'latex');
+    leg.FontSize = 14;
+    leg.Position = [0.4842 0.1500 0.4845 0.2281];
+    drawnow()
     
-    grid on
-    ylabel('t-settle')
-    xlabel('ref')
-    legend(labs)
+    
+    % Plot percentage increase/decrease.
+        
+    ts_opt_k = ts_opt(1:length(t_settle_lin_s));
+    perc_inc = t_settle_lin_s./ts_opt_k;
+    
+    change_current_figure(F400);
+    hold on;
+    hands_perc(rmax_iter) = plot(ref_s(1:k_ref), perc_inc,...
+                        'LineWidth', 2, 'Color', colrs(rmax_iter+1, :));
+    leg_str_perc = sprintf('$\\gamma = %.0f$, $r_{max} = %.1f$', gamma, rmax);
+    set(hands_perc(rmax_iter), 'DisplayName', leg_str_perc);
+    
+    leg_perc = legend(hands_perc);
+    set(leg_perc, 'interpreter', 'latex', 'FontSize', 14);
+    
+%     grid on
+%     ylabel('t-settle')
+%     xlabel('ref')
+
     % Now do the MPC
-    t_settle_s = zeros(length(N_mpc_s), kk);
-    mpc_on = 1;
-    for mpc_iter = 1:length(N_mpc_s(1:end-1))
-        N_mpc = N_mpc_s(mpc_iter);
-        kk = find(max_setpoints_mpc(mpc_iter, :) >=rmax, 1, 'first');
-        gamma = gam_s(kk+1);
-
-        Qp = dare(sys_recyc.a, sys_recyc.b, Q1, gamma); 
-        % sim_struct.mpcProb1 = sparseMPCprob(sys_recyc, N_mpc, Q1, Qp, gamma);
-        mpcProb1 = condensedMPCprob(sys_recyc, N_mpc, Q1, Qp, gamma);
-        mpcProb1.add_U_constraint('box', [-du_max, du_max]);
-
-        K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, gamma)*0;
-
-
-        t_settle_s = zeros(1, kk);
-        k_ref = find(ref_s >=rmax, 1, 'first');
-        for k=1:k_ref
-
-            ref_f = ref_s(k)
-            sim('MPC_fp')
-
-            y1 = y_mpcDist; 
-            [t_settle, k_s] = settle_time(y1.time, y1.Data, ref_f, 0.01*ref_f,...
-                                          [], [], 30);
-
-            t_settle_s(mpc_iter, k) = t_settle;
-            figure(mpc_iter); hold on;
-            plot(y1.Time, y1.Data)
-            drawnow()
-        end
-        
-        figure(100)
-        subplot(subs(rmax_iter));
-        hold on
-        
-        title(sprintf('rmax = %.1f', rmax));
-        labs(mpc_iter+1) = plot(ref_s(1:k_ref), t_settle_s(mpc_iter,:));
-        legstr = sprintf('Mpc: N= %.0f, gam=%.0f', N_mpc, gamma);
-        set(labs(mpc_iter+1), 'DisplayName', legstr)
-        legend(labs)
-    end
+%     t_settle_s = zeros(length(N_mpc_s), kk);
+%     mpc_on = 1;
+%     for mpc_iter = 1:length(N_mpc_s(1:end-1))
+%         N_mpc = N_mpc_s(mpc_iter);
+%         kk = find(max_setpoints_mpc(mpc_iter, :) >=rmax, 1, 'first');
+%         gamma = gam_s(kk+1);
+% 
+%         Qp = dare(sys_recyc.a, sys_recyc.b, Q1, gamma); 
+%         % sim_struct.mpcProb1 = sparseMPCprob(sys_recyc, N_mpc, Q1, Qp, gamma);
+%         mpcProb1 = condensedMPCprob(sys_recyc, N_mpc, Q1, Qp, gamma);
+%         mpcProb1.add_U_constraint('box', [-du_max, du_max]);
+% 
+%         K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, gamma)*0;
+% 
+% 
+%         t_settle_s = zeros(1, kk);
+%         k_ref = find(ref_s >=rmax, 1, 'first');
+%         for k=1:k_ref
+% 
+%             ref_f = ref_s(k)
+%             sim('MPC_fp')
+% 
+%             y1 = y_mpcDist; 
+%             [t_settle, k_s] = settle_time(y1.time, y1.Data, ref_f, 0.01*ref_f,...
+%                                           [], [], 30);
+% 
+%             t_settle_s(mpc_iter, k) = t_settle;
+%             figure(mpc_iter); hold on;
+%             plot(y1.Time, y1.Data)
+%             drawnow()
+%         end
+%         
+%         figure(100)
+%         subplot(subs(rmax_iter));
+%         hold on
+%         
+%         title(sprintf('rmax = %.1f', rmax));
+%         labs(mpc_iter+1) = plot(ref_s(1:k_ref), t_settle_s(mpc_iter,:));
+%         legstr = sprintf('Mpc: N= %.0f, gam=%.0f', N_mpc, gamma);
+%         set(labs(mpc_iter+1), 'DisplayName', legstr)
+%         legend(labs)
+%     end
 
 end
+%%
 
+if saveon
+
+   saveas(gcf, 'figures/cp_traj.svg')
+end
+%%
+if saveon
+    saveas(F300, 'figures/cp_clqropt_vs_linmaxset_TS-s.svg')
+    saveas(F400, 'figures/perc_increase_lin_over_clqr.svg');
+end
 
