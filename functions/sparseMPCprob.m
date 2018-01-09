@@ -1,35 +1,38 @@
 classdef sparseMPCprob < handle
-%         H;
-%         M;
-%         Ainq;
-%         binq;
-%         N_mpc;
-%         kappa;
-%
-%
-% Construction: condensedMPCprob(sys,N, Q,Qp, R)
-%               condensedMPCprob(sys,N, Q,Qp, R, S)
-%
-% This sets H, M, N_mpc, and kappa fields. We leave it to you to fill in
-% Ainq and binq.
+    % sparseMPCprob  container for the sparse MPC QP formulation.
+    %         H;
+    %         M;
+    %         Ainq;
+    %         binq;
+    %         N_mpc;
+    %         kappa;
+    %
+    %
+    % Construction: condensedMPCprob(sys,N, Q,Qp, R)
+    %               condensedMPCprob(sys,N, Q,Qp, R, S)
+    %
+    % This sets H, M, N_mpc, and kappa fields. We leave it to you to fill in
+    % Ainq and binq.
 
 
     properties
-        H;
-        Aeq;
-        beq;
-        Ainq;
-        binq;
-        N_mpc;
-        kappa;
-        ns;
-        nu;
-        qpopts;
-        n_warmstart;
+        H;      % The problem Hessian
+        Aeq;    % The LHS equality constraint enforcing dynamcs.
+        beq;    % the RHS equality equality constraint enforcing dynamcs.
+        Ainq;   % Inequality LHS for control constraint.  
+        binq;   % Inequality RHS for control constraint.  
+        N_mpc;  % Control horizon
+        kappa;  % condition number of H
+        ns;     % number of states.
+        nu;     % Number of controls.
+        qpopts; % Options that get passed to quadrog. From optimset.
+        n_warmstart; % Used by the S-function to set some dimensions.
     end
     
     methods
         function obj = sparseMPCprob(sys,N, Q,Qp, R, S)
+            % obj = sparseMPCprob(sys,N, Q,Qp, R, S)
+            % S can be [], in which case, it is set to the zero matrix.
             if ~exist('S', 'var')
                 ns = size(sys.b,1);
                 nu = size(sys.b, 2);
@@ -49,8 +52,22 @@ classdef sparseMPCprob < handle
             obj.n_warmstart = (obj.N_mpc+1)*obj.ns + obj.N_mpc*obj.nu;
         end
         
+        
         function [U, X] = solve(self, xk_1)
-            
+            % [U, X] = solve(self, xk_1)
+            % Solves the MPC problem defined by the instance, given
+            % an initial condition xk_1. 
+            % 
+            % Inputs
+            % ------
+            %   xk_1 : the initial condition at which to solve the MPC
+            %   problem
+            %
+            % Outputs
+            % ------
+            %   U : the sequence of optimal controls from k=1...self.N_mpc
+            %   X : the sequence of optimal states from k= 1...self.N_mpc.
+            %       X has dimensions (Ns x N_mpc).
             beq_xk = self.beq;
             beq_xk(1:self.ns) = xk_1;
             UX = mpcSolve_local(self.H, self.Ainq, self.binq,...
@@ -63,6 +80,8 @@ classdef sparseMPCprob < handle
         end
         
         function self = add_U_constraint(self, type, bnds)
+            % self = add_U_constraint(self, type, bnds)
+            %
             % Add an input constraint to the MpcPRoblem instance.
             % type: 'box' forms a box constraint on u between bnds(1) and
             % bnds(2)
@@ -92,7 +111,7 @@ classdef sparseMPCprob < handle
             self.binq = [self.binq; binq];
         end
         
-    end
+    end % METHODS
     
 end
 
