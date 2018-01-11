@@ -33,7 +33,7 @@
 % 
 %  find_ref_max(..., 'fig_base', int). Only used if verbose >=1. Allows the
 %  figures generated to be incremented. The scheme is 
-%  figure(1 + 10*fig_base) etc. Default is fig_base=10;
+%  figure(1 + fig_base) etc. Default is fig_base=10;
 %
 % Outputs
 % -------
@@ -62,8 +62,8 @@ function [ref_max, t_settle_s] = find_ref_max(sim_struct, ref_s, varargin)
     % ------------------------------------------------------------------- %
     % Pull out all the data stored in sim_struct to expose it to simulink.
     PLANT = sim_struct.PLANT;
-    Ts = PLANT.Ts;
-    Nx = sim_struct.Nx;
+    Ts = PLANT.Ts; 
+    Nx = sim_struct.Nx; 
     
     K_lqr = sim_struct.K_lqr;
     mpcProb1 = sim_struct.mpcProb1;
@@ -77,12 +77,12 @@ function [ref_max, t_settle_s] = find_ref_max(sim_struct, ref_s, varargin)
 
     figs = [];
     if verbose > 0
-         F1 = figure(1 + 10*fig_base);
+         F1 = figure(1 + fig_base);
          figs = [figs, F1];
     end
     if verbose > 1
-        F2 = figure(2 + 10*fig_base);
-        F3 = figure(3 + 10*fig_base);
+        F2 = figure(2 + fig_base);
+        F3 = figure(3 + fig_base);
         figs = [figs, F2, F3];
     end
     
@@ -127,7 +127,7 @@ function figs = plot_local(y1, u1, du1, figs, fig_base, verbose)
         try
             change_current_figure(figs(1))
         catch
-            figs(1) = figure(1 + 10*fig_base);
+            figs(1) = figure(1 + fig_base);
         end
         hold on
         plot(y1.Time, y1.Data)
@@ -138,7 +138,7 @@ function figs = plot_local(y1, u1, du1, figs, fig_base, verbose)
         try
             change_current_figure(figs(2))
         catch
-            figs(2) = figure(2 + 10*fig_base); 
+            figs(2) = figure(2 + fig_base); 
         end
         hold on
         plot(u1.Time, u1.Data)
@@ -148,7 +148,7 @@ function figs = plot_local(y1, u1, du1, figs, fig_base, verbose)
         try
             change_current_figure(figs(3))
         catch
-            figs(3) = figure(3 + 10*fig_base); 
+            figs(3) = figure(3 + fig_base); 
         end
         hold on
         plot(du1.Time, du1.Data)

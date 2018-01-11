@@ -93,7 +93,7 @@ Qp = dare(sys_recyc.a, sys_recyc.b, Q1, R1);
 
 
 
-%%
+
 % ------------------ Linear + delU Saturation Case ---------------------- %
 % Iterate over a bunch of gammas and try to find the maximum setpoint for
 % each one. This code is pretty niave. We start at a very low setpoint and
@@ -103,183 +103,103 @@ Qp = dare(sys_recyc.a, sys_recyc.b, Q1, R1);
 % setpoint is large enough, we dont have the stability problem, which is
 % weird.
 % ref_s = linspace(0.01, 15, 200);
+
 clc
 
 R = 5;
 mpc_on=0;
 
-trun = 400*Ts;
-
-% mpcProb1 = sparseMPCprob(sys_recyc, N_mpc, Q1, Qp, R); 
-mpcProb1 = condensedMPCprob(sys_recyc, N_mpc, Q1, Qp, R); 
-mpcProb1.add_U_constraint('box', [-du_max, du_max]);
-
-
-
-sim_struct = struct('PLANT', PLANT, 'trun', trun, 'mpcProb1', mpcProb1,...
-                    'du_max', du_max, 'mpc_on', mpc_on,...
-                    'xss', xss, 'Nx', Nx);
-
-ref_range = [0.01, 15];
-ref_step = .1;
-ref_s = ref_range(1):ref_step:ref_range(2);
+% ref_range = [0.01, 15];
+% ref_step = .1;
+% ref_s = ref_range(1):ref_step:ref_range(2);
 
 % *Optimal, open-loop* trajectory generation over all setpoints. This
 % provides the basiline for comparison of the other methods. 
-N_traj = 400;
+ref_s = [0.1:0.1:15];
+N_traj = 600;
 gamma = 100;
-gam_s = linspace(100, 20000, 5);
-max_setpoints_linear = 0*gam_s;
+gam_s = linspace(gamma, 20000, 5);
+
+% Form paramater classes
+% 1. Time optimal
+
+N_mpc_s = [4, 8, 12, 16, 20];
+N_traj = 400;
+trun = Ts*N_traj;
+clear StepParamsMPC
+clear StepParamsCLQR
+clear build_clqr_trajs_obj
+clear build_max_setpoints_obj
+clear build_timeopt_trajs
+clear StepData
+clear StepParamsMPC
 
 
+step_params_timeopt = StepParamsTimeOpt(sys, ref_s, du_max, sys_nodelay, 10);
+step_params_lin   = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, trun);
+step_params_mpc   = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, N_mpc_s, 'condensed', trun);
+step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, gamma, PLANT, N_traj, 'condensed');
 
-%%
-data_struct.N_mpc_s = [4, 8];
-data_struct.sys = sys_recyc;
-data_struct.Q   = Q1;
-data_struct.ref_s = ref_s;
-data_struct.gam_s = gam_s(1:3);
-data_struct.sim_struct = sim_struct;
-data_struct.mpc_on    = 0;
-data_struct.verbose   = 1;
-data_struct.savedata  = 1;
-data_struct.file      = 'data/max_ref_data_dalay.mat';
-data_struct.fig_files = ['figures/max_ref_dataf1.fig', 'figures/max_ref_data2.fig'];
+step_data_timeopt = StepData(step_params_timeopt, 'verbose', 0, 'savedata', true,...
+    'file', 'data/timeopt_ref_data.mat');
+step_data_clqr = StepData(step_params_clqr, 'verbose', 0, 'savedata', true,...
+    'file', 'data/clqr_ref_data.mat');
+max_sp_data_lin = StepData(step_params_lin, 'verbose', 0, 'savedata', true,...
+    'file', 'data/max_sp_data_lin.mat', 'fig_files',...
+    ['figures/max_sp_data_lin1.fig', 'figures/max_sp_data_lin2.fig']);
+max_sp_data_mpc = StepData(step_params_mpc, 'verbose', 0, 'savedata', true,...
+    'file', 'data/max_sp_data_mpc.mat', 'fig_files',...
+    ['figures/max_sp_data_mpc1.fig', 'figures/max_sp_data_mpc2.fig']);
 
 
-clear build_clqr_trajs
-clear opt_traj_jen
-data_struct_clqr = data_struct;
-data_struct_clqr.gam_s_clqr = 100;
-data_struct_clqr.file = 'data/clqr_data_tmp.mat';
-data_struct_clqr.du_max = du_max;
-data_struct_clqr.N_traj = 600;
-data_struct_clqr.mpc_mode = 'condensed';
-
-clqr_data = build_clqr_trajs(data_struct_clqr, 'force', 0);
-
-F200 = figure(200); hold on;
-settle_times_clqr = clqr_data.settle_times_opt_save{1};
-plot(ref_s, settle_times_clqr)
-
-% settle_times_opt_save = cell(1, length(gam_s));
-% opt_trajs_save = cell(1, length(gam_s));
-% hands = [];
-% F200 = figure(200); hold on
-% colrs = get(gca, 'colororder');
-% load_opt = 0;
-% for iter = 1:length(gam_s)
-%     gamma = gam_s(iter);
-%     if load_opt
-%         load('clqr_opt_data.mat')
-%         opt_trajs_save = clqr_opt_data.opt_trajs_save;
-%         settle_times_opt_save = clqr_opt_data.settle_times_opt_save;
-%     else
-%         [traj_s, settle_times_opt] = opt_traj_gen(Q1, gamma, N_traj, sys_recyc, ...
-%                                 ref_s, 0, 'uMax', du_max, 'verbose', 0);
-%         settle_times_opt_save{iter} = settle_times_opt;
-%         opt_trajs_save{iter} = traj_s;
-%     end
-%     change_current_figure(F200); 
-%     hands(iter) = plot(ref_s, settle_times_opt_save{iter}*1000, 'LineWidth', 2);
-% 
-%     set(hands(iter), 'DisplayName', sprintf('$\\gamma = %.0f$', gamma),...
-%         'Color', colrs(iter, :));
-%     leg = legend(hands);
-%     set(leg, 'interpreter', 'latex');
-%     ylabel('settle time [ms]', 'FontSize', 16)
-%     xlabel('setpoint', 'FontSize', 16)
-%     drawnow()
-%     grid on
-% end
-% leg.FontSize = 16;
-% leg.Location = 'Northwest';
-
-%% for all the ref_f_s, get time-optimal settle times
-g_eject = zpk(exp(-wp_real_x(1)*Ts), exp(-wz_real_x(1)*Ts), 1, sys_nodelay.Ts);
-g_eject = g_eject/dcgain(g_eject);
-sys_eject = minreal(sys_nodelay*g_eject);
-sys_recyc_eject = SSTools.deltaUkSys(sys_eject);
-Nx_eject = SSTools.getNxNu(sys_recyc_eject);
-x0_eject = Nx_eject*0;
-time_opt_settletime_s = ref_s*0;
-warning('off', 'MATLAB:nargchk:deprecated')
-
-clear timeOptBisect
-toBisect = TimeOptBisect(sys_recyc_eject, du_max);
-toBisect.maxIter = 50;
-vb = 1;
-if vb > 1
-    F1000 = figure(1000)
+% 1. First, generate for CLQR optimal trajectory.
+fid = fopen('log.txt', 'w+');
+try
+    clqr_data = build_clqr_trajs_obj(step_data_clqr, 'force', 0, 'fid', fid);
+    fprintf(fid, 'Finished building clqr_data\n');
+catch ME
+    errMsg = getReport(ME);
+    fprintf(fid, 'Failed to build clqr_data: \n%s', errMsg);
 end
-for k=52:length(ref_s)
-    xf = Nx_eject*ref_s(k);
-    [xx, uu, S]=toBisect.time_opt_bisect(x0_eject, xf);
-    time_opt_settletime_s(k) = uu.Time(end) + 10*sys_recyc_eject.Ts;
-    
-    if vb > 0
- 
-        if vb > 1 
-           if mod(k, 20)==0
-            for i=1:k
-                close(figure(1000+i))
-            end
-        end
-            figure(1000+k)
-        else
-            change_current_figure(F1000);
-        end
-        set(gcf, 'Position', [-981 49 894 976])
-        % Extend the trajectory, so we can see if its actually at steady state;
-        t_ext = [uu.Time(end)+Ts:Ts:uu.Time(end)*2]';
-        t = [uu.Time; t_ext];
-        u = [uu.Data; 0*t_ext];
-        y = lsim(sys_recyc_eject, u, t, zeros(12,1));
-        fprintf('optimal N=%.0f\n', length(uu.Data))
-        subplot(311); 
-        plot(t, y)
-        hold on
-        xlm = xlim;
-        plot(xlm, [ref_s(k), ref_s(k)], '--')
 
-        subplot(312)
-        plot(t, u)
-        hold on;
-        
-        subplot(313)
-        plot(t, cumsum(u))
-        hold on
-        
-        drawnow()
-    end
-%     keyboard
+try
+    max_sp_data_lin = build_max_setpoints_obj(max_sp_data_lin, 'fid', fid);
+    fprintf(fid, 'Finished building max setpoints, linear \n');
+catch ME
+    errMsg = getReport(ME);
+     fprintf(fid, 'Failed to build max setpoints, linear: \n%s', errMsg);
 end
+
+try
+    max_sp_data_mpc = build_max_setpoints_obj(max_sp_data_mpc, 'fid', fid);
+    fprintf(fid, 'Finished building max setpoints, mpc \n');
+catch ME
+    errMsg = getReport(ME);
+    fprintf(fid, 'Failed to build max setpoints, mpc: %s\n', errMsg);
+end
+
+try%
+   step_data_timeopt = build_timeopt_trajs(step_data_timeopt, 'force', 0, 'fid', fid, 'max_iter', 50);
+   fprintf(fid, 'Finished building time-optimal trajectories\n');
+
+   catch ME
+    exception = MException.last;
+    errMsg = getReport(ME);
+    fprintf(fid, 'Failed to build time-optimal trajectories:\n%s', errMsg);
+end
+
+fclose(fid);
 %%
-figure(200)
+figure(F200)
 
 % nh = length(hands)
 hands(end+1) = plot(ref_s, time_opt_settletime_s*1000, ':', 'LineWidth', 3)
 set(hands(end), 'DisplayName', 'Time Optimal')
 legend(hands)
 
-%%
-data_struct.N_mpc_s = [4, 8];
-data_struct.sys = sys_recyc;
-data_struct.Q   = Q1;
-data_struct.ref_s = ref_s;
-data_struct.gam_s = gam_s(1:3);
-data_struct.sim_struct = sim_struct;
-data_struct.mpc_on = 0;
-data_struct.verbose = 1;
-data_struct.savedata = 1;
 
 
-data_struct.file = 'data/max_ref_data_dalay.mat';
-data_struct.file = 'data/max_ref_data_dalay.mat';
-data_struct.fig_files = ['figures/max_ref_dataf1.fig', 'figures/max_ref_data2.fig'];
-clc
-clear build_max_setpoints
-build_max_setpoints(data_struct)
+
 %%
 saveon = 1;
 clqr_opt_data.opt_trajs_save = opt_trajs_save;
