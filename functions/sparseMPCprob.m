@@ -53,7 +53,7 @@ classdef sparseMPCprob < handle
         end
         
         
-        function [U, X] = solve(self, xk_1)
+        function [U, X] = solve(self, xk_1, varargin)
             % [U, X] = solve(self, xk_1)
             % Solves the MPC problem defined by the instance, given
             % an initial condition xk_1. 
@@ -63,11 +63,28 @@ classdef sparseMPCprob < handle
             %   xk_1 : the initial condition at which to solve the MPC
             %   problem
             %
+            %   solve(..., 'getX', {0|1}) If 1, also return the state
+            %   sequence. Since we are in the condensed version, this is
+            %   found via lsim(...)
+            %  
+            %   solve(...,'warm_start_data', not used currently.
+            %
             % Outputs
             % ------
             %   U : the sequence of optimal controls from k=1...self.N_mpc
             %   X : the sequence of optimal states from k= 1...self.N_mpc.
-            %       X has dimensions (Ns x N_mpc).
+            %        Empty if 'getX' is 0 (default), otherwise, a matrix 
+            %        of dimensions (Ns x N_mpc).
+            
+            % Parse varagin.
+            defaultGetX = true;
+            defaultWarm_start_data = [];
+            p = inputParser;
+            p.addParameter('getX', defaultGetX);
+            p.addParameter('warm_start_data', defaultWarm_start_data);
+            parse(p, varargin{:});
+            getX = p.Results.getX;
+            
             beq_xk = self.beq;
             beq_xk(1:self.ns) = xk_1;
             UX = mpcSolve_local(self.H, self.Ainq, self.binq,...
@@ -75,8 +92,12 @@ classdef sparseMPCprob < handle
             
             % Split the solution into controls and states.
             U = UX(1:self.nu*self.N_mpc)';
-            X = UX(self.nu*self.N_mpc+1:end);
-            X = reshape(X, self.ns, []);
+            if getX
+                X = UX(self.nu*self.N_mpc+1:end);
+                X = reshape(X, self.ns, []);
+            else
+                X = [];
+            end
         end
         
         function self = add_U_constraint(self, type, bnds)
