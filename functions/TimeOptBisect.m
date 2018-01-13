@@ -11,7 +11,7 @@ classdef TimeOptBisect
               % Default is 10.
         TOL;  % Tolerance on ||xf - X(N)*|| for deciding if we are
               % close enough.
-        maxIter; % Maximum number of times to bump while searching
+        max_iter; % Maximum number of times to bump while searching
                  % for the upper bound. Default is 20.
     end
     methods
@@ -27,27 +27,39 @@ classdef TimeOptBisect
 
             self.bump = 10;
             self.TOL = 5e-3;
-            self.maxIter = 20;
+            self.max_iter = 20;
 
         end
         
         % ---------------------------------------------------------------- %
-        function [xx, uu, S] = time_opt_bisect(self, x0, xf, varargin)
+        function [xx, uu, status] = time_opt_bisect(self, x0, xf, varargin)
         % Solve the minimum-time problem in Discrete Time using a bisection
         % search method.
             p = inputParser;
-            p.addParameter('verbose', true)
+            p.addParameter('verbose', true);
+            p.addParameter('fid', 1);
             parse(p, varargin{:});
-            verbose = p.Results.verbose;
             
+            verbose = p.Results.verbose;
+            fid = p.Results.fid;
+            status = 0;
             % Find upper and lower bounds on N.
-            [lowerBound, upperBound] = self.find_bounds(x0, xf, 'verbose', verbose);
+            [lowerBound, upperBound, status] = self.find_bounds(x0, ...
+                                                              xf, 'verbose',...
+                                                              verbose, 'fid', fid);
+            if status
+                xx = [];
+                uu = [];
+                status = 1;
+                return
+            end
+            
             % Start in the middle of the bounds. 
             k0 = floor(mean(lowerBound, upperBound));
             % Hueristic to determine max_iter.     
-            maxIter_bisect =( upperBound - lowerBound + 1)*2;
+            max_iter_bisect =( upperBound - lowerBound + 1)*2;
             % Perform the Bisection search. 
-            for i = 1:maxIter_bisect
+            for i = 1:max_iter_bisect
                 results = self.time_opt_cvx_prob(k0, x0, xf);
                 Jval = results.cvx_optval;
                 if (Jval >= self.TOL)
@@ -70,10 +82,13 @@ classdef TimeOptBisect
             u = results.U;
             Jval = results.cvx_optval;
             if isnan(Jval)
-                keyboard
+                % keyboard 
+                fprintf(fid, ['Final Jval is NaN. Exiting with status ' ...
+                              '1']);
+                status = 1;
             end
             if verbose
-                fprintf('Final CVX Jval = %d\n', Jval);
+                fprintf(fid, 'Final CVX Jval = %d\n', Jval);
             end
             
 
@@ -81,23 +96,25 @@ classdef TimeOptBisect
 
             xx = timeseries(X_DT, t_DT);
             uu = timeseries(u, t_DT);
-            S  = sprintf('Settle Time (discrete, all states): %.5f', t_DT(end));
 
         end
 
         % ---------------------------------------------------------------- %
-        function [lb, ub] = find_bounds(self, x0, xf, varargin)
+        function [lb, ub, status] = find_bounds(self, x0, xf, varargin)
             p = inputParser;
-            p.addParameter('verbose', true)
+            p.addParameter('verbose', true);
+            p.addParameter('fid', 1);
             parse(p, varargin{:});
             verbose = p.Results.verbose;
-                % if length(varargin) == 1
-                    
+            fid = p.Results.fid;
+            status = 0;
+                
         % [lb, ub] = find_bounds(self, x0, xf)
         % Find lower and upper bounds on maximum trajectory length, k0.
             lowerBound = length(self.Gam);
+            upperBound = [];
             k0 = lowerBound;
-            for i = 1:self.maxIter
+            for i = 1:self.max_iter
                 results = self.time_opt_cvx_prob(k0, x0, xf);
                 Jval = results.cvx_optval;
 
@@ -113,16 +130,19 @@ classdef TimeOptBisect
                 else
                     upperBound = k0;
                     if verbose
-                        fprintf('Bounds found!\n')
-                        fprintf('upperBound = %.0f\n', upperBound)
-                        fprintf('lowerBound = %.0f \n', lowerBound)
+                        fprintf(fid, 'Bounds found!\n')
+                        fprintf(fid, 'upperBound = %.0f\n', upperBound)
+                        fprintf(fid, 'lowerBound = %.0f \n', lowerBound)
                     end
                     break;
                 end
             end
             if isempty(upperBound)
-               error(['Exhausted maxIter but no Upper Bound found. ',...
-                       'Possible solution is to increase maxIter']);
+                str = sprintf(['MyWarning: Exhausted max_iter but no Upper Bound found. ',...
+                       'Possible solution is to increase ',...
+                        'max_iter=%0.0f'], self.max_iter);
+               fprintf(fid, '%s\n', str)
+               status = 1;
             end
                             
             lb = lowerBound;
