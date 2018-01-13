@@ -170,30 +170,30 @@ catch ME
 end
 %%
 % 2.----------- Generate LIN max setpoints --------------------------
-clc
-close all
 tic
 try
-    clear find_ref_max
-    clear build_max_setpoints
-    max_sp_data_lin.params.ref_s = linspace(1, 5, 10);
-    max_sp_data_lin.params.gam_s = linspace(100, 10000, 10);
+%     clear find_ref_max
+%     clear build_max_setpoints
+%     max_sp_data_lin.params.ref_s = linspace(1, 5, 10);
+%     max_sp_data_lin.params.gam_s = linspace(100, 10000, 10);
     max_sp_data_lin = build_max_setpoints(max_sp_data_lin, 'fid', fid, 'force', 0);
-    fprintf(fid, 'Finished building max setpoints, linear. Total time = %.2f\n', toc);
+    fprintf(fid, 'Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
 catch ME
     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
-     fprintf(fid, 'Failed to build max setpoints, linear: \n%s', errMsg);
+     fprintf(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
 end
+%%
 % 3.----------- Generate  mpc max setpoints --------------------------
 
+tic
 try
     max_sp_data_mpc = build_max_setpoints(max_sp_data_mpc, 'fid', fid, 'verbose', 2);
-    fprintf(fid, 'Finished building max setpoints, mpc. Total time = %.2f\n', toc);
+    fprintf(fid, 'Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
 catch ME
     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
-    fprintf(fid, 'Failed to build max setpoints, mpc: %s\n', errMsg);
+    fprintf(fid, 'Failed to build max setpoints, mpc: %s\n\n', errMsg);
 end
-
+%%
 % 4.----------- Generate for time-optimal trajectories ------------------
 clear build_timeopt_trajs
 try
@@ -265,19 +265,49 @@ for k = 1:length(max_sp_data_mpc.params.N_mpc_s)
     set(hands_mxsp(k+1), 'DisplayName', stit);
 end
 legend(hands_mxsp)
-%%
+
 xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 14);
 ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 14);
-%%
 
+saveas(F10, 'figures/max_ref_vs_gamma_lin_MPC.svg')
 %%
 clc
 clear TsByMaxRefParams
+fid = fopen('log-tsbyrefMax.txt', 'w+');
+% fid = 1;
+rmax_s = [1, 2.1, 4.8, 5.5, 10];
+ts_by_rmax_lin = TsByMaxRefParams(max_sp_data_lin, rmax_s, 'data/ts_byrefmax_lin.mat');
+ts_by_rmax_mpc = TsByMaxRefParams(max_sp_data_mpc, rmax_s, 'data/ts_byrefmax_mpc.mat');
+tic
+try
+    ts_by_rmax_lin = ts_by_rmax_lin.run_ts_by_refs('verbose', 1, 'fid', fid);
+    fprintf(fid, 'Finished running Ts by Max Ref, linear. Total time = %.2f\n\n', toc);
+catch ME
+    errMsg = getReport(ME,  'extended','hyperlinks', 'off');
+    fprintf(fid, 'Failed to run Ts by max setpoints, linear: %s\n\n', errMsg);
+end
 
-rmax_s = [1, 2.1, 4.8];
-ts_by_rmax_lin = TsByMaxRefParams(max_sp_data_lin, rmax_s);
+tic
+try
+fprintf(fid, 'Finished running Ts by Max Ref, MPC. Total time = %.2f\n\n', toc);
+ts_by_rmax_mpc = ts_by_rmax_lin.run_ts_by_refs_mpc('verbose', 1, 'fid', fid);
 
-ts_by_rmax_lin = ts_by_rmax_lin.run_ts_by_refs();
+catch ME
+    errMsg = getReport(ME,  'extended','hyperlinks', 'off');
+    fprintf(fid, 'Failed to run Ts by max setpoints, mpc: %s\n\n', errMsg);
+    
+end
+
+if fid >1
+    fclose(fid);
+    msg = freadf('log-tsbyrefMax.txt');
+    to = { 'abraker@fastmail.com', 'robr9299@colorado.edu'};
+    ssendmail('MATLAB Report:compare_maximum_ref.mm', msg, 'to', to)
+%     ssendmail('test from matlab', 'body of test from matlab', 'to',...
+%         'robr9299@colorado.edu', 'attachments', {'figures/cp_traj.svg'})
+end
+
+
 
 %%
 clc

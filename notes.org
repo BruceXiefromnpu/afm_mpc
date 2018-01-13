@@ -5,20 +5,31 @@
 #+PROPERTY: SAVE_AS projects/mpc_j.html
 #+OPTIONS: tex:t
 #+STARTUP: latexpreview
+#+TODO: TODO(t) WAITING(w@/!) | DONE(d@/!) CANCELED(c@/!) STARTED(s@/!) DEFERRED(ef@/!)
+#+STARTUP: fold
+#+STARTUP: lognotestate t
+#+SEQ_TODO: TODO STARTED WAITING DELEGATED APPT | DONE DEFERRED CANCELLED
 
 
 * Speed Comparison Tasks
-** TODO modify to also save trajectories.
+** DONE modify to also save trajectories.
+- State "DONE"       from "TODO"       [2018-01-12 Fri 16:50] \\
+  That took forever. Most of today. These cell arrays and arrays of structs confuse me.
 This needs to by done in 
-*** TODO [[functions/find_ref_max.m]]
-*** TODO [[functions/build_max_setpoints.m]] so that the trajectories are saved into the results.
+*** DONE [[file:functions/find_ref_max.m]]
+- State "DONE"       from "TODO"       [2018-01-12 Fri 16:51]
+*** DONE [[file:functions/build_max_setpoints.m]] so that the trajectories are saved into the results.
+- State "DONE"       from "TODO"       [2018-01-12 Fri 16:51]
 ** TODO plot percent increases against time-optimal for linear 
 <2018-01-08 Mon 23:55>
 ** TODO plot percent increases against time-optimal for MPC 
 <2018-01-08 Mon 23:56>
 
-** TODO verify plotting of [[file:functions/StepParamsCLQR.m]]
-** TODO add plotting to [[file:functions/StepParamsTimeOpt.m]]
+** DONE verify plotting of [[file:functions/StepParamsCLQR.m]]
+- State "DONE"       from "TODO"       [2018-01-12 Fri 17:20] \\
+  quick
+** DONE add plotting to [[file:functions/StepParamsTimeOpt.m]]
+- State "DONE"       from "TODO"       [2018-01-12 Fri 18:05]
 ** TODO subclass StepParams for build_max_setpoints.m??
 and add plotting functions etc? Not sure its worth it at this point. 
 ** TODO new subclass or modofy [[file:functions/TsByMaxRefParams.m]] to include MPC
@@ -30,8 +41,7 @@ and add plotting functions etc? Not sure its worth it at this point.
 
 * State Estimation Tasks
 ** TODO Try some of the LTR things. 
-e.g., $\gammaBB^{T}$, $\gamma$ large
-<2018-01-08 Mon 23:56>
+e.g., $\gamma BB^{T}$, $\gamma$ large  <2018-01-08 Mon 23:56>
 
 * Quantifying the time savings (if any) of MPC and d-rated linear feedback
 I have been trying to figure out how to quantify the time savings (if any) of using MPC vs a de-rated, saturated linear feedback. The basic idea is:

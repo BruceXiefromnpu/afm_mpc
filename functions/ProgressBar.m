@@ -30,6 +30,7 @@ classdef ProgressBar < handle
         prior_length;
         prior_msg;
         has_initialized;
+        prior_perc_done;
     end
     
     methods
@@ -59,28 +60,28 @@ classdef ProgressBar < handle
         function upd(self, iter)
             % Update the progress bar.
             fracDone = iter / self.max_iter;
-            percentDone = 100 * fracDone;
-
+            percentDone = round(100 * fracDone, 0);
+            
+            
             done_bar = repmat('+', 1, floor(self.bar_len * fracDone));
             undone_bar = repmat(' ', 1, self.bar_len - floor(self.bar_len * fracDone));
             whole_bar = sprintf('%s: [%s%s]', self.start_str, done_bar, undone_bar);
-            msg = sprintf('%s %3.1f', whole_bar, percentDone); 
+            msg = sprintf('%s %3.0f', whole_bar, percentDone); 
 
-            if ~self.has_initialized
-                fprintf('%s\n', msg);
+            if ~self.has_initialized || self.fid > 1
+                fprintf(self.fid, '%s\n', msg);
                 self.prior_msg = msg;
                 self.prior_length = length(msg);
                 self.has_initialized = 1;
-            else
+            elseif percentDone > self.prior_perc_done;
                 reverseStr = repmat(sprintf('\b'), 1, 1+length(self.prior_msg));
                 fprintf(self.fid, '%s%s\n', reverseStr, msg);
                 self.prior_msg = msg;
                 self.prior_length = length(msg);
             end
 
-            %         if iter >= max_iter
-            %             fprintf('\n')
-            %         end
+            self.prior_perc_done = percentDone;
+            
         end
     end
 end

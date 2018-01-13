@@ -72,7 +72,7 @@ function step_data = build_max_setpoints(step_data, varargin)
     p = inputParser;
     p.addParameter('force', defaultForce);
     p.addParameter('fid', 1);
-    p.addParameter('verbose', 0);
+    p.addParameter('verbose', 1);
     parse(p, varargin{:});
     force = p.Results.force;
     fid = p.Results.fid;
@@ -81,7 +81,7 @@ function step_data = build_max_setpoints(step_data, varargin)
         load(step_data.file)
         fprintf(fid, 'LOG (build_max_setpoints, mpc_on=%d)\n', step_data.params.sim_struct.mpc_on);
         fprintf(fid, ['Data appears to be the same. Loading data ',...
-                 'without re-calculation.\n\n']);
+                 'without re-calculation.\n']);
         return
     end
     fprintf(fid, 'LOG (build_max_setpoints, mpc_on=%d)\n', step_data.params.sim_struct.mpc_on);
@@ -128,8 +128,9 @@ function step_data = build_max_setpoints(step_data, varargin)
             PB = ProgressBar(length(params.gam_s), 'start_str', ...
                              'Lin', 'fid', fid);
         end
-
-        result_s = build_max_sp_local(params, Figs, ...
+        % Make it a cell array of size one for compatibility with
+        % the MPC case.
+        result_s{1} = build_max_sp_local(params, Figs, ...
                                            PB, verbose);
     else
         %      result_s.max_setpoints = max_setpoints;
