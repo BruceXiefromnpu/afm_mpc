@@ -1,4 +1,4 @@
-% clqr_data = build_clqr_trajs(data_struct)
+% clqr_data = build_clqr_trajs(step_data, varargin)
 %
 % Builds CLQR trajectories parameteriezed by gamma. Will run a sequence
 % of simulations over a list of references, for each gamma. Will record
@@ -7,36 +7,44 @@
 %
 % Inputs
 % -----
-%    data_struct : is a structure with the followin format:
-%    data_struct.sys = sys_recyc;
-%    data_struct.Q   = Q;
-%    data_struct.ref_s = ref_s;
-%    data_struct.sim_struct = sim_struct;
-%    data_struct.verbose = 1;
-%    data_struct.savedata = 1;
-%    data_struct_clqr.gam_s_clqr = [200]; % The list of gammas to loop over.
-%    data_struct_clqr.file = 'data/clqr_data.mat'; % The file to save
-%                                                  % things to
-%    data_struct_clqr.du_max = du_max : slew rate limit
-%    data_struct_clqr.N_traj = 400    : control horizon.
+%   step_data : a class instance of StepData 
+% 
+% Outputs
+%  -----
+%  step_data : the same class that was passed in, but with the
+%  results field populated. The results field shall have the form:
+%  
+%    N.B. The results fields are cell arrays, to account for the
+%    occasion that we gam_s is a vector.
+% 
+%    results.settle_times_opt_cell : settle times for each reference.
+% 
+%    results.opt_trajs_cell        : the trajectories associated
+%    with each reference (Y, U, X).
 %
-% The big function of this function is to check if data_struct.file
+%
+% The big function of this function is to check if step_data.file
 % exists. If it does, then the function compares the data saved in that
 % .mat file to the data provided in data_struct. If the data is the same,
 % the function simply loads the .mat file and returns the structure
 % contained therin. If the data has changed, the function will perform
 % the simulations again, saving the new data into the .mat file specified
 % in data_struct.file.
+%
+%
+% See Also: opt_traj_gen, StepDataCLQR
 
-function step_data = build_clqr_trajs_obj(step_data, varargin)
+function step_data = build_clqr_trajs(step_data, varargin)
 % Description.
     defaultForce = 0;
     p = inputParser;
     p.addParameter('force', defaultForce);
     p.addParameter('fid', 1);
+    p.addParameter('verbose', 1);
     parse(p, varargin{:});
     force = p.Results.force;
     fid = p.Results.fid;
+    verbose = p.Results.verbose;
     if stepdata_struct_unchanged(step_data) && ~force
         load(step_data.file)
         fprintf(fid, 'LOG: (build_clqr_trajs)\n');
@@ -57,8 +65,6 @@ function step_data = build_clqr_trajs_obj(step_data, varargin)
     N_traj = params.N_traj;
     mpc_mode = params.mpc_mode;
    
-    
-    verbose = step_data.verbose;    
     % Pre-allocate
     settle_times_opt_save = cell(1, length(gam_s));
     opt_trajs_save = cell(1, length(gam_s));
@@ -131,51 +137,5 @@ function status = stepdata_struct_unchanged(data_struct)
     
     status = 1;
 end
-
-
-
-% function status = data_struct_unchanged(data_struct)
-% % This function will return 1 if
-%     % (a) data_struct.file exists
-%     % (b) the fields .Q, .sys, .ref_s, .gam_s are the same
-%     %     as the data contained in data_struct.file
-%     % (c) the field (.max_setpoints_lin)(.max_setpoints_mpc) exists,
-%     %     depending on the flag data_struct.mpc_on
-    
-%     if ~exist(data_struct.file, 'file')
-%         status = 0;
-%         % keyboard
-%         return 
-%     else
-%         load(data_struct.file)
-%         % Provides: clqr_data
-%     end
-%     fields1 = {'Q', 'ref_s', 'gam_s_clqr', 'N_traj'};
-%     fields2 = {'A', 'B', 'C', 'D', 'Ts'};
-%     if fields_have_changed(data_struct, clqr_data.data_struct, fields1)
-%         status = 0;
-%         % keyboard
-%         return
-%     elseif isfield(data_struct, 'sys') && isfield(clqr_data.data_struct, 'sys')
-%         if fields_have_changed(data_struct.sys, clqr_data.data_struct.sys, fields2)
-%             status = 0;
-%             % keyboard
-%         end
-%     else  % only way we get here is if .sys is not afield of either structure.
-%         status = 0;
-%         % keyboard
-%         return
-%     end
-        
-%     if ~isfield(clqr_data, 'settle_times_opt_save') ||...
-%             ~isfield(clqr_data, 'opt_trajs_save')
-%         status = 0;
-%         % keyboard
-%         return
-%     end
-
-    
-%     status = 1;
-% end
 
 

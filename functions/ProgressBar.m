@@ -6,6 +6,9 @@
 % progressbar(..., 'bar_len', 35) the number of characters wide that the 
 % bar is
 %
+% prgressbar(..., 'fid', fid) A file id to write the progress to a
+% file. Default is fid=1, which writes to standard terminal.
+% 
 % Returns
 % -------
 %   upd : a function handle that will update the progress bar.
@@ -23,6 +26,7 @@ classdef ProgressBar < handle
         max_iter;
         start_str;
         bar_len;
+        fid;
         prior_length;
         prior_msg;
         has_initialized;
@@ -37,11 +41,13 @@ classdef ProgressBar < handle
             validScalarPosNum = @(x) isnumeric(x) && isscalar(x) && (x > 0);
             addParameter(p, 'bar_len', default_bar_len, validScalarPosNum);
             addParameter(p, 'start_str', default_start_str);
-
+            addParameter(p, 'fid', 1);
+            
             parse(p, varargin{:})
 
             self.bar_len = p.Results.bar_len;
             self.start_str = p.Results.start_str;
+            self.fid = p.Results.fid;
             self.max_iter = max_iter;
             
             bar_init = sprintf('[%s]', repmat(' ', 1, self.bar_len));
@@ -67,7 +73,7 @@ classdef ProgressBar < handle
                 self.has_initialized = 1;
             else
                 reverseStr = repmat(sprintf('\b'), 1, 1+length(self.prior_msg));
-                fprintf('%s%s\n', reverseStr, msg);
+                fprintf(self.fid, '%s%s\n', reverseStr, msg);
                 self.prior_msg = msg;
                 self.prior_length = length(msg);
             end

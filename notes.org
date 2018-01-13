@@ -6,6 +6,33 @@
 #+OPTIONS: tex:t
 #+STARTUP: latexpreview
 
+
+* Speed Comparison Tasks
+** TODO modify to also save trajectories.
+This needs to by done in 
+*** TODO [[functions/find_ref_max.m]]
+*** TODO [[functions/build_max_setpoints.m]] so that the trajectories are saved into the results.
+** TODO plot percent increases against time-optimal for linear 
+<2018-01-08 Mon 23:55>
+** TODO plot percent increases against time-optimal for MPC 
+<2018-01-08 Mon 23:56>
+
+** TODO verify plotting of [[file:functions/StepParamsCLQR.m]]
+** TODO add plotting to [[file:functions/StepParamsTimeOpt.m]]
+** TODO subclass StepParams for build_max_setpoints.m??
+and add plotting functions etc? Not sure its worth it at this point. 
+** TODO new subclass or modofy [[file:functions/TsByMaxRefParams.m]] to include MPC
+** TODO Finish the scheme to check if data has generated load/regenerate 
+<2018-01-10 Wed 22:25>
+
+** TODO Simulate TsByRefMax for MPC and create PLOTs
+** TODO Bisect on ref-max vs gamma ??
+
+* State Estimation Tasks
+** TODO Try some of the LTR things. 
+e.g., $\gammaBB^{T}$, $\gamma$ large
+<2018-01-08 Mon 23:56>
+
 * Quantifying the time savings (if any) of MPC and d-rated linear feedback
 I have been trying to figure out how to quantify the time savings (if any) of using MPC vs a de-rated, saturated linear feedback. The basic idea is:
 
@@ -78,3 +105,4 @@ BTW, all of this is from git commit '4c8970d'
 
 [fn:time] Of course, we might also think about comparing to the *time-optimal* trajectory for each setpoint. That is something that should be done at some point, but it will require some caveats. The most pressing caveat is that we must delete the slow real pole-zero pair before computing the time-trajectory, because the time-optimal trajectory requires that the states be at steady state. If we don't do this, then the resulting time-optimal trajectory will have a comparitively very slow settling time.
 
+ 

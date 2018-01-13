@@ -45,8 +45,6 @@
 %   If 'sparse', will use the sparseMPCprob class, if 'condensed',
 %   will use the condensedMPCprob class. 
 
-
-
 function [traj_s, settle_times] = opt_traj_gen(Q, R, N_traj, sys, ref_s, ref_0_s, varargin )
 
 % -------------------------------------------------------- %

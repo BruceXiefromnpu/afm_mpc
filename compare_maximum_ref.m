@@ -115,7 +115,7 @@ mpc_on=0;
 
 % *Optimal, open-loop* trajectory generation over all setpoints. This
 % provides the basiline for comparison of the other methods. 
-ref_s = [0.1:0.1:15];
+ref_s = [0.1:0.01:15];
 N_traj = 600;
 gamma = 100;
 gam_s = linspace(gamma, 20000, 200);
@@ -124,7 +124,7 @@ gam_s = linspace(gamma, 20000, 200);
 % 1. Time optimal
 
 N_mpc_s = [4, 8, 12, 16, 20];
-N_traj = 400;
+N_traj = 800;
 trun = Ts*N_traj;
 clear StepParamsMPC
 clear StepParamsCLQR
@@ -134,71 +134,110 @@ clear build_timeopt_trajs
 clear StepData
 clear StepParamsMPC
 
+%%
+clc
+clear StepData
+clear StepDataCLQR
+clear StepDataTimeOpt
 
 step_params_timeopt = StepParamsTimeOpt(sys, ref_s, du_max, sys_nodelay, 10);
 step_params_lin   = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, trun);
 step_params_mpc   = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, N_mpc_s, 'condensed', trun);
 step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, gamma, PLANT, N_traj, 'condensed');
 
-step_data_timeopt = StepData(step_params_timeopt, 'verbose', 0, 'savedata', true,...
+step_data_timeopt = StepData(step_params_timeopt, 'savedata', true,...
     'file', 'data/timeopt_ref_data.mat');
-step_data_clqr = StepData(step_params_clqr, 'verbose', 0, 'savedata', true,...
+step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
     'file', 'data/clqr_ref_data.mat');
-max_sp_data_lin = StepData(step_params_lin, 'verbose', 0, 'savedata', true,...
-    'file', 'data/max_sp_data_lin.mat', 'fig_files',...
-    ['figures/max_sp_data_lin1.fig', 'figures/max_sp_data_lin2.fig']);
-max_sp_data_mpc = StepData(step_params_mpc, 'verbose', 0, 'savedata', true,...
-    'file', 'data/max_sp_data_mpc.mat', 'fig_files',...
-    ['figures/max_sp_data_mpc1.fig', 'figures/max_sp_data_mpc2.fig']);
+max_sp_data_lin = StepData(step_params_lin, 'savedata', false,...
+    'file', 'data/max_sp_data_lin.mat');
+max_sp_data_mpc = StepData(step_params_mpc, 'savedata', false,...
+    'file', 'data/max_sp_data_mpc.mat');
 
+%
+% 1.----------- Generate for CLQR optimal trajectories ------------------
 
-% 1. First, generate for CLQR optimal trajectory.
-fid = fopen('log.txt', 'w+');
+% fid = fopen('log2.txt', 'w+');
+fid = 1;
+%%
+tic
 try
-    clqr_data = build_clqr_trajs(step_data_clqr, 'force', 0, 'fid', fid);
-    fprintf(fid, 'Finished building clqr_data\n');
+    step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 0, 'fid', fid, 'verbose', 2);
+    fprintf(fid, 'Finished building clqr_data. Total time = %.2f\n', toc);
 catch ME
-    errMsg = getReport(ME);
+    errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
     fprintf(fid, 'Failed to build clqr_data: \n%s', errMsg);
 end
-
+%%
+% 2.----------- Generate LIN max setpoints --------------------------
+clc
+close all
+tic
 try
-    max_sp_data_lin = build_max_setpoints(max_sp_data_lin, 'fid', fid);
-    fprintf(fid, 'Finished building max setpoints, linear \n');
+    clear find_ref_max
+    clear build_max_setpoints
+    max_sp_data_lin.params.ref_s = linspace(1, 5, 10);
+    max_sp_data_lin.params.gam_s = linspace(100, 10000, 10);
+    max_sp_data_lin = build_max_setpoints(max_sp_data_lin, 'fid', fid, 'force', 0);
+    fprintf(fid, 'Finished building max setpoints, linear. Total time = %.2f\n', toc);
 catch ME
-    errMsg = getReport(ME);
+    errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
      fprintf(fid, 'Failed to build max setpoints, linear: \n%s', errMsg);
 end
+% 3.----------- Generate  mpc max setpoints --------------------------
 
 try
-    max_sp_data_mpc = build_max_setpoints(max_sp_data_mpc, 'fid', fid);
-    fprintf(fid, 'Finished building max setpoints, mpc \n');
+    max_sp_data_mpc = build_max_setpoints(max_sp_data_mpc, 'fid', fid, 'verbose', 2);
+    fprintf(fid, 'Finished building max setpoints, mpc. Total time = %.2f\n', toc);
 catch ME
-    errMsg = getReport(ME);
+    errMsg = getReport(ME,  'extended','hyperlinks', 'off');
     fprintf(fid, 'Failed to build max setpoints, mpc: %s\n', errMsg);
 end
 
-try%
-   step_data_timeopt = build_timeopt_trajs(step_data_timeopt, 'force', 0, 'fid', fid, 'max_iter', 50);
-   fprintf(fid, 'Finished building time-optimal trajectories\n');
-
+% 4.----------- Generate for time-optimal trajectories ------------------
+clear build_timeopt_trajs
+try
+%    step_data_timeopt.params.ref_s = ref_s(50:52)
+   [step_data_timeopt, status] = build_timeopt_trajs(step_data_timeopt, 'force', 0, 'fid', fid, 'max_iter', 50);
+   if status
+       fprintf(fid, 'build_timeopt_trajs failed with exit status %0.0f\n', status);
+   else
+       fprintf(fid, 'Finished building time-optimal trajectories. Total time = %.2f\n', toc);
+   end
    catch ME
     exception = MException.last;
-    errMsg = getReport(ME);
+    errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
     fprintf(fid, 'Failed to build time-optimal trajectories:\n%s', errMsg);
 end
 
-fclose(fid);
+if fid >1
+    fclose(fid);
+    msg = freadf('log.txt');
+    to = { 'abraker@fastmail.com', 'robr9299@colorado.edu'};
+    ssendmail('MATLAB Report:compare_maximum_ref.mm', msg, 'to', to)
+%     ssendmail('test from matlab', 'body of test from matlab', 'to',...
+%         'robr9299@colorado.edu', 'attachments', {'figures/cp_traj.svg'})
+end
+
+
 %%
-figure(F200)
+% expose variables for plotting.
+% time_opt_settletime_s = step_data_timeopt.results.time_opt_settletime_s;
+clqr_settletime_s = step_data_clqr.results.settle_times_opt_cell{1};
 
+
+
+figure(300); clf
+colrs =  get(gca, 'colororder');
+hands = []
 % nh = length(hands)
-hands(end+1) = plot(ref_s, time_opt_settletime_s*1000, ':', 'LineWidth', 3)
-set(hands(end), 'DisplayName', 'Time Optimal')
+% hands(1) = plot(ref_s, time_opt_settletime_s*1000, ':', 'LineWidth', 3);
+% set(hands(end), 'DisplayName', 'Time Optimal')
+hold on
+hands(2) = plot(ref_s, clqr_settletime_s*1000, 'Color', colrs(1, :), 'LineWidth', 2);
+set(hands(end), 'DisplayName', 'CLQR')
+
 legend(hands)
-
-
-
 
 %%
 saveon = 1;
@@ -208,10 +247,45 @@ if saveon
     saveas(F200, 'figures/opttraj_setpoint_vs_ts.svg')
 %     save('data/clqr_opt_data.mat', 'clqr_opt_data');
 end
-
+%%
+% Plot maximum reference vs gamma
+F10 = figure(10); clf; hold on;
+colrs =  get(gca, 'colororder');
+hands_mxsp = []
+hands_mxsp(1) = plot(max_sp_data_lin.params.gam_s, max_sp_data_lin.results.max_setpoints,...
+                     '-', 'Color', colrs(1, :),...
+            'LineWidth', 2);
+set(hands_mxsp(1), 'DisplayName', 'LQR Lin + Sat');        
+for k = 1:length(max_sp_data_mpc.params.N_mpc_s)
+    
+    hands_mxsp(k+1) = plot(max_sp_data_mpc.params.gam_s, max_sp_data_mpc.results{k}.max_setpoints,...
+                       '-', 'Color', colrs(k+1, :), 'LineWidth', 2);
+    
+    stit = sprintf('MPC, N=%.0f', max_sp_data_mpc.params.N_mpc_s(k));
+    set(hands_mxsp(k+1), 'DisplayName', stit);
+end
+legend(hands_mxsp)
+%%
+xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 14);
+ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 14);
+%%
 
 %%
 clc
+clear TsByMaxRefParams
+
+rmax_s = [1, 2.1, 4.8];
+ts_by_rmax_lin = TsByMaxRefParams(max_sp_data_lin, rmax_s);
+
+ts_by_rmax_lin = ts_by_rmax_lin.run_ts_by_refs();
+
+%%
+clc
+clear TsByMaxRefParams
+figure(20)
+
+[ax, hands, leg] = ts_by_rmax_lin.plot_ts_v_r2max(gca);
+%%
 % Now load in the data generated by build_max_setpoints.m
 load('data/max_ref_data_dalay.mat')
 gam_s = max_ref_data.gam_s;
@@ -242,6 +316,12 @@ set(hands(1), 'DisplayName', 'CLQR opt')
 ylabel('settle time [ms]', 'FontSize', 16)
 xlabel('setpoint', 'FontSize', 16)
 grid
+
+
+
+
+
+
 
 rmax_s = [1, 2.1, 4.8];
 subs = [221, 222, 223, 224];

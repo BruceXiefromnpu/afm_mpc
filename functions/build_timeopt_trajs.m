@@ -28,7 +28,7 @@
 % the simulations again, saving the new data into the .mat file specified
 % in data_struct.file.
 
-function step_data = build_timeopt_trajs(step_data, varargin)
+function [step_data, status] = build_timeopt_trajs(step_data, varargin)
 % Description.
     defaultForce = 0;
     p = inputParser;
@@ -36,13 +36,15 @@ function step_data = build_timeopt_trajs(step_data, varargin)
     p.addParameter('max_iter', 20);
     p.addParameter('do_eject', true);
     p.addParameter('fid', 1);
+    p.addParameter('verbose', 1);
     
     parse(p, varargin{:});
     force = p.Results.force;
     max_iter = p.Results.max_iter;
     do_eject = p.Results.do_eject;
     fid = p.Results.fid;
-    
+    verbose = step_data.verbose;    
+    status = 0;
     if stepdata_struct_unchanged(step_data) && ~force
         load(step_data.file)
         fprintf(fid, 'LOG: (build_timeopt_trajs)\n');
@@ -50,7 +52,7 @@ function step_data = build_timeopt_trajs(step_data, varargin)
                  'without re-calculation.\n\n']);
         return
     end
-    fprintf(fid, 'LOG (build_timeopt_trajs\n');
+    fprintf(fid, 'LOG (build_timeopt_trajs:\n)');
     fprintf(fid, 'data has changed: re-building max setpoints.\n');
     
     params = step_data.params;
@@ -62,8 +64,7 @@ function step_data = build_timeopt_trajs(step_data, varargin)
     sys_nodelay = params.sys_nodelay;
     Nd = params.Nd;
     
-    verbose = step_data.verbose;    
-    
+        
     if verbose
         Fig = figure(200);
         hands = [];
@@ -94,11 +95,19 @@ function step_data = build_timeopt_trajs(step_data, varargin)
     
     warning('off', 'MATLAB:nargchk:deprecated')
     toBisect = TimeOptBisect(sys_sim, du_max);
+    toBisect.max_iter = max_iter;
+    
     for iter = 1:length(ref_s)
         fprintf(fid, ['Time Optimal bisection for ref=%.3f, iter = %.0f ' ...
                  'of %.0f\n'], ref_s(iter), iter, length(ref_s));
         xf = Nx_sim*ref_s(iter);
-        [X, U, S]=toBisect.time_opt_bisect(x0_sim, xf);
+        [X, U, status]=toBisect.time_opt_bisect(x0_sim, xf);
+        if status
+            fprintf(fid, ['Time-optimal bisection failed at ref = ' ...
+            '%0.3f. Exiting...'], ref_s(iter));
+            break
+        end
+        
         time_opt_settletime_s(iter) = U.Time(end) + Nd*sys_sim.Ts;
 
         traj_iter = struct('X', X, 'U', U);
@@ -112,6 +121,14 @@ function step_data = build_timeopt_trajs(step_data, varargin)
 
     if verbose
         h = plot(ref_s, time_opt_settletime_s*1000, 'LineWidth', 2); 
+    end
+    
+    % If the bisection failed, truncate the results, so that the
+    % simulation will run again.
+    if status
+        step_data.params.ref_s = ref_s(1:iter-1);
+        time_opt_settletime_s = time_opt_settletime_s(1:iter-1);
+        opt_trajs_save = opt_trajs_save(1:iter-1);
     end
     
     

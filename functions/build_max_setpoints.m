@@ -1,34 +1,82 @@
-% max_ref_data = build_max_setpoints(data)
 
-% I want to investigate methods to increase the condition number of the
-% Hessian
-
-% Build up the correct model from what is saved from sysID. Ie, put the
-% thing in a 
-
-function step_data = build_max_setpoints_obj(step_data, varargin)
-
-
-% ------------------ Linear + delU Saturation Case ---------------------- %
-% Iterate over a bunch of gammas and try to find the maximum setpoint for
-% each one. This code is pretty niave. We start at a very low setpoint and
-% slowly increase the setpoint until the settling time is reported as NaN.
-% A bisection search would probably be faster. This is complicated though
-% by the fact that instability seems to occur in the "middle": if the
-% setpoint is large enough, we dont have the stability problem, which is
-% weird.
-
-% pull data out of data variable:
+function step_data = build_max_setpoints(step_data, varargin)
+% step_data = build_max_setpoints(step_data, varargin) 
+%    
+% Builds a set of maximum setpoints for a family of LQR based
+% linear or MPC based controllers. The controllers are
+% parameterized by gamma. 
+%
+% Inputs
+% -----
+%   step_data : a class instance of StepData 
+%   
+% Outputs
+% -------
+%   step_data : the function will populate the StepData.results
+%   property upon exit. In addition, if the StepData.file field has
+%   been set, will also save the resulting instance into that file
+%   location.
+% 
+%   Upon (succseful exit), the results property will contain the
+%   following fields for the linear case:
+%   results.max_setpoints.
+%          results.data{idx}.t_settle_s
+%          results.data{idx}.y_traje_s
+%          results.data{idx}.ref_max
+%   where idx is the index for gamma.
+% 
+%   For the mpc case, results is itself a cell array, with size=length(N_mpc).
+% 
+% Optional Inputs
+% --------------
+%   build_max_setpoints(..., 'force', (true|false)) if true,  will
+%   force the simulations to be re-run regardless of if the
+%   underlying parameters are the same as the saved ones.
+% 
+%   build_max_setpoints(..., 'fid', fid) Default fid=1. Pass in a
+%   file id from fopen to write all logging info to a file. Will
+%   only be used if step_data.verbose >0.
+%
+%   verbose = 0 --> only initial and final status printed to console.
+%   verbose =  1 print progress bar to console
+%   verbose =  2 plot gamma vs max in Fig 1, and settle-times vs
+%   ref in Fig (all gammas).
+%   verbose = 3 plot y-trajs into a figure. A new figure is
+%   generated for each gamma.
+%   verbose = 4 also plot u/du-trajs into 2 figures. A new figure is
+%   generated for each gamma. This generates a lot of figures, so
+%   currently, they are all deleted after every 10th gamma.
+% 
+% Algorithm/Methods
+% ----------------
+%   Linear + delU Saturation Case 
+%   ----------------------------- 
+%    Iterate over a bunch of gammas and try to find the maximum setpoint for
+%    each one. This code is pretty niave. We start at a very low setpoint and
+%    slowly increase the setpoint until the settling time is reported as NaN.
+%    A bisection search would probably be faster. This is complicated though
+%    by the fact that instability seems to occur in the "middle": if the
+%    setpoint is large enough, we dont have the stability problem, which is
+%    weird.
+%
+%  MPC Case 
+%  --------
+%    This works similarly, but now we also allow the simulations to
+%    be done over a family of control horizons. Thus, there are two
+%    loops: the outer loop loops of N_mpc_s, the inner loop loops
+%    over gammas, like in the linear case.
     
-
-
+    
+    % pull data out of data variable:
     defaultForce = 0;
     p = inputParser;
     p.addParameter('force', defaultForce);
     p.addParameter('fid', 1);
+    p.addParameter('verbose', 0);
     parse(p, varargin{:});
     force = p.Results.force;
     fid = p.Results.fid;
+    verbose = p.Results.verbose;
     if stepdata_struct_unchanged(step_data) && ~force
         load(step_data.file)
         fprintf(fid, 'LOG (build_max_setpoints, mpc_on=%d)\n', step_data.params.sim_struct.mpc_on);
@@ -41,7 +89,7 @@ function step_data = build_max_setpoints_obj(step_data, varargin)
     
     params = step_data.params;
     % Expose parameters:
-    verbose = step_data.verbose;
+    
      
     gam_s = params.gam_s;
     ref_s = params.ref_s;
@@ -59,6 +107,9 @@ function step_data = build_max_setpoints_obj(step_data, varargin)
     
     if verbose > 1
         F1 = figure(1); clf;
+        xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 16)
+        ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 16)
+        
         F2 = figure(2); clf; hold on;
         ylabel('settle time [ms]')
         xlabel('ref_f')
@@ -74,41 +125,44 @@ function step_data = build_max_setpoints_obj(step_data, varargin)
     
     if ~mpc_on
         if verbose > 0
-            PB = ProgressBar(length(params.gam_s), 'start_str', 'Lin');
+            PB = ProgressBar(length(params.gam_s), 'start_str', ...
+                             'Lin', 'fid', fid);
         end
 
-        max_setpoints = build_max_sp_local(params, Figs, ...
+        result_s = build_max_sp_local(params, Figs, ...
                                            PB, verbose);
     else
-        % Pre-allocate.
-        max_setpoints = repmat(0*params.gam_s, length(N_mpc_s), 1);
+        %      result_s.max_setpoints = max_setpoints;
+        %      result_s.data = result_data; 
+        %        -Where max_setpoints is a vector (list) of the maximum
+        %         setpoint achievable for each supplied gamma.
+        %        - data is a vector of structs containing:
+        %            data(idx).t_settle_s
+        %            data(idx).y_traj_s
+        %            data(idx).ref_max
+        
+        result_s = cell(1, length(N_mpc_s));
         sim_struct.mpc_on = true;
         for mpc_iter = 1:length(params.N_mpc_s)
             N_mpc_iter = params.N_mpc_s(mpc_iter);
             if verbose > 0
                 start_str = sprintf('MPC, N=%.0f', N_mpc_iter);
-                PB = ProgressBar(length(params.gam_s), 'start_str', start_str);
+                PB = ProgressBar(length(params.gam_s), 'start_str', ...
+                                 start_str, 'fid', fid);
             end
-
-            max_setpoints_iter = build_max_sp_local(params, Figs, PB, verbose, ...
-                                                    N_mpc_iter);
-            max_setpoints(mpc_iter, :) = max_setpoints_iter;
+ 
+            result_s_iter = build_max_sp_local(params, Figs, PB, verbose, ...
+                                                           N_mpc_iter);
+            result_s{mpc_iter} = result_s_iter;
         end
     
     end
 
-    results.(max_sp_fieldname) = max_setpoints;
-    step_data.results = results;
+    % ---------------- Save Data and Pretty-fy Figures---------------------%
+    
+    % results.max_setpoints = max_setpoints;
+    step_data.results = result_s;
         
-    if verbose > 1
-        hlin.DisplayName = 'LQR lin + sat';
-        xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 16)
-        ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 16)
-        ylim([0, 5.1])
-        title('with delay')
-        % hmpc.DisplayName = 'MPC';
-        % legend([hlin, hmpc])
-    end
 
     if step_data.savedata
         save(step_data.file, 'step_data')
@@ -120,8 +174,27 @@ function step_data = build_max_setpoints_obj(step_data, varargin)
 
 end % END MAIN FUNCTION
 
-function max_setpoints_iter = build_max_sp_local(params, Figs, PB, verbose, ...
+% -----------------------------------------------------------------------%
+% -----------------------------------------------------------------------%
+
+function result_s = build_max_sp_local(params, Figs, PB, verbose, ...
                                                  varargin)
+% Returns
+% ------
+%      result_s.max_setpoints = max_setpoints;
+%      result_s.data = result_data; 
+%        -Where max_setpoints is a vector (list) of the maximum
+%         setpoint achievable for each supplied gamma.
+%        - data is a vector of structs containing:
+%            data{idx}.t_settle_s
+%            data{idx}.y_traj_s
+%            data{idx}.ref_max
+%         In other words, the structure contained in each element
+%         of data contains the max reference achievable for
+%         gamma(idx), and the y_trajectories and t_settle_s contain
+%         the eponymous data for each reference tested up until
+%         (and including) ref_max.
+    
     sim_struct = params.sim_struct;
     if length(varargin) == 1
         N_mpc_iter = varargin{1};
@@ -136,47 +209,28 @@ function max_setpoints_iter = build_max_sp_local(params, Figs, PB, verbose, ...
     ref_max = ref_s(1);
     max_setpoints_iter = 0*gam_s;
     if verbose
-        colrs = get(gca, 'colororder');
         PB.upd(0);
     end
+    data = cell(1, length(gam_s));
     for gam_iter = 1:length(gam_s)
         gamma = gam_s(gam_iter);
         % Update either K or the mpcProb.
         sim_struct = update_sim_struct(sim_struct, params, gamma, N_mpc_iter);
         
+        % Warm starting
         rmax_ind = find(ref_s == ref_max, 1);
         rmax_ind = max([rmax_ind-5, 1]);
         
         fig_base = 10*gam_iter;
-        [ref_max, t_settle_s] = find_ref_max(sim_struct, ref_s(rmax_ind:end),...
+        data_iter = find_ref_max(sim_struct, ref_s(rmax_ind:end),...
                                              'verbose', verbose,...
                                              'fig_base', fig_base);
-        max_setpoints_iter(gam_iter) = ref_max;
+        max_setpoints(gam_iter) = data_iter.ref_max;
+        data{gam_iter} = data_iter;
         
         if verbose > 1
-            if mod(gam_iter, 10)==0
-                fprintf('\ndeleting current figures\n\n')
-                for i=1:gam_iter
-                    close(figure(10*i + 1))
-                    close(figure(10*i + 2))
-                    close(figure(10*i + 3))
-                end
-            end
-            change_current_figure(Figs(2));
-            k_max = find(t_settle_s == 0, 1, 'first') -1;
-            plot(ref_s(1:k_max), t_settle_s(1:k_max)*1e3)
-            ylim([0, 10])
-
-            if exist('hlin', 'var')
-                delete(hlin)
-                drawnow()
-            end
-
-            change_current_figure(Figs(1))
-            hlin = plot(gam_s(1:gam_iter), max_setpoints_iter(1:gam_iter),...
-                        '-o', 'Color', colrs(1,:), 'LineWidth', 2);
-            drawnow()
-            hold on
+            plot_local(data_iter.t_settle_s, gam_s, ref_s, max_setpoints, ...
+                       Figs, gam_iter)
         end
         if verbose > 0
             PB.upd(gam_iter);
@@ -184,9 +238,37 @@ function max_setpoints_iter = build_max_sp_local(params, Figs, PB, verbose, ...
         
         %     keyboard
     end % end MAIN LOOP 
-    
+    result_s.max_setpoints = max_setpoints;
+    result_s.data = data;
 end
 
+function plot_local(t_settle_s, gam_s, ref_s, max_setpoints, Figs, gam_iter)
+% expose for easy access while plotting:
+    
+    if mod(gam_iter, 10)==0
+        fprintf('\ndeleting current figures\n\n')
+        for i=1:gam_iter
+            close(figure(10*i + 1))
+            close(figure(10*i + 2))
+            close(figure(10*i + 3))
+        end
+    end
+    change_current_figure(Figs(2));
+    % colrs = get(gca, 'colororder');
+    k_max = find(t_settle_s ~= 0, 1, 'last');
+    
+    plot(ref_s(1:k_max), t_settle_s(1:k_max)*1e3)
+    % ylim([0, 10])
+    hold on
+    drawnow()
+
+    change_current_figure(Figs(1))
+    hlin = plot(gam_s(1:gam_iter), max_setpoints(1:gam_iter),...
+                '-o',  'LineWidth', 2);
+
+    drawnow()
+    hold on
+end
 
 
 function sim_struct = update_sim_struct(sim_struct, params, gamma, N_mpc_iter)
@@ -230,78 +312,3 @@ function status = stepdata_struct_unchanged(data_struct)
 end
 
 
-
-
-% function status = data_struct_unchanged(data_struct)
-% % This function will return 1 if
-%     % (a) data_struct.file exists
-%     % (b) the fields .Q, .sys, .ref_s, .gam_s are the same
-%     %     as the data contained in data_struct.file
-%     % (c) the field (.max_setpoints_lin)(.max_setpoints_mpc) exists,
-%     %     depending on the flag data_struct.mpc_on
-    
-%     if ~exist(data_struct.file, 'file')
-%         status = 0;
-%         % keyboard
-%         return 
-%     else
-%         load(data_struct.file)
-%     end
-%     fields1 = {'Q', 'ref_s', 'gam_s'};
-%     fields2 = {'A', 'B', 'C', 'D', 'Ts'};
-%     if fields_have_changed(data_struct, max_ref_data, fields1)
-%         status = 0;
-%         % keyboard
-%         return
-%     elseif isfield(data_struct, 'sys') && isfield(max_ref_data, 'sys')
-%         if fields_have_changed(data_struct.sys, max_ref_data.sys, fields2)
-%             status = 0;
-%             % keyboard
-%         end
-%     else
-%         % only way we get here is if .sys is not afield of either structure.
-%         status = 0;
-%         keyboard
-%         return
-%     end
-            
-%     if data_struct.mpc_on == 0
-%         if ~isfield(max_ref_data, 'max_setpoints_lin')
-%             status = 0;
-%             % keyboard
-%             return
-%         end
-%     elseif data_struct.mpc_on == 1
-%         if ~isfield(max_ref_data, 'max_setpoints_mpc')
-%             status = 0;
-%             % keyboard
-%             return
-%         end
-%         if ~isequal(data_struct.N_mpc_s, max_ref_data.N_mpc_s)
-%             status = 0;
-%             % keyboard
-%             return
-%         end
-%     end
-%     status = 1;
-% end
-
-
-% function status = fields_have_changed(strct1, strct2, fields)
-%     for fld = fields
-%         A = isfield(strct2, fld{1}) || isprop(strct2, fld{1} );
-%         B = isfield(strct1, fld{1}) || isprop(strct1, fld{1} );
-%         if A && B
-%             if ~isequal(strct2.(fld{1}), strct1.(fld{1}))
-%                 % keyboard
-%                 status = 1;
-%                 return
-%             end
-%         else
-%             status = 1;
-%             % keyboard
-%             return 
-%         end
-%     end
-%     status = 0;
-% end
