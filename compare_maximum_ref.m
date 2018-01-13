@@ -289,13 +289,11 @@ end
 
 tic
 try
-fprintf(fid, 'Finished running Ts by Max Ref, MPC. Total time = %.2f\n\n', toc);
-ts_by_rmax_mpc = ts_by_rmax_lin.run_ts_by_refs_mpc('verbose', 1, 'fid', fid);
-
+    ts_by_rmax_mpc = ts_by_rmax_mpc.run_ts_by_refs_mpc('verbose', 1, 'fid', fid);
+    fprintf(fid, 'Finished running Ts by Max Ref, MPC. Total time = %.2f\n\n', toc);
 catch ME
     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
     fprintf(fid, 'Failed to run Ts by max setpoints, mpc: %s\n\n', errMsg);
-    
 end
 
 if fid >1

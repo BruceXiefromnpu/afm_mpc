@@ -31,7 +31,7 @@ for to_ = to
     cmd = sprintf('./sendattach.sh -t %s -s "%s" -b "%s"', to_{1}, subject, ...
                   message);
     cmd = add_attachments(cmd,  attachments);
-    keyboard
+
     status = system(cmd);
 end
 
