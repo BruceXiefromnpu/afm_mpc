@@ -1,4 +1,4 @@
-classdef TsByMaxRefParams < handle
+classdef TsByMaxRefParams
     properties
         StepData;
         rmax_s;
@@ -16,21 +16,30 @@ classdef TsByMaxRefParams < handle
         % This method will call self.run_ts_by_refs for each N_mpc
         % in self.StepData.params.N_mpc_s.
             p = inputParser;
-            defaultForce = 0;
-            p.addParameter('force', defaultForce);
+            p.addParameter('force', 0);
             p.addParameter('fid', 1);
             p.addParameter('verbose', 0);
             parse(p, varargin{:});
             opts.force = p.Results.force;
             opts.fid = p.Results.fid;
             opts.verbose = p.Results.verbose;
+            
+            if exist(self.file, 'file')
+                other = load(self.file);
+                if self.isequal(other.ts_by_rmax_data)
+                    fprintf(['Data appears unchanged. Loading saved ' ...
+                             'data without re-calculation\n'])
+                    self = other.ts_by_rmax_data;
+                    return
+                end
+            end
+            
             N_mpc_s = self.StepData.params.N_mpc_s;
             results = cell(1, length(N_mpc_s));
             
             for k = 1:length(N_mpc_s)
                 % idx_N_mpc = k
                 results{k} = run_ts_by_refs_local(self, k, opts);
-                
             end
             self.results = results;
             ts_by_rmax_data = self;
@@ -39,8 +48,7 @@ classdef TsByMaxRefParams < handle
 
         function self = run_ts_by_refs(self, varargin)
             p = inputParser;
-            defaultForce = 0;
-            p.addParameter('force', defaultForce);
+            p.addParameter('force', 0);
             p.addParameter('fid', 1);
             p.addParameter('verbose', 1);
             parse(p, varargin{:});
@@ -48,7 +56,16 @@ classdef TsByMaxRefParams < handle
             opts.fid = p.Results.fid;
             opts.verbose = p.Results.verbose;
 
-            
+            if exist(self.file, 'file')
+                other = load(self.file);
+                if self.isequal(other.ts_by_rmax_data)
+                    fprintf(['Data appears unchanged. Loading saved ' ...
+                             'data without re-calculation\n'])
+                    self = other.ts_by_rmax_data;
+                    return
+                end
+            end
+            keyboard
             result = run_ts_by_refs_local(self, [], opts);
             self.results = result;
             ts_by_rmax_data = self;
@@ -88,7 +105,8 @@ classdef TsByMaxRefParams < handle
         
 
         function eqq = isequal(self, other, varargin)
-            if length(varargin > 0)
+
+            if length(varargin) > 0
                 strict = 1;
             else
                 strict = 0;
@@ -99,7 +117,7 @@ classdef TsByMaxRefParams < handle
             else
                 eqq1 = isequal(self.StepData.params, ...
                                other.StepData.params);
-                eqq2 = isequal(self.rmax_s, other.rmax_s)
+                eqq2 = isequal(self.rmax_s, other.rmax_s);
                 eqq = eqq1 && eqq2;
             end
         end
@@ -114,7 +132,7 @@ function results = run_ts_by_refs_local(self, idx_N_mpc, opts)
         idx_N_mpc = 1;
         N_mpc = [];
     else
-        N_mpc = self.StepData.params.N_mpc_s(idx_N_mpc)
+        N_mpc = self.StepData.params.N_mpc_s(idx_N_mpc);
     end
     
 

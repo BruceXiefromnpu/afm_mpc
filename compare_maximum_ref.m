@@ -134,7 +134,7 @@ clear build_timeopt_trajs
 clear StepData
 clear StepParamsMPC
 
-%%
+
 clc
 clear StepData
 clear StepDataCLQR
@@ -157,7 +157,8 @@ max_sp_data_mpc = StepData(step_params_mpc, 'savedata', false,...
 %
 % 1.----------- Generate for CLQR optimal trajectories ------------------
 
-% fid = fopen('log2.txt', 'w+');
+% logfile = 'log2.txt';
+% fid = fopen(logfile, 'w+');
 fid = 1;
 %%
 tic
@@ -168,7 +169,7 @@ catch ME
     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
     fprintf(fid, 'Failed to build clqr_data: \n%s', errMsg);
 end
-%%
+
 % 2.----------- Generate LIN max setpoints --------------------------
 tic
 try
@@ -182,7 +183,7 @@ catch ME
     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
      fprintf(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
 end
-%%
+
 % 3.----------- Generate  mpc max setpoints --------------------------
 
 tic
@@ -193,12 +194,13 @@ catch ME
     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
     fprintf(fid, 'Failed to build max setpoints, mpc: %s\n\n', errMsg);
 end
-%%
+
 % 4.----------- Generate for time-optimal trajectories ------------------
 clear build_timeopt_trajs
 try
 %    step_data_timeopt.params.ref_s = ref_s(50:52)
-   [step_data_timeopt, status] = build_timeopt_trajs(step_data_timeopt, 'force', 0, 'fid', fid, 'max_iter', 50);
+   [step_data_timeopt, status] = build_timeopt_trajs(step_data_timeopt, 'force', 0,...
+       'verbose', 1, 'fid', fid, 'max_iter', 50);
    if status
        fprintf(fid, 'build_timeopt_trajs failed with exit status %0.0f\n', status);
    else
@@ -209,12 +211,11 @@ try
     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
     fprintf(fid, 'Failed to build time-optimal trajectories:\n%s', errMsg);
 end
-
+%%
 if fid >1
     fclose(fid);
-    msg = freadf('log.txt');
     to = { 'abraker@fastmail.com', 'robr9299@colorado.edu'};
-    ssendmail('MATLAB Report:compare_maximum_ref.mm', msg, 'to', to)
+    ssendmail('MATLAB Report:compare_maximum_ref.mm', logfile, 'to', to)
 %     ssendmail('test from matlab', 'body of test from matlab', 'to',...
 %         'robr9299@colorado.edu', 'attachments', {'figures/cp_traj.svg'})
 end
@@ -222,37 +223,39 @@ end
 
 %%
 % expose variables for plotting.
-% time_opt_settletime_s = step_data_timeopt.results.time_opt_settletime_s;
+clc
+time_opt_settletime_s = step_data_timeopt.results.time_opt_settletime_s;
 clqr_settletime_s = step_data_clqr.results.settle_times_opt_cell{1};
 
 
 
-figure(300); clf
+F300=figure(300); clf
 colrs =  get(gca, 'colororder');
-hands = []
+hands = [];
 % nh = length(hands)
-% hands(1) = plot(ref_s, time_opt_settletime_s*1000, ':', 'LineWidth', 3);
-% set(hands(end), 'DisplayName', 'Time Optimal')
+hands(1) = plot(ref_s, time_opt_settletime_s*1000, ':', 'LineWidth', 3);
+set(hands(end), 'DisplayName', 'Time Optimal');
 hold on
 hands(2) = plot(ref_s, clqr_settletime_s*1000, 'Color', colrs(1, :), 'LineWidth', 2);
 set(hands(end), 'DisplayName', 'CLQR')
 
 legend(hands)
+xlabel('reference [v]')
+ylabel('settle-time [ms]')
+
 
 %%
 saveon = 1;
-clqr_opt_data.opt_trajs_save = opt_trajs_save;
-clqr_opt_data.settle_times_opt_save = settle_times_opt_save;
+
 if saveon
-    saveas(F200, 'figures/opttraj_setpoint_vs_ts.svg')
-%     save('data/clqr_opt_data.mat', 'clqr_opt_data');
+    saveas(F300, 'figures/clqrTimeOpt_sp_vs_ts.svg')
 end
 %%
 % Plot maximum reference vs gamma
 F10 = figure(10); clf; hold on;
 colrs =  get(gca, 'colororder');
 hands_mxsp = []
-hands_mxsp(1) = plot(max_sp_data_lin.params.gam_s, max_sp_data_lin.results.max_setpoints,...
+hands_mxsp(1) = plot(max_sp_data_lin.params.gam_s, max_sp_data_lin.results{1}.max_setpoints,...
                      '-', 'Color', colrs(1, :),...
             'LineWidth', 2);
 set(hands_mxsp(1), 'DisplayName', 'LQR Lin + Sat');        
@@ -271,9 +274,16 @@ ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 14);
 
 saveas(F10, 'figures/max_ref_vs_gamma_lin_MPC.svg')
 %%
+% ======================================================================= %
+%                                                                         %
+% ------------------Settle-By-Maximum-Acheivable-Reference -------------- %
+%                                                                         %
+% ======================================================================= %
 clc
 clear TsByMaxRefParams
-fid = fopen('log-tsbyrefMax.txt', 'w+');
+logfile2 = 'log-tsbyrefMax.txt';
+fid = fopen('log-tsbyrefMax.txt', 'w');
+
 % fid = 1;
 rmax_s = [1, 2.1, 4.8, 5.5, 10];
 ts_by_rmax_lin = TsByMaxRefParams(max_sp_data_lin, rmax_s, 'data/ts_byrefmax_lin.mat');
@@ -286,7 +296,7 @@ catch ME
     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
     fprintf(fid, 'Failed to run Ts by max setpoints, linear: %s\n\n', errMsg);
 end
-
+%%
 tic
 try
     ts_by_rmax_mpc = ts_by_rmax_mpc.run_ts_by_refs_mpc('verbose', 1, 'fid', fid);
@@ -296,11 +306,12 @@ catch ME
     fprintf(fid, 'Failed to run Ts by max setpoints, mpc: %s\n\n', errMsg);
 end
 
+%% 
+
 if fid >1
     fclose(fid);
-    msg = freadf('log-tsbyrefMax.txt');
     to = { 'abraker@fastmail.com', 'robr9299@colorado.edu'};
-    ssendmail('MATLAB Report:compare_maximum_ref.mm', msg, 'to', to)
+    ssendmail('MATLAB Report:compare_maximum_ref.mm', logfile2, 'to', to)
 %     ssendmail('test from matlab', 'body of test from matlab', 'to',...
 %         'robr9299@colorado.edu', 'attachments', {'figures/cp_traj.svg'})
 end
@@ -314,6 +325,75 @@ figure(20)
 
 [ax, hands, leg] = ts_by_rmax_lin.plot_ts_v_r2max(gca);
 %%
+
+% Copy the ref-vs-ts figure;
+f400 = copyobj(F300, 0);
+hold on
+
+% hands2 = f400.Children.Children;
+hands2 = f400.CurrentAxes.Children;
+hands3 = gobjects(length(ts_by_rmax_lin.rmax_s), 1)
+
+for k=1:length(ts_by_rmax_lin.rmax_s)
+
+rmax = ts_by_rmax_lin.rmax_s(k);
+settle_times = ts_by_rmax_lin.results{k}.t_settle_s;
+ref_s = ts_by_rmax_lin.results{k}.ref_s_to_rmax;
+gamma = ts_by_rmax_lin.results{k}.gamma;
+
+stit = sprintf('LIN, $r_{max}=%.2f$, $\\gamma=%.0f$', rmax, gamma);
+hands3(k) = plot(ref_s, settle_times*1000);
+set(hands3(k), 'DisplayName', stit, 'LineWidth', 2);
+
+
+end
+
+
+
+hleg = legend([hands2; hands3]);
+set(hleg, 'interpreter', 'latex')
+
+
+%%
+clc
+num_N_mpcs = length(ts_by_rmax_mpc.StepData.params.N_mpc_s);
+fighands = gobjects(num_N_mpcs, 1);
+
+for mpc_iter=1:num_N_mpcs
+    fighands(mpc_iter) = copyobj(F300, 0);
+    hold on
+
+    % hands2 = f400.Children.Children;
+    hands2 = fighands(mpc_iter).CurrentAxes.Children;
+    hands3 = gobjects(length(ts_by_rmax_mpc.rmax_s), 1)
+
+
+    N_mpc = ts_by_rmax_mpc.StepData.params.N_mpc_s(mpc_iter)
+
+    for k=1:length(ts_by_rmax_mpc.rmax_s)
+        rmax = ts_by_rmax_mpc.rmax_s(k);
+        settle_times = ts_by_rmax_mpc.results{mpc_iter}{k}.t_settle_s;
+        ref_s = ts_by_rmax_mpc.results{mpc_iter}{k}.ref_s_to_rmax;
+        gamma = ts_by_rmax_mpc.results{mpc_iter}{k}.gamma;
+
+        stit = sprintf('MPC: N=%.0f, $r_{max}=%.2f$, $\\gamma=%.0f$', N_mpc, rmax, gamma);
+        hands3(k) = plot(ref_s, settle_times*1000);
+        set(hands3(k), 'DisplayName', stit, 'LineWidth', 2);
+    end
+
+    title(sprintf('Nmpc = %.0f', N_mpc))
+
+
+    hleg = legend([hands2; hands3]);
+    set(hleg, 'interpreter', 'latex')
+
+end
+%%
+
+
+
+
+
 % Now load in the data generated by build_max_setpoints.m
 load('data/max_ref_data_dalay.mat')
 gam_s = max_ref_data.gam_s;

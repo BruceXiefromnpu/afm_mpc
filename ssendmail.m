@@ -1,7 +1,7 @@
-function [ status ] = ssendmail(subject, message, varargin)
+function [ status ] = ssendmail(subject, message_file, varargin)
 % securely (meaning my password is not stored in clear text in matlabs 
 % config file) sends email.
-% with my msmpt recipient, subject, message
+% with my msmpt recipient, subject, message_file
 %
 % [ status ] = ssendmail(subject, message, varargin)
 %
@@ -28,10 +28,10 @@ if ~iscell(to)
 end
 for to_ = to
     % cmd = sprintf('echo "%s" |%s %s', msg, sndmail, to_{1});
-    cmd = sprintf('./sendattach.sh -t %s -s "%s" -b "%s"', to_{1}, subject, ...
-                  message);
+    cmd = sprintf('cat %s|./sendattach.sh -t %s -s "%s" ', message_file,...
+                  to_{1}, subject);
+                  
     cmd = add_attachments(cmd,  attachments);
-
     status = system(cmd);
 end
 

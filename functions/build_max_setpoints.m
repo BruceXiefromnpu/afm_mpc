@@ -167,12 +167,8 @@ function step_data = build_max_setpoints(step_data, varargin)
 
     if step_data.savedata
         save(step_data.file, 'step_data')
-        if verbose >1
-            saveas(F1, step_data.fig_files(1))
-            saveas(F1, step_data.fig_files(2))
-        end
     end
-
+    
 end % END MAIN FUNCTION
 
 % -----------------------------------------------------------------------%

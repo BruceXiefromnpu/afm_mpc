@@ -43,7 +43,8 @@ function [step_data, status] = build_timeopt_trajs(step_data, varargin)
     max_iter = p.Results.max_iter;
     do_eject = p.Results.do_eject;
     fid = p.Results.fid;
-    verbose = step_data.verbose;    
+    verbose = p.Results.verbose;
+    
     status = 0;
     if stepdata_struct_unchanged(step_data) && ~force
         load(step_data.file)
