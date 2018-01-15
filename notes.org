@@ -11,38 +11,6 @@
 #+SEQ_TODO: TODO STARTED WAITING DELEGATED APPT | DONE DEFERRED CANCELLED
 
 
-* Speed Comparison Tasks
-** DONE modify to also save trajectories.
-- State "DONE"       from "TODO"       [2018-01-12 Fri 16:50] \\
-  That took forever. Most of today. These cell arrays and arrays of structs confuse me.
-This needs to by done in 
-*** DONE [[file:functions/find_ref_max.m]]
-- State "DONE"       from "TODO"       [2018-01-12 Fri 16:51]
-*** DONE [[file:functions/build_max_setpoints.m]] so that the trajectories are saved into the results.
-- State "DONE"       from "TODO"       [2018-01-12 Fri 16:51]
-** TODO plot percent increases against time-optimal for linear 
-<2018-01-08 Mon 23:55>
-** TODO plot percent increases against time-optimal for MPC 
-<2018-01-08 Mon 23:56>
-
-** DONE verify plotting of [[file:functions/StepParamsCLQR.m]]
-- State "DONE"       from "TODO"       [2018-01-12 Fri 17:20] \\
-  quick
-** DONE add plotting to [[file:functions/StepParamsTimeOpt.m]]
-- State "DONE"       from "TODO"       [2018-01-12 Fri 18:05]
-** TODO subclass StepParams for build_max_setpoints.m??
-and add plotting functions etc? Not sure its worth it at this point. 
-** TODO new subclass or modofy [[file:functions/TsByMaxRefParams.m]] to include MPC
-** TODO Finish the scheme to check if data has generated load/regenerate 
-<2018-01-10 Wed 22:25>
-
-** TODO Simulate TsByRefMax for MPC and create PLOTs
-** TODO Bisect on ref-max vs gamma ??
-
-* State Estimation Tasks
-** TODO Try some of the LTR things. 
-e.g., $\gamma BB^{T}$, $\gamma$ large  <2018-01-08 Mon 23:56>
-
 * Quantifying the time savings (if any) of MPC and d-rated linear feedback
 I have been trying to figure out how to quantify the time savings (if any) of using MPC vs a de-rated, saturated linear feedback. The basic idea is:
 
@@ -116,3 +84,52 @@ BTW, all of this is from git commit '4c8970d'
 [fn:time] Of course, we might also think about comparing to the *time-optimal* trajectory for each setpoint. That is something that should be done at some point, but it will require some caveats. The most pressing caveat is that we must delete the slow real pole-zero pair before computing the time-trajectory, because the time-optimal trajectory requires that the states be at steady state. If we don't do this, then the resulting time-optimal trajectory will have a comparitively very slow settling time.
 
  
+
+
+* Speed Comparison Tasks
+** DONE modify to also save trajectories.
+- State "DONE"       from "TODO"       [2018-01-12 Fri 16:50] \\
+  That took forever. Most of today. These cell arrays and arrays of structs confuse me.
+This needs to by done in 
+*** DONE [[file:functions/find_ref_max.m]]
+- State "DONE"       from "TODO"       [2018-01-12 Fri 16:51]
+*** DONE [[file:functions/build_max_setpoints.m]] so that the trajectories are saved into the results.
+- State "DONE"       from "TODO"       [2018-01-12 Fri 16:51]
+** TODO plot percent increases against time-optimal for linear 
+<2018-01-08 Mon 23:55>
+** TODO plot percent increases against time-optimal for MPC 
+<2018-01-08 Mon 23:56>
+
+** STARTED StepDataCLQR class
+- State "STARTED"    from "TODO"       [2018-01-15 Mon 01:18] \\
+  need to debug still
+** STARTED StepDataTimeOpt class
+- State "STARTED"    from "TODO"       [2018-01-15 Mon 01:18] \\
+  need to debug still
+** TODO StepDataQuad class. 
+Note sure if the linear and MPC cases should be split here.
+** DONE verify plotting of [[file:functions/StepParamsCLQR.m]]
+- State "DONE"       from "TODO"       [2018-01-12 Fri 17:20] \\
+  quick
+** DONE add plotting to [[file:functions/StepParamsTimeOpt.m]]
+- State "DONE"       from "TODO"       [2018-01-12 Fri 18:05]
+** TODO subclass StepParams for build_max_setpoints.m??
+and add plotting functions etc? Not sure its worth it at this point. 
+** DONE new subclass or modofy [[file:functions/TsByMaxRefParams.m]] to include MPC
+- State "DONE"       from "TODO"       [2018-01-15 Mon 01:16] \\
+  works for mpc now
+** DONE Finish the scheme to check if data has generated load/regenerate 
+- State "DONE"       from "TODO"       [2018-01-14 Sun 20:40] \\
+  Finished this in TsBymaxrefparams
+<2018-01-10 Wed 22:25>
+
+** DONE Simulate TsByRefMax for MPC and create PLOTs
+- State "DONE"       from "TODO"       [2018-01-14 Sun 20:38] \\
+  that took FOR-E-VER. This doesn't make mpc look at all beneficial. 
+  Also doesn't agree with my conf paper results, but params are slightly different. Re-running with same params.
+** TODO Bisect on ref-max vs gamma ??
+
+* State Estimation Tasks
+** TODO Try some of the LTR things. 
+e.g., $\gamma BB^{T}$, $\gamma$ large  <2018-01-08 Mon 23:56>
+
