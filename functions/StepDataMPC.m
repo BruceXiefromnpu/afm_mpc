@@ -99,12 +99,11 @@ classdef StepDataMPC < StepDataQuad
                              'setpoints.\n']);
             end
             
+            
             % ------------------------------------------------------------------ %
-            % Finally, run the simulations. Pass all this shit into the local
-            % runner function.
+            % The parameter data has changed, so we re-run. Setup
+            % and run the simulations 
 
-            %      result_s.max_setpoints = max_setpoints;
-            %      result_s.data = result_data; 
             %        -Where max_setpoints is a vector (list) of the maximum
             %         setpoint achievable for each supplied gamma.
             %        - data is a vector of structs containing:

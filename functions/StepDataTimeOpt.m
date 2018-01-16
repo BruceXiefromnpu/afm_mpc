@@ -24,8 +24,6 @@ classdef StepDataTimeOpt < StepData
             % self.savedata =  p.Results.savedata;
             % self.results = [];
         end
-
-
         
         function plot_ref_vs_settle(self,ax, varargin)
         % plot_ref_vs_settle(self,ax, varargin)
@@ -135,16 +133,21 @@ classdef StepDataTimeOpt < StepData
             savedata = p.Results.savedata;
             
             status = 0;
-            if self.stepdata_struct_unchanged() && ~force
+            self.logger('%s LOG (build_timeopt_trajs):\n', ...
+                        datestr(now));
+            if force
+                self.logger(['Force = true, rebuilding time-optimal ' ...
+                             'trajectories\n']);
+            if self.stepdata_struct_unchanged() 
                 other = load(self.file);
-                self.logger('LOG: (build_timeopt_trajs)\n');
                 self.logger(['Data appears to be the same. Loading data ',...
                               'without re-calculation.\n\n']);
                 self = other.step_data;
                 return
+            else
+            self.logger(['data has changed: re-building max ' ...
+                         'setpoints.\n']);
             end
-            self.logger('LOG (build_timeopt_trajs):\n');
-            self.logger('data has changed: re-building max setpoints.\n');
             
             params = self.params;
             

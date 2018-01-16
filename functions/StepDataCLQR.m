@@ -12,24 +12,7 @@ classdef StepDataCLQR < StepData
     methods
         function self = StepDataCLQR(Params, varargin)
         % % First, parse the inputs we care about here:
-        %     p=inputParser();
-        %     p.KeepUnmatched = true;
-        %     p.addParameter('logger', @fprintf);
-        %     p.addParameter('ProgBar', @ProgressBar);
-        %     parse(p, varargin{:});
-        %     % Now, pull out everything that doesn't match, and
-        %     % re-package it into a cell array (varargin like) to
-        %     % pass into StepData. p.Unmatched is a struct. 
-        %     unm  = p.Unmatched;
-        %     unm_flds = fieldnames(unm);
-        %     varg = {};
-        %     for k = 1:length(unm_flds)
-        %         varg{end+1} = unm_flds{k};
-        %         varg{end+1} = unm.(unm_flds{k});
-        %     end
             self = self@StepData(Params, varargin{:});
-            
-
             
             self.plot_ref_vs_settle_fcn = @plot_ref_vs_settle;
 
