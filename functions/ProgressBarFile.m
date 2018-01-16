@@ -1,4 +1,4 @@
-% upd = ProgressBar(max_iter, varargin)
+% upd = ProgressBarFile(max_iter, varargin)
 % 
 % progressbar(..., 'start_str', start_str) a label for the start of the
 % progress bar
@@ -21,7 +21,7 @@
 % for i=1:N
 %     upd(i)
 % end
-classdef ProgressBar < handle
+classdef ProgressBarFile < handle
     properties
         max_iter;
         start_str;
@@ -34,7 +34,7 @@ classdef ProgressBar < handle
     end
     
     methods
-        function self = ProgressBar(max_iter, varargin)
+        function self = ProgressBarFile(max_iter, varargin)
             % self = ProgressBar(max_iter, varargin)
             p = inputParser;
             default_bar_len = 35;
@@ -43,7 +43,7 @@ classdef ProgressBar < handle
             addParameter(p, 'bar_len', default_bar_len, validScalarPosNum);
             addParameter(p, 'start_str', default_start_str);
             addParameter(p, 'logger', @fprintf);
-            
+
             parse(p, varargin{:})
 
             self.bar_len = p.Results.bar_len;
@@ -65,30 +65,18 @@ classdef ProgressBar < handle
             fracDone = iter / self.max_iter;
             percentDone = round(100 * fracDone, 0);
             
-            
-            done_bar = repmat('+', 1, floor(self.bar_len * fracDone));
-            undone_bar = repmat(' ', 1, self.bar_len - floor(self.bar_len * fracDone));
-            % whole_bar = sprintf('%s: [%s%s]', self.start_str,
-            % done_bar, undone_bar);
-            whole_bar = sprintf('%s  %s: [%s%s]', datestr(now), ...
-                                self.start_str, done_bar, undone_bar);
-            msg = sprintf('%s %3.0f', whole_bar, percentDone); 
+            if percentdone > self.prior_perc_done
+                done_bar = repmat('+', 1, floor(self.bar_len * fracDone));
+                undone_bar = repmat(' ', 1, self.bar_len - floor(self.bar_len * fracDone));
+                whole_bar = sprintf('%s  %s: [%s%s]', datestr(now), ...
+                                    self.start_str, done_bar, undone_bar);
+                msg = sprintf('%s %3.0f', whole_bar, percentDone); 
 
-            % if ~self.has_initialized || (self.logstate > 0 &&
-            % percentDone > self.prior_perc_done)
-            if ~self.has_initialized 
                 self.logger('%s\n', msg);
                 self.prior_msg = msg;
                 self.prior_length = length(msg);
                 self.has_initialized = 1;
-            elseif percentDone > self.prior_perc_done
-                
-                reverseStr = repmat(sprintf('\b'), 1, 1+length(self.prior_msg));
-                self.logger('%s%s\n', reverseStr, msg);
-                self.prior_msg = msg;
-                self.prior_length = length(msg);
             end
-
             self.prior_perc_done = percentDone;
             
         end

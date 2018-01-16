@@ -142,8 +142,10 @@ step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
 % 1.----------- Generate for CLQR optimal trajectories ------------------
 
 logfile = 'log_clqr.log';
-fid = fopen(logfile, 'w+');
-% fid = 1;
+echo_file([], logfile);
+logstart=2;
+
+
 %%
 % 1.----------- Generate LIN max setpoints --------------------------------
 tic

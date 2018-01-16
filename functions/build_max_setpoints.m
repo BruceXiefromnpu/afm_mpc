@@ -71,21 +71,23 @@ function step_data = build_max_setpoints(step_data, varargin)
     defaultForce = 0;
     p = inputParser;
     p.addParameter('force', defaultForce);
-    p.addParameter('fid', 1);
+    p.addParameter('logger', @fprintf); 
+    p.addParameter('ProgBar', @ProgressBar); 
     p.addParameter('verbose', 1);
     parse(p, varargin{:});
     force = p.Results.force;
-    fid = p.Results.fid;
+    logger = p.Results.logger;
+    
     verbose = p.Results.verbose;
     if stepdata_struct_unchanged(step_data) && ~force
         load(step_data.file)
-        fprintf(fid, 'LOG (build_max_setpoints, mpc_on=%d)\n', step_data.params.sim_struct.mpc_on);
-        fprintf(fid, ['Data appears to be the same. Loading data ',...
+        logger('LOG (build_max_setpoints, mpc_on=%d)\n', step_data.params.sim_struct.mpc_on);
+        logger(['Data appears to be the same. Loading data ',...
                  'without re-calculation.\n']);
         return
     end
-    fprintf(fid, 'LOG (build_max_setpoints, mpc_on=%d)\n', step_data.params.sim_struct.mpc_on);
-    fprintf(fid, 'data has changed: re-building max setpoints.\n');
+    logger('LOG (build_max_setpoints, mpc_on=%d)\n', step_data.params.sim_struct.mpc_on);
+    logger('data has changed: re-building max setpoints.\n');
     
     params = step_data.params;
     % Expose parameters:
@@ -121,12 +123,11 @@ function step_data = build_max_setpoints(step_data, varargin)
     % ------------------------------------------------------------------ %
     % Finally, run the simulations. Pass all this shit into the local
     % runner function.
-    PB = [];
     
     if ~mpc_on
         if verbose > 0
-            PB = ProgressBar(length(params.gam_s), 'start_str', ...
-                             'Lin', 'fid', fid);
+            PB = ProgBar(length(params.gam_s), 'start_str', ...
+                             'Lin');
         end
         % Make it a cell array of size one for compatibility with
         % the MPC case.
@@ -148,8 +149,8 @@ function step_data = build_max_setpoints(step_data, varargin)
             N_mpc_iter = params.N_mpc_s(mpc_iter);
             if verbose > 0
                 start_str = sprintf('MPC, N=%.0f', N_mpc_iter);
-                PB = ProgressBar(length(params.gam_s), 'start_str', ...
-                                 start_str, 'fid', fid);
+                PB = ProgBar(length(params.gam_s), 'start_str', ...
+                                 start_str);
             end
  
             result_s_iter = build_max_sp_local(params, Figs, PB, verbose, ...
@@ -243,7 +244,7 @@ function plot_local(t_settle_s, gam_s, ref_s, max_setpoints, Figs, gam_iter)
 % expose for easy access while plotting:
     
     if mod(gam_iter, 10)==0
-        fprintf('\ndeleting current figures\n\n')
+        logger('\ndeleting current figures\n\n')
         for i=1:gam_iter
             close(figure(10*i + 1))
             close(figure(10*i + 2))

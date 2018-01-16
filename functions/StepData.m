@@ -6,6 +6,8 @@ classdef StepData
         fig_files;
         savedata;
         results;
+        logger;
+        ProgBar
     end
     
     methods
@@ -13,12 +15,16 @@ classdef StepData
             p = inputParser;
             p.addParameter('savedata', true)
             p.addParameter('file', '')
+            p.addParameter('logger', @fprintf);
+            p.addParameter('ProgBar', @ProgressBar);
             parse(p, varargin{:});
-            
             
             self.params = Params;
             self.file = p.Results.file;
             self.savedata =  p.Results.savedata;
+            self.logger = p.Results.logger;
+            self.ProgBar = p.Results.ProgBar;
+            
             self.results = [];
         end
         
@@ -46,7 +52,7 @@ classdef StepData
                 % keyboard
                 return 
             else
-                load(self.file)
+                load(self.file);
                 % Provides: step_data
             end
             params_other = step_data.params;

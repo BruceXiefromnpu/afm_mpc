@@ -35,7 +35,7 @@ function sim_struct = build_sim_struct(self)
     
     sim_struct = struct('PLANT', self.plant, 'trun', self.trun, 'mpcProb1', mpcProb1,...
                         'du_max', self.du_max, 'mpc_on', false,...
-                        'xss', xss, 'Nx', Nx);
+                        'xss', xss, 'Nx', Nx, 'N_mpc', 0);
     
     
 end

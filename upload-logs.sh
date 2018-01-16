@@ -90,5 +90,5 @@ do
         upload "$FILE"
         LTIME="$ATIME"
     fi
-    sleep 60
+    sleep 600
 done

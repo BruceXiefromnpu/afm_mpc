@@ -11,14 +11,33 @@ classdef StepDataCLQR < StepData
     
     methods
         function self = StepDataCLQR(Params, varargin)
-            self = self@StepData(Params, varargin{:})
+        % % First, parse the inputs we care about here:
+        %     p=inputParser();
+        %     p.KeepUnmatched = true;
+        %     p.addParameter('logger', @fprintf);
+        %     p.addParameter('ProgBar', @ProgressBar);
+        %     parse(p, varargin{:});
+        %     % Now, pull out everything that doesn't match, and
+        %     % re-package it into a cell array (varargin like) to
+        %     % pass into StepData. p.Unmatched is a struct. 
+        %     unm  = p.Unmatched;
+        %     unm_flds = fieldnames(unm);
+        %     varg = {};
+        %     for k = 1:length(unm_flds)
+        %         varg{end+1} = unm_flds{k};
+        %         varg{end+1} = unm.(unm_flds{k});
+        %     end
+            self = self@StepData(Params, varargin{:});
+            
+
+            
             self.plot_ref_vs_settle_fcn = @plot_ref_vs_settle;
+
             % p = inputParser;
             % p.addParameter('savedata', true)
             % p.addParameter('file', '')
             % p.addParameter('fig_files', '')
             % parse(p, varargin{:});
-            
             
             % self.params = Params;
             % self.file = p.Results.file;
@@ -120,22 +139,21 @@ classdef StepDataCLQR < StepData
             defaultForce = 0;
             p = inputParser;
             p.addParameter('force', defaultForce);
-            p.addParameter('fid', 1);
             p.addParameter('verbose', 1);
             parse(p, varargin{:});
             force = p.Results.force;
-            fid = p.Results.fid;
             verbose = p.Results.verbose;
+            
             if self.stepdata_struct_unchanged() && ~force
                 other=load(self.file); % should provide step_data
-                fprintf(fid, 'LOG: (build_clqr_trajs)\n');
-                fprintf(fid, ['Data appears to be the same. Loading data ',...
+                self.logger('LOG: (build_clqr_trajs)\n');
+                self.logger(['Data appears to be the same. Loading data ',...
                               'without re-calculation.\n\n']);
                 self = other.step_data;
                 return
             end
-            fprintf(fid, 'LOG (build_clqr_trajs\n');
-            fprintf(fid, ['Data has changed or force=true: re-building ' ...
+            self.logger('LOG (build_clqr_trajs\n');
+            self.logger(['Data has changed or force=true: re-building ' ...
                           'CLQR trajectories.\n']);
             
             gam_s = self.params.gam_s;
@@ -224,13 +242,10 @@ classdef StepDataCLQR < StepData
             p = inputParser;
             
             defaultS = zeros(size(sys.b, 1), size(sys.b, 2));
-            defaultUMax = 0;
-            defaultSlewMax = 0;
-            defaultMPCmode = 'condensed';
             
             addParameter(p, 'S', defaultS);
             addParameter(p, 'verbose', 0);
-            addParameter(p, 'mpc_mode', defaultMPCmode);    
+            addParameter(p, 'mpc_mode', 'condensed');
             
             parse(p, varargin{:})
             S = p.Results.S;
@@ -264,7 +279,7 @@ classdef StepDataCLQR < StepData
                 NLQR_prob.add_U_constraint('slew', du_max);
             end
 
-            if verbose >= 2
+            if verbose >= 3
                 %     mkfig(verbose)
                 Fig = figure();
             else
@@ -281,7 +296,7 @@ classdef StepDataCLQR < StepData
             tvec = (0:1:N_traj-1)*sys.Ts; 
             settle_times = zeros(1, length(ref_s));
             start_str = sprintf('CLQR, gamma: %.0f', R);
-            upd = ProgressBar(length(ref_s), 'start_str', start_str);
+            upd = self.ProgBar(length(ref_s), 'start_str', start_str);
             
             upd.upd(0);
             for iter = 1:length(ref_s)
@@ -320,7 +335,7 @@ classdef StepDataCLQR < StepData
                 upd.upd(iter);
                 
             end
-            % fprintf('PUT\n')
+            % self.logger('PUT\n')
             traj_s.X_vec_s = X_vec_s;
             traj_s.Y_vec_s = Y_vec_s;
             traj_s.U_vec_s = U_vec_s;

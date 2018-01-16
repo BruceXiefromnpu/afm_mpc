@@ -97,23 +97,29 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
         end
         
         if isnan(t_settle)
+            ts_is_nan = true;
             break
         else
+            ts_is_nan = false;
             t_settle_s(iter) = t_settle;
             y_traj_s(iter) = Y;
         end    
     end 
     
-    if iter > 1
-        ref_max = ref_s(iter-1);
-        result.ref_max = ref_max;
-        result.y_traj_s = y_traj_s;
-        result.t_settle_s = t_settle_s;
-    else
+    if ts_is_nan && iter == 1 % The smallest reference was unstable.
         result.ref_max = NaN;
         result.t_settle_s = [];
         result.y_traj_s = Y;
+        return
+    elseif ts_is_nan % we reached an unstable ref, but its not the
+                     % first. So largest stable is the last one.
+        ref_max = ref_s(iter-1);
+    else             % We never found an unstable ref.
+        ref_max = ref_s(iter);
     end
+    result.ref_max = ref_max;
+    result.y_traj_s = y_traj_s;
+    result.t_settle_s = t_settle_s;
 
 end
 

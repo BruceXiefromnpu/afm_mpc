@@ -16,7 +16,7 @@ classdef StepParamsMPC
         
     methods
         function self = StepParamsMPC(sys, ref_s, du_max, Q, gam_s, ...
-                                      plant, N_mpc_s, mpc_mode, trun)
+                                      plant, trun, N_mpc_s, mpc_mode)
             self.sys = sys;
             self.ref_s = ref_s;
             self.du_max = du_max;
@@ -41,7 +41,7 @@ function sim_struct = build_sim_struct(self)
     
     sim_struct = struct('PLANT', self.plant, 'trun', self.trun, 'mpcProb1', [],...
                         'du_max', self.du_max, 'mpc_on', true,...
-                        'xss', xss, 'Nx', Nx);
+                        'xss', xss, 'Nx', Nx, 'N_mpc', 0);
     
     
 end

@@ -106,8 +106,6 @@ classdef StepDataTimeOpt < StepData
         %   Hz. I should augment this to also allow inputing an overloading
         %   function handle that will do this. 
         % 
-        %   build_timeopt_trajs(..., 'fid' 1) A file id to write
-        %   logging data to.
         % 
         %   build_timeopt_trajs(..., 'verbose', 1) 1 --> write
         %   logging info to file id. 2 --> make plot to figure 200 also.
@@ -125,28 +123,28 @@ classdef StepDataTimeOpt < StepData
             p.addParameter('force', defaultForce);
             p.addParameter('max_iter', 20);
             p.addParameter('do_eject', true);
-            p.addParameter('fid', 1);
             p.addParameter('verbose', 1);
             p.addParameter('savedata', 1);
+
             parse(p, varargin{:});
+
             force = p.Results.force;
             max_iter = p.Results.max_iter;
             do_eject = p.Results.do_eject;
-            fid = p.Results.fid;
             verbose = p.Results.verbose;
             savedata = p.Results.savedata;
             
             status = 0;
             if self.stepdata_struct_unchanged() && ~force
                 other = load(self.file);
-                fprintf(fid, 'LOG: (build_timeopt_trajs)\n');
-                fprintf(fid, ['Data appears to be the same. Loading data ',...
+                self.logger('LOG: (build_timeopt_trajs)\n');
+                self.logger(['Data appears to be the same. Loading data ',...
                               'without re-calculation.\n\n']);
                 self = other.step_data;
                 return
             end
-            fprintf(fid, 'LOG (build_timeopt_trajs):\n');
-            fprintf(fid, 'data has changed: re-building max setpoints.\n');
+            self.logger('LOG (build_timeopt_trajs):\n');
+            self.logger('data has changed: re-building max setpoints.\n');
             
             params = self.params;
             
@@ -189,12 +187,12 @@ classdef StepDataTimeOpt < StepData
             toBisect.max_iter = max_iter;
             
             for iter = 1:length(ref_s)
-                fprintf(fid, ['Time Optimal bisection for ref=%.3f, ref_iter = %.0f ' ...
+                self.logger(['Time Optimal bisection for ref=%.3f, ref_iter = %.0f ' ...
                               'of %.0f\n'], ref_s(iter), iter, length(ref_s));
                 xf = Nx_sim*ref_s(iter);
                 [X, U, status]=toBisect.time_opt_bisect(x0_sim, xf);
                 if status
-                    fprintf(fid, ['Time-optimal bisection failed at ref = ' ...
+                    self.logger(['Time-optimal bisection failed at ref = ' ...
                                   '%0.3f. Exiting...'], ref_s(iter));
                     break
                 end
@@ -207,7 +205,7 @@ classdef StepDataTimeOpt < StepData
                 if verbose >=2
                     change_current_figure(Fig); 
                     hold on
-                    hands(iter) = plot(ref_s(iter), settle_times_opt(iter)*1000, 'xk'); 
+                    hands(iter) = plot(ref_s(iter), settle_times_opt(iter)*1000, '-xk'); 
                 end
             end
             
@@ -222,7 +220,7 @@ classdef StepDataTimeOpt < StepData
             end
             
             self.results.settle_times_opt =  settle_times_opt;
-            self.self.results.opt_trajs_cell.Y_vec_s = Y_vec_s;
+            self.results.opt_trajs_cell.Y_vec_s = Y_vec_s;
             self.results.opt_trajs_cell.X_vec_s = X_vec_s;
             self.results.opt_trajs_cell.U_vec_s = U_vec_s;
             
