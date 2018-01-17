@@ -1,4 +1,4 @@
-classdef StepDataMPC < StepDataQuad
+classdef StepDataMPC_parfor < StepDataQuad_parfor
     
     properties
         % params;
@@ -9,8 +9,8 @@ classdef StepDataMPC < StepDataQuad
     end
     
     methods
-        function self = StepDataMPC(Params, varargin)
-            self = self@StepDataQuad(Params, varargin{:})
+        function self = StepDataMPC_parfor(Params, varargin)
+            self = self@StepDataQuad_parfor(Params, varargin{:})
         end
         function self = build_max_setpoints(self, varargin)
         % self = build_max_setpoints(self, varargin) 
@@ -115,14 +115,15 @@ classdef StepDataMPC < StepDataQuad
             gam_s = self.params.gam_s;
             result_s = cell(1, length(self.params.N_mpc_s));
             sim_struct.mpc_on = true;
-            for mpc_iter = 1:length(N_mpc_s)
+            ProgBar = @self.ProgBar;
+            parfor mpc_iter = 1:length(N_mpc_s)
                 N_mpc_iter = N_mpc_s(mpc_iter);
                 if verbose > 0
                     start_str = sprintf('MPC, N=%.0f', N_mpc_iter);
-                    PB = self.ProgBar(length(gam_s), 'start_str', ...
+                    PB = ProgBar(length(gam_s), 'start_str', ...
                                  start_str);
                 end
-                self.params.sim_struct.N_mpc = N_mpc_iter;
+%                 self.params.sim_struct.N_mpc = N_mpc_iter;
                 result_s_iter = self.build_max_sp_local(PB, verbose, ...
                                                    N_mpc_iter);
                 result_s{mpc_iter} = result_s_iter;

@@ -48,9 +48,11 @@ end
 
 function CheckPrms(block)
   mpcProb = block.DialogPrm(1).Data;
-  
-  if ~isa(mpcProb, 'sparseMPCprob') && ~isa(mpcProb, 'condensedMPCprob') 
-    error('Need condensedMPCprob or FGMprob data type.');
+  ok_objs = ['sparseMPCprob', 'sparseMPCprob_OA',...
+             'condensedMPCprob', 'condensedMPCprob_OA'];
+  if ~ismember(class(mpcProb), ok_objs)
+% ~isa(mpcProb, 'sparseMPCprob') && ~isa(mpcProb, 'condensedMPCprob') && ~isa(mpcProb, 'condensedMPCprob_OA') 
+    error('Need condensedMPCprob or sparseMPCprob data type.');
   end
 end  
 

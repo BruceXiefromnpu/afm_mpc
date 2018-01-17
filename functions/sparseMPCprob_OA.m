@@ -1,4 +1,4 @@
-classdef sparseMPCprob < handle
+classdef sparseMPCprob_OA < handle
     % sparseMPCprob  container for the sparse MPC QP formulation.
     %         H;
     %         M;
@@ -19,8 +19,10 @@ classdef sparseMPCprob < handle
         H;      % The problem Hessian
         Aeq;    % The LHS equality constraint enforcing dynamcs.
         beq;    % the RHS equality equality constraint enforcing dynamcs.
-        Ainq;   % Inequality LHS for control constraint.  
-        binq;   % Inequality RHS for control constraint.  
+%         Ainq;   % Inequality LHS for control constraint.  
+%         binq;   % Inequality RHS for control constraint. 
+        lb;
+        ub;
         N_mpc;  % Control horizon
         kappa;  % condition number of H
         ns;     % number of states.
@@ -30,7 +32,7 @@ classdef sparseMPCprob < handle
     end
     
     methods
-        function obj = sparseMPCprob(sys,N, Q,Qp, R, S)
+        function obj = sparseMPCprob_OA(sys,N, Q,Qp, R, S)
             % obj = sparseMPCprob(sys,N, Q,Qp, R, S)
             % S can be [], in which case, it is set to the zero matrix.
             if ~exist('S', 'var')
@@ -42,8 +44,10 @@ classdef sparseMPCprob < handle
             obj.H     = sparse(H);
             obj.Aeq   = sparse(Aeq);
             obj.beq   = beq;
-            obj.Ainq  = [];
-            obj.binq  = [];
+%             obj.Ainq  = [];
+%             obj.binq  = [];
+            obj.lb    =[];
+            obj.ub    =[];
             obj.N_mpc = N;
             obj.kappa = cond(H);
             obj.ns = size(sys.b,1);
@@ -87,8 +91,7 @@ classdef sparseMPCprob < handle
             
             beq_xk = self.beq;
             beq_xk(1:self.ns) = xk_1;
-            UX = mpcSolve_local(self.H, self.Ainq, self.binq,...
-                self.Aeq, beq_xk, self.qpopts);
+            UX = mpcSolve_qpoa(self.H, self.Aeq, beq_xk, self.lb, self.ub);
             
             % Split the solution into controls and states.
             U = UX(1:self.nu*self.N_mpc)';
@@ -115,25 +118,32 @@ classdef sparseMPCprob < handle
 
             
             if strcmp(type, 'box')
-                Zro = zeros(self.N_mpc*self.nu*2, (self.N_mpc+1)*self.ns);
-                I = eye(self.N_mpc*self.nu);
-                Ainq = [[I;-I], Zro];
-                binq = [ones(self.N_mpc,1)*bnds(2);
-                       ones(self.N_mpc,1)*(-bnds(1))];
+                lb_u = ones(self.nu*self.N_mpc, 1)*bnds(1);
+                lb_x = ones(self.ns*(1+self.N_mpc), 1)*(-Inf);
+                ub_u = ones(self.nu*self.N_mpc, 1)*bnds(2);
+                ub_x = ones(self.ns*(1+self.N_mpc), 1)*(Inf);
                 
-            elseif strcmp(type, 'slew')
-                Zro = zeros((self.N_mpc*self.nu-1)*2, (self.N_mpc+1)*self.ns);
-                S = derMat(self.N_mpc);
-                Ainq = [[S; -S], Zro];
-                binq = [zeros(2*self.N_mpc-2, 1)+bnds(1)];
-
+                self.lb = [lb_u;lb_x];
+                self.ub = [ub_u; ub_x];
+%             elseif strcmp(type, 'slew')
+%                 Zro = zeros((self.N_mpc*self.nu-1)*2, (self.N_mpc+1)*self.ns);
+%                 S = derMat(self.N_mpc);
+%                 Ainq = [[S; -S], Zro];
+%                 binq = [zeros(2*self.N_mpc-2, 1)+bnds(1)];
             end
-            self.Ainq = [self.Ainq; Ainq];
-            self.binq = [self.binq; binq];
+%             self.Ainq = [self.Ainq; Ainq];
+%             self.binq = [self.binq; binq];
         end
         
     end % METHODS
     
+end
+
+function UX = mpcSolve_qpoa(H, Aeq, beq, lb, ub)
+    opts = qpOASES_options('MPC', 'enableEqualities', 1,...
+        'enableFarBounds', 1);
+    f  = zeros(size(H,2),1);
+    UX = qpOASES(H, f, Aeq, lb, ub, beq, beq, {opts});
 end
 
 function UX = mpcSolve_local(H, Ainq,binq, Aeq, beq, qpopts)
@@ -180,11 +190,13 @@ function [H, Aeq, beq] = clqrProblem_local(sys, N, Q, R, Qp, S)
     
     
     % Now build the equality constraint. This should look like:
-    %  [I 0 0  0 0 0 ][x0]   [x0]
-    %  [A B -I 0 0 0 ][u0] = [0 ]
-    %  [0 0  A B -I  ][x1]   [0 ]
-    %                 [u1]
-    %                 [x_N] 
+    %  [0 0  0|    |0  0 ][u0]   [x0]
+    %  [0 0  0| I  |0  0 ][u1]   [0]
+    %  [0 0  0|    |0  0 ][uN]   [0]
+    %  [-----------------][--] = [--]
+    %  [B 0  0 |I -A  0 ][x0]    [0 ]
+    %  [0 B  0 |0  I  -A][x1]    [0 ]
+    %                    [x_N] 
     
     
     I_b = eye(N, N);

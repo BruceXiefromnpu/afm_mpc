@@ -79,7 +79,58 @@ This is essentially as you would expect given the results of [[fig:perc_clqr]]. 
 
 BTW, all of this is from git commit '4c8970d'
 
+
+* This takes forever! Or taking a 30 hour simulation to 37 minutes
+Running these parameter sweeps takes takes an enormours amount of time, especially the MPC simulations. I have looked into a couple things to speed this up over the last couple of days. Even ignoring the extra time incurred to do one MPC simulation (over linear feedback), I am looking at multiple control horizons, and the QP takes longer to solve the longer the control horizon gets. Two effective strategies here are (1) using matlabs parfor to simulate over multiple control horizons at once and (2) finding a faster QP solver.
+** Be smarter: warm start the max-setpoint search
+If you look back at [[fig:maxsplin]], you might notice that the maximum setpoint never decreases with when we increase $\gamma$. We observe this behaivior in both the saturated/linear case as well as the MPC case. This makes sense. Thus, when re-running the maximum setpoint search, rather than starting each $\gamma$-iteration at the first setpoint in the list, we could start it at the previous maximum setpoint found. Im still a little skeptical that this holds for every case, so instead of starting at the previous maximum setpoint, I start the search 5 setpoints back, which is a number I chose without much thought. In any case, doing this takes my simulation time from about 30 hours to 8 hours.
+
+** An external Solver: qpOASES
+This part of the story is as much blind luck as anything else. The next idea to speed the MPC simulations up was to speed up the individual simulation times. I have been using a single block diagram with a matlab S-function to solve the MPC problem. The S-function takes as a parameter an instance of my condensedMPCprob or sparseMPCprob, or an FGMProb [fn:1]. It is my understanding that matlab doesn't compile a matlab S-function like it does the rest of the simulink model. So my first thought was that I would try to basically either re-write the S-function in c or, more ideally, I would try to automatically generate c-code for the S-function with matlab coder. Unfortunately, for this to do any good, we need to be able to do codegen for quadprog, which matlab doesn't support. 
+
+So I spent this afternoon looking at external solvers which I *could* compile. Of course, in the back of my mind, I knew that quadprog is not implemented as a bunch of matlab code but is itself a compiled function. But I chose to ignore this obvious fact and spent an afternoon looking for QP c libraries. I ended up installing a library called [[https://projects.coin-or.org/qpOASES][qpOASES]], which is designed specifically to solve QP's taking the form
+
+\begin{align}
+\min{x} & \frac{1}x^{T} H x + x^{T} g\\
+\text{s.t.}&\\
+lb  & \leq x \leq ub\\
+lb_{A} & \leq Ax \leq ub_{A}
+\end{align}
+
+Equality constraints can be enforced by letting $lb_{j}=ub_{j}$ for $j$ where you need equality rather than inequality. If you read the documentation and the associated paper, they will tell you that qpOASES is best for small to medium sized problems. I will note here that matlab's quadprog uses an interior points method, while qpOASES uses an active set method. I'm sure you can find some heuristics in the literature about which method is better for different MPC formulations, but I will share here some quick results comparing the two for both methods.
+
+
+About a month ago, I compared the solution quality using the condensed vs the sparse MPC form (both using matlab's quadprog). The results I got showed essentially no difference in the solutions, up to control horizons of about 400 (which was as large as I tested). It seems the conditioning problem is mostly a problem only when using the FGM. So I have been using the condensed form in these simulations. 
+
+For a control horizon of $N=40$, the following figure shows the error between qpOASES and matlab's quadprog.
+#+caption: Error between Matlab's quadprog and qpOASES
+#+name: fig:qpOA_error
+[[file:figures/qpOASES_vs_quadprog_error.svg]]
+
+ 
+
+Anyway, qpOASES is significantly faster, on the order of 6-10 times. And this is without using any of the warm starting. For example, the last time I ran this set simulations using quadprog, the MPC part took 8.8 hours. This was before [[hotstart][my "warm-starting"]] of the max setpoint search. *Using qpOASES, this took 1.3 hours.*
+*** Installing
+Building qpOASES went without a hitch. The developers have also build a matlab/mex interface. This didn't compile with the recommended matlab script. However, they also included a standard Makefile, and once I got the include paths for matlabs libraries set, this build just fine. It will be interesting to see how this goes on the windows machine...
+
+*** What about the sparse formulation?
+Out of curiosity, I also compared the solution time of quadprog vs qpOASES solving the sparse MPC formulation. Here, the results are drastically different. For a horizon of $N=8$, quadprog takes 0.014 seconds and qpOASES takes 0.65 seconds, which is about *45 times slower*. For $N=40$, quadprog finishes is 0.075 seconds and qpOASES took 144 seconds, i.e., over *1900 times slower*. It is important to note here that I did not compile qpOASES with either of the recommended sparse solvers, MA27, or MA57, so these results could change significantly if I linked to one of those two. UPDATE: Linking to MA57 seems to reduce the time from 144 seconds to about 6 seconds. 
+
+*The moral here is that that (1) algorithms matter (2) choose the right one for the job*
+
+UPDATE: looks like if I warm-start the QP, then quadprog doesn't seem to run any faster, but qpOASES runs about twice as fast. Well, that only takes it down to about 28 minutes.
+
+** Matlabs parfor
+Matlab's parfor command lets you unroll a for loop if the iterations are independant and you follow a few rules.
+In the end parfor took my simulation from 1.3 hours to 37 minutes on my laptop which has two physical cores. This should be nearly halved on a machine with 4 cores (or 8 processors typically).
+*** Logging with parfor
+One of the unexpected things this broke was my data logging scheme. I had previously been passing a file identifier(fid) into all the functions and fprintf(fid,...)-ing stuff so I could see where the simulation was. The problem though is that when parfor sends a loop iteration to a new matlab process ('worker' in Mathworks parlance), the fid becomes meaningless. Now, instead of an fid, I pass a function handle around that I call logger, and replace all the fprintf statements logger('%s', str), e.g.. By default, all the functions will set logger = @fprintf. If I want to write to a file, then I pass a handle to a method in some class that I instantiate that will write to a file. In that class method that has the file name I want to log to as a propertie and in the logger method, I can set a while loop to try to open the file and the resulting fid comes back as >1. This solution is way better and more general than splitting the logging up into different files, or passing in the log-file name and implementing that as just some function. For example, suppose I want to both write to a log file and print to the console? Then I just create a new class that will do that and pass that function handle in, rather than going through all the code and adding more fprintf statements or something.
+
+Somewhat ironically, now that my simulation finishes in 35 minutes, I don't think I really need all this logging and data uploading...
+
 * Footnotes
+
+[fn:1] Before I did this, I called the QP solver (wheather quadprog or my FGM solver) from a matlab function in simulink. The problem with this is that you cannnot pass a class object or a function handle into the matlab function. This means that I needed separate simulink diagrams for each of the three cases(sparse-quadprog, condensed-quadprog, and condensed FGM). This meant that every change to a simulink model, wheather variable names or whatever, had to be implemented in several different models by hand. By using an S-function which takes as a parameter a class which has the solution to QP built in as a class method, I can have a single simulink model and only change which class I use.
 
 [fn:time] Of course, we might also think about comparing to the *time-optimal* trajectory for each setpoint. That is something that should be done at some point, but it will require some caveats. The most pressing caveat is that we must delete the slow real pole-zero pair before computing the time-trajectory, because the time-optimal trajectory requires that the states be at steady state. If we don't do this, then the resulting time-optimal trajectory will have a comparitively very slow settling time.
 
@@ -100,20 +151,28 @@ This needs to by done in
 ** TODO plot percent increases against time-optimal for MPC 
 <2018-01-08 Mon 23:56>
 
-** STARTED StepDataCLQR class
+** DONE StepDataCLQR class
+- State "DONE"       from "STARTED"    [2018-01-17 Wed 11:09] \\
+  Finished this a couple days ago
 - State "STARTED"    from "TODO"       [2018-01-15 Mon 01:18] \\
   need to debug still
-** STARTED StepDataTimeOpt class
+** DONE StepDataTimeOpt class
+- State "DONE"       from "STARTED"    [2018-01-17 Wed 11:09] \\
+  finished a couple days ago
 - State "STARTED"    from "TODO"       [2018-01-15 Mon 01:18] \\
   need to debug still
-** TODO StepDataQuad class. 
+** DONE StepDataQuad class. 
+- State "DONE"       from "TODO"       [2018-01-16 Tue 21:03] \\
+  Finished this yesterday
 Note sure if the linear and MPC cases should be split here.
 ** DONE verify plotting of [[file:functions/StepParamsCLQR.m]]
 - State "DONE"       from "TODO"       [2018-01-12 Fri 17:20] \\
   quick
 ** DONE add plotting to [[file:functions/StepParamsTimeOpt.m]]
 - State "DONE"       from "TODO"       [2018-01-12 Fri 18:05]
-** TODO subclass StepParams for build_max_setpoints.m??
+** DONE subclass StepParams for build_max_setpoints.m??
+- State "DONE"       from "TODO"       [2018-01-16 Tue 22:37] \\
+  It made more sense to subclass StepData >-- StepDataQuad --{StepDataMPC, StepDataLin}
 and add plotting functions etc? Not sure its worth it at this point. 
 ** DONE new subclass or modofy [[file:functions/TsByMaxRefParams.m]] to include MPC
 - State "DONE"       from "TODO"       [2018-01-15 Mon 01:16] \\
@@ -128,6 +187,11 @@ and add plotting functions etc? Not sure its worth it at this point.
   that took FOR-E-VER. This doesn't make mpc look at all beneficial. 
   Also doesn't agree with my conf paper results, but params are slightly different. Re-running with same params.
 ** TODO Bisect on ref-max vs gamma ??
+
+** DONE Implement warm-start for Max-Setpoint search<<hotstart>>
+From the data we have so far, the maximum setpoints increase monotonically with $\gamma$. Thus, instead of starting the max setpoint search from the very bottom, we should start it at the previous maximum setpoint we found for the last $\gamma$ in the list. Alternativly, we can be extra save and move back a few.
+- State "DONE"       from "TODO"       [2018-01-15 Mon 21:37] \\
+  I ended up implemented this as looking back in the list references by 5.
 
 * State Estimation Tasks
 ** TODO Try some of the LTR things. 

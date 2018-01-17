@@ -109,41 +109,37 @@ trun = Ts*N_traj;
 %%
 clc
 
-logfile = 'log-test.log';
+logfile = 'log-lin-mpc-parfor_hotstart.log';
 LG = EchoFile(logfile);
-% logger = @LG.echo_file;
-% ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', logger);
-logger = @fprintf;
-ProgBar = @(max_iter, varargin)ProgressBar(max_iter, varargin{:}, 'logger', logger);
+logger = @LG.echo_file;
+ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', logger);
+% logger = @fprintf;
+% ProgBar = @(max_iter, varargin)ProgressBar(max_iter, varargin{:}, 'logger', logger);
 
 
 step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, trun);
 step_data_lin = StepDataLin(step_params_lin, 'savedata', true,...
-    'file', 'data/lin_ref_data_test.mat', 'logger', logger,...
+    'file', 'data/lin_ref_data_test_parfor.mat', 'logger', logger,...
     'Progbar', ProgBar);
 
 step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT,...
                     trun, N_mpc_s,'condensed');
-step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', false,...
-    'file', 'data/lin_ref_data_test.mat', 'logger', logger,...
+step_data_mpc = StepDataMPC_parfor(step_params_mpc, 'savedata', false,...
+    'file', 'data/lin_ref_data_test_parfor.mat', 'logger', logger,...
     'Progbar', ProgBar);
-
+%%
 
 % 1.----------- Generate for CLQR optimal trajectories ------------------
 
-
-
-
-
 tic
-try
+ try
     step_data_lin = step_data_lin.build_max_setpoints('force', 0, 'verbose', 1);
     logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
 catch ME
     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
     logger('Failed to build max setpoints, linear: \n\n%s', errMsg);    
 end
-%%
+
 clc
 tic
 try
