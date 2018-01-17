@@ -105,9 +105,7 @@ clc
 R = 5;
 mpc_on=0;
 
-ref_range = [0.01, 15];
-ref_step = .1;
-ref_s = ref_range(1):ref_step:ref_range(2);
+
 
 % *Optimal, open-loop* trajectory generation over all setpoints. This
 % provides the basiline for comparison of the other methods. 
@@ -116,21 +114,32 @@ N_traj = 600;
 gamma = 100;
 gam_s = linspace(gamma, 20000, 200); % original
 % gam_s = [1, 100, 1000, 2500, 5000, 10000];
+ref_s = 0.1:0.05:15;
 
-% Form paramater classes
-% 1. Time optimal
 
 N_mpc_s = [4, 8, 12, 16, 20]; % original 
 % N_mpc_s = [12, 18, 24];
 N_traj = 800;
 trun = Ts*N_traj;
 
+
+logfile = 'log-lin-mpc-parfor_hotstart2.log';
+LG = EchoFile(logfile);
+logger = @LG.echo_file;
+ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', logger);
+
+
 step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, trun);
-step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, N_mpc_s, 'condensed', trun);
-max_sp_data_lin = StepData(step_params_lin, 'savedata', true,...
-    'file', fname_lin);
-max_sp_data_mpc = StepData(step_params_mpc, 'savedata', true,...
-    'file', fname_mpc);
+step_data_lin = StepDataLin(step_params_lin, 'savedata', true,...
+    'file', 'data/lin_ref_data_test_parfor.mat', 'logger', logger,...
+    'Progbar', ProgBar);
+
+step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT,...
+                    trun, N_mpc_s,'condensed');
+step_data_mpc = StepDataMPC_parfor(step_params_mpc, 'savedata', true,...
+    'file', 'data/lin_ref_data_test_parfor.mat', 'logger', logger,...
+    'Progbar', ProgBar);
+
 
 % step_params_timeopt = StepParamsTimeOpt(sys, ref_s, du_max, sys_nodelay, 10);
 step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, gamma, PLANT, N_traj, 'condensed');
@@ -138,20 +147,13 @@ step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
     'file', fname_clqr);
 
 
-%
-% 1.----------- Generate for CLQR optimal trajectories ------------------
-
-logfile = 'log_clqr.log';
-echo_file([], logfile);
-logstart=2;
-
 
 %%
 % 1.----------- Generate LIN max setpoints --------------------------------
 tic
 try
-    max_sp_data_lin = build_max_setpoints(max_sp_data_lin, 'fid', fid,'verbose', 1, 'force', 0);
-    fprintf(fid, 'Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
+    step_data_lin = step_data_lin.build_max_setpoints('force', 0, 'verbose', 1);
+    logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
 catch ME
     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
      fprintf(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
@@ -161,14 +163,14 @@ end
 
 tic
 try
-    max_sp_data_mpc = build_max_setpoints(max_sp_data_mpc, 'fid', fid, 'verbose', 1, 'force', 1);
-    fprintf(fid, 'Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
+    step_data_mpc = step_data_mpc.build_max_setpoints('force', 1, 'verbose', 1);
+   logger('Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
 catch ME
     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
-    fprintf(fid, 'Failed to build max setpoints, mpc: %s\n\n', errMsg);
+    logger('Failed to build max setpoints, mpc: %s\n\n', errMsg);    
 end
-
 % 4.----------- Generate CLQR  trajectories -------------------------------
+%%
 tic
 try
     step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 1, 'fid', fid, 'verbose', 1);
