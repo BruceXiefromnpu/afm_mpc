@@ -27,8 +27,6 @@ classdef sparseMPCprob_OA < handle
         kappa;  % condition number of H
         ns;     % number of states.
         nu;     % Number of controls.
-        qpopts; % Options that get passed to quadrog. From optimset.
-        n_warmstart; % Used by the S-function to set some dimensions.
     end
     
     methods
@@ -52,15 +50,13 @@ classdef sparseMPCprob_OA < handle
             obj.kappa = cond(H);
             obj.ns = size(sys.b,1);
             obj.nu = size(sys.b,2);
-            obj.qpopts = optimset('Display', 'off');
-            obj.n_warmstart = (obj.N_mpc+1)*obj.ns + obj.N_mpc*obj.nu;
         end
-        
         
         function [U, X] = solve(self, xk_1, varargin)
             % [U, X] = solve(self, xk_1)
             % Solves the MPC problem defined by the instance, given
-            % an initial condition xk_1. 
+            % an initial condition xk_1. The qpOASES QP solver will be
+            % used.
             % 
             % Inputs
             % ------
@@ -71,8 +67,6 @@ classdef sparseMPCprob_OA < handle
             %   sequence. Since we are in the condensed version, this is
             %   found via lsim(...)
             %  
-            %   solve(...,'warm_start_data', not used currently.
-            %
             % Outputs
             % ------
             %   U : the sequence of optimal controls from k=1...self.N_mpc
@@ -125,7 +119,9 @@ classdef sparseMPCprob_OA < handle
                 
                 self.lb = [lb_u;lb_x];
                 self.ub = [ub_u; ub_x];
-%             elseif strcmp(type, 'slew')
+            elseif strcmp(type, 'slew')
+                error(['Slew rate constraint is currently not ',...
+                    'implemented for sparseMPCprob_OA']);
 %                 Zro = zeros((self.N_mpc*self.nu-1)*2, (self.N_mpc+1)*self.ns);
 %                 S = derMat(self.N_mpc);
 %                 Ainq = [[S; -S], Zro];

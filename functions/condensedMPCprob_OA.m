@@ -1,10 +1,16 @@
 classdef condensedMPCprob_OA < handle
-%         H;
-%         M;
-%         Ainq;
-%         binq;
-%         N_mpc;
-%         kappa;
+%         H;                The problem Hessian.
+%         M;                The affine term, multiplied by xk_1.
+%         Ainq;             Inequality LHS for input constraint.
+%         binq;             Ineqauality RHS for input constraint. 
+%         lb;               Box constraint upper bound.
+%         ub;               Box constraint lower bound.
+%         N_mpc;            Control horizon.
+%         nu;               Number of inputs.
+%         ns;               Number of states.
+%         kappa;            Condition number of H.
+%         warm_start_data;
+%         sys;              The associated LTI ss system.
 %
 %
 % Construction: condensedMPCprob(sys,N, Q,Qp, R)
@@ -15,26 +21,24 @@ classdef condensedMPCprob_OA < handle
 
 
     properties
-        H;  % The problem Hessian.
-        M;  % The affine term, multiplied by xk_1.
-        Ainq; % Inequality LHS for input constraint.
-        binq; % Ineqauality RHS for input constraint. 
-        lb;
-        ub;
-        N_mpc; % Control horizon.
-        nu;    % Number of inputs.
-        ns;    % Number of states.
-        kappa; % Condition number of H.
-        n_warmstart; % set to N_mpc right now.
+        H;                % The problem Hessian.
+        M;                % The affine term, multiplied by xk_1.
+        Ainq;             % Inequality LHS for input constraint.
+        binq;             % Ineqauality RHS for input constraint. 
+        lb;               % Box constraint upper bound.
+        ub;               % Box constraint lower bound.
+        N_mpc;            % Control horizon.
+        nu;               % Number of inputs.
+        ns;               % Number of states.
+        kappa;            % Condition number of H.
         warm_start_data;
-        sys;         % The associated LTI ss system.
-%         n_dec_vec;
+        sys;              % The associated LTI ss system.
     end
     
     methods
         function obj = condensedMPCprob_OA(sys,N, Q,Qp, R, S)
             % obj = condensedMPCprob(sys,N, Q,Qp, R, S)
-            % Construct a conensedMPCprob instance. 
+            % Construct a conensedMPCprob_OA instance. 
             if isa(sys, 'condensedMPCprob')
                 obj.H = sys.H;
                 obj.M = sys.M;
@@ -45,23 +49,20 @@ classdef condensedMPCprob_OA < handle
                 obj.N_mpc = sys.N_mpc;
                 obj.nu = sys.nu;
                 obj.ns = sys.ns;
-                obj.n_warmstart = sys.n_warmstart;
                 obj.warm_start_data = sys.warm_start_data;
-                obj.n_dec_vec = sys.n_dec_vec;
             else
                 if ~exist('S', 'var')
                     ns = size(sys.b,1);
                     nu = size(sys.b, 2);
                     S = zeros(ns, nu);
                 end
-                [H, M] = clqrProblem_local(sys,N, Q, R, Qp, S);
+                [H, M] = clqrProblem_builder(sys,N, Q, R, Qp, S);
                 obj.H     = H;
                 obj.M     = M;
                 obj.N_mpc = N;
                 obj.kappa = cond(H);
                 obj.nu = size(R,1);
                 obj.ns = size(Q,1);
-                obj.n_warmstart = N;
                 obj.warm_start_data = qpOASES_auxInput('x0', zeros(N,1));
                 obj.sys = sys;
                 
@@ -69,10 +70,10 @@ classdef condensedMPCprob_OA < handle
         end
         
         function [U, X] = solve(self, xk_1, varargin)
-            % Solve the condensed MPC problem.
+            % Solve the condensed MPC problem using the qpOASES solver.
             % [U, X] = solve(self, xk_1, varargin)
             %
-            % inputs
+            % Inputs
             % ------
             %   xk_1 : current state (ie, initial condition) for the
             %   optimization problem.
@@ -81,8 +82,6 @@ classdef condensedMPCprob_OA < handle
             %   sequence. Since we are in the condensed version, this is
             %   found via lsim(...)
             %  
-            %   solve(...,'warm_start_data', not used currently.
-            %
             % Outputs
             % ------
             %   U : vector of optimal controls
@@ -114,8 +113,6 @@ classdef condensedMPCprob_OA < handle
             % [ u_1(0) u_1(0) ...]
             % [ u_2(0) u_2(1) ...]
             U = reshape(U, self.nu, []);
-           
-            % uk = Us(1:self.nu);
         end
         
         function self = add_U_constraint(self, type, bnds)
@@ -132,22 +129,17 @@ classdef condensedMPCprob_OA < handle
             if strcmp(type, 'box')
                 self.ub = ones(self.N_mpc, 1)*bnds(2);
                 self.lb = ones(self.N_mpc, 1)*bnds(1);
-%                 I = eye(self.N_mpc*self.nu);
-%                 Ainq = [I;-I];
-%                 binq = [ones(self.N_mpc,1)*bnds(2);
-%                        ones(self.N_mpc,1)*(-bnds(1))];
             elseif strcmp(type, 'slew')
-                S = derMat(self.N_mpc);
-                self.Ainq = [S; -S];
-                self.binq = [zeros(2*self.N_mpc-2, 1)+bnds(1)];
+                error(['Slew rate constraint is currently not implemented',...
+                    'for condensedMPCprob_OA']);
+                %S = derMat(self.N_mpc);
+                %self.Ainq = [S; -S];
+                %self.binq = [zeros(2*self.N_mpc-2, 1)+bnds(1)];
             end
-
         end
         
-        
-    end
-    
-end
+    end % METHODS
+end % CLASSDEF
 
 function X = discrete_lsim(sys, U, x0)
     % The sparseMPC returns the N+1th state. This function does the same 
@@ -165,7 +157,7 @@ function X = discrete_lsim(sys, U, x0)
 end
 
 
-function [H, M] = clqrProblem_local(sys, N, Q, r, Qp, S)
+function [H, M] = clqrProblem_builder(sys, N, Q, r, Qp, S)
     if sys.Ts == 0
         error('system "sys" should be discrete time dynamical system')
     end

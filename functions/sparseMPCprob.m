@@ -1,12 +1,15 @@
 classdef sparseMPCprob < handle
-    % sparseMPCprob  container for the sparse MPC QP formulation.
-    %         H;
-    %         M;
-    %         Ainq;
-    %         binq;
-    %         N_mpc;
-    %         kappa;
-    %
+%   sparseMPCprob  container for the sparse MPC QP formulation.
+%         H;      The problem Hessian
+%         Aeq;    The LHS equality constraint enforcing dynamcs.
+%         beq;    the RHS equality equality constraint enforcing dynamcs.
+%         Ainq;   Inequality LHS for control constraint.  
+%         binq;   Inequality RHS for control constraint.  
+%         N_mpc;  Control horizon
+%         kappa;  condition number of H
+%         ns;     number of states.
+%         nu;     Number of controls.
+%         qpopts; Options that get passed to quadrog. From optimset.
     %
     % Construction: condensedMPCprob(sys,N, Q,Qp, R)
     %               condensedMPCprob(sys,N, Q,Qp, R, S)
@@ -26,7 +29,6 @@ classdef sparseMPCprob < handle
         ns;     % number of states.
         nu;     % Number of controls.
         qpopts; % Options that get passed to quadrog. From optimset.
-        n_warmstart; % Used by the S-function to set some dimensions.
     end
     
     methods
@@ -49,7 +51,6 @@ classdef sparseMPCprob < handle
             obj.ns = size(sys.b,1);
             obj.nu = size(sys.b,2);
             obj.qpopts = optimset('Display', 'off');
-            obj.n_warmstart = (obj.N_mpc+1)*obj.ns + obj.N_mpc*obj.nu;
         end
         
         
@@ -113,28 +114,24 @@ classdef sparseMPCprob < handle
                 fprintf('Assuming symmentric bounds of [%.3f, %.3f]\n', bnds(1), bnds(2));
             end
 
-            
             if strcmp(type, 'box')
                 Zro = zeros(self.N_mpc*self.nu*2, (self.N_mpc+1)*self.ns);
                 I = eye(self.N_mpc*self.nu);
                 Ainq = [[I;-I], Zro];
                 binq = [ones(self.N_mpc,1)*bnds(2);
                        ones(self.N_mpc,1)*(-bnds(1))];
-                
             elseif strcmp(type, 'slew')
                 Zro = zeros((self.N_mpc*self.nu-1)*2, (self.N_mpc+1)*self.ns);
                 S = derMat(self.N_mpc);
                 Ainq = [[S; -S], Zro];
                 binq = [zeros(2*self.N_mpc-2, 1)+bnds(1)];
-
             end
             self.Ainq = [self.Ainq; Ainq];
             self.binq = [self.binq; binq];
         end
         
     end % METHODS
-    
-end
+end % CLASDEF
 
 function UX = mpcSolve_local(H, Ainq,binq, Aeq, beq, qpopts)
 
@@ -147,7 +144,6 @@ function [H, Aeq, beq] = clqrProblem_local(sys, N, Q, R, Qp, S)
     if sys.Ts == 0
         error('system "sys" should be discrete time dynamical system')
     end
-    
     
     ns = size(sys.b, 1);
     nu = size(sys.b, 2);

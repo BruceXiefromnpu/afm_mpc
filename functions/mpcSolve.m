@@ -1,4 +1,4 @@
-function solveMpc(block)
+function mpcSolve(block)
 % Level-2 MATLAB file S-Function for solving linear constrained MPC problem
 % with classes defined in condensedMPC and FGMprob.
 
@@ -11,7 +11,7 @@ function setup(block)
   block.NumDialogPrms = 1;
   block.DialogPrmsTunable = {'Nontunable'}; %This is critical to allow class parameter
   
-  % Regieste number of input and output ports
+  % Register number of input and output ports
   block.NumInputPorts  = 1;
   block.NumOutputPorts = 1;
 
@@ -36,7 +36,7 @@ function setup(block)
 
   % Register methods
   block.RegBlockMethod('CheckParameters',         @CheckPrms);
-  %   block.RegBlockMethod('ProcessParameters',       @ProcessPrms);
+  % block.RegBlockMethod('ProcessParameters',       @ProcessPrms);
   block.RegBlockMethod('PostPropagationSetup',    @DoPostPropSetup);
   block.RegBlockMethod('Start',                   @Start);  
   block.RegBlockMethod('Outputs',                 @Outputs);
@@ -47,26 +47,18 @@ end
 
 
 function CheckPrms(block)
+% make sure we know how to handle the parameter that gets passed.
   mpcProb = block.DialogPrm(1).Data;
-  ok_objs = ['sparseMPCprob', 'sparseMPCprob_OA',...
-             'condensedMPCprob', 'condensedMPCprob_OA'];
+  ok_objs = {'sparseMPCprob', 'sparseMPCprob_OA',...
+             'condensedMPCprob', 'condensedMPCprob_OA'};
   if ~ismember(class(mpcProb), ok_objs)
-% ~isa(mpcProb, 'sparseMPCprob') && ~isa(mpcProb, 'condensedMPCprob') && ~isa(mpcProb, 'condensedMPCprob_OA') 
-    error('Need condensedMPCprob or sparseMPCprob data type.');
+    str = sprintf(repmat('%s, ', 1, length(ok_objs)), ok_objs{:});
+    error('Need one on %s data type.', str);
   end
 end  
 
 
 function DoPostPropSetup(block)
-  % Setup Dwork  
-  mpcProb = block.DialogPrm(1).Data;
-  block.NumDworks = 1;
-  block.Dwork(1).Name = 'ziyi'; 
-  block.Dwork(1).Dimensions      = mpcProb.n_warmstart;
-  block.Dwork(1).DatatypeID      = 0;
-  block.Dwork(1).Complexity      = 'Real';
-  block.Dwork(1).UsedAsDiscState = true;
-  
   % Register all tunable parameters as runtime parameters.
   block.AutoRegRuntimePrms;
 end
@@ -79,36 +71,18 @@ end
 
 function Start(block)
   
-  % Initialize Dwork
-  mpcProb = block.DialogPrm(1).Data;
-  N = mpcProb.N_mpc;
-  % Length of the total decision variable.
-
-  if N>0
-      block.Dwork(1).Data = zeros(mpcProb.n_warmstart, 1);
-  else
-      block.Dwork(1).Data = 0;
-  end
-
+% Used to initialize Dwork here for ziyi hotstart. Now, store hotstart data
+% inside handle class property.
 end
 
 
 function Outputs(block)
   mpcProb = block.DialogPrm(1).Data;
-  n_warmstart = mpcProb.N_mpc;
   
   xk_1 = block.InputPort(1).Data;
     
-%   ziyi = block.Dwork(1).Data;
-  if n_warmstart>0
-      [U] = mpcProb.solve(xk_1);
-      u_k = U(1:mpcProb.nu);
-%       block.Dwork(1).Data = double(ziyi);
-  else
-      u_k = mpcProb.solve(xk_1, ziyi);
-      block.Dwork(1).Data = 0;
-  end
-  
+  [U] = mpcProb.solve(xk_1);
+  u_k = U(1:mpcProb.nu);
   
   block.OutputPort(1).Data = double(u_k);
 
