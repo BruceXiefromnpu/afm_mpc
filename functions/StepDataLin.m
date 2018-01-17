@@ -94,8 +94,9 @@ classdef StepDataLin < StepDataQuad
                         'without re-calculation.\n']);
                 return
             else
-                self.logger(['data has changed or force flag : ' ...
-                             're-building max setpoints.\n']);
+                self.logger(['data has changed or self.file does not',...
+                             'exist or force flag=true : re-building',...
+                             'max setpoints.\n']);
             end
             
             % The parameter data has changed, so we re-run. Setup

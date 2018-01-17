@@ -3,7 +3,6 @@ classdef StepDataCLQR < StepData
     properties
         % params;
         % file;
-        % fig_files;
         % savedata;
         % results;
         plot_ref_vs_settle_fcn;
@@ -76,21 +75,18 @@ classdef StepDataCLQR < StepData
         % 
         % Optional Inputs
         % --------------
-        %   build_timeopt_trajs(..., 'force', (true|false)) Force a
+        %   build_clqr_trajs(..., 'force', (true|false)) Force a
         %   rerun of the simulations, regardless of wheather or not
         %   the parameters have changed.
         % 
-        %   build_timeopt_trajs(..., 'max_iter', 20) Maximum number
+        %   build_clqr_trajs(..., 'max_iter', 20) Maximum number
         %   of iterations allowed to find an upper bound in the
         %   bisection search.
         % 
-        %   build_timeopt_trajs(..., 'fid' 1) A file id to write
-        %   logging data to.
-        % 
-        %   build_timeopt_trajs(..., 'verbose', 1) 1 --> write
+        %   build_clqr_trajs(..., 'verbose', 1) 1 --> write
         %   logging info to file id. 2 --> make plot to figure 200 also.
         % 
-        %   build_timeopt_trajs(..., 'savedata', 1) save the
+        %   build_clqr_trajs(..., 'savedata', 1) save the
         %   results and the whole object to self.file? Will be saved
         %   as variable 'step_data'
         %
@@ -141,11 +137,8 @@ classdef StepDataCLQR < StepData
             
             gam_s = self.params.gam_s;
             % Pre-allocate
-            % settle_times_opt_save = cell(1, length(gam_s));
-            self.results.settle_times_opt_cell = cell(1, length(gam_s));
-            % opt_trajs_save = cell(1, length(gam_s)); 
-            self.results.opt_trajs_cell = cell(1, length(gam_s));
-
+            settle_times_opt_cell = cell(1, length(gam_s));
+            opt_trajs_cell = cell(1, length(gam_s)); 
             
             if verbose >= 2
                 Fig = figure(200);
@@ -154,24 +147,22 @@ classdef StepDataCLQR < StepData
                 change_current_figure(Fig);
             end
             ref_0 = 0;
-            for iter = 1:length(gam_s)
+            parfor iter = 1:length(gam_s)
                 gamma_k = gam_s(iter);
 
-                [traj_s, settle_times_opt] = self.opt_traj_gen(gamma_k, ref_0, 'verbose', verbose,...
-                                                          'mpc_mode', self.params.mpc_mode);
-                % settle_times_opt_save{iter} = settle_times_opt;
-                % opt_trajs_save{iter} = traj_s;
-                self.results.settle_times_opt_cell{iter} = settle_times_opt;
-                self.results.opt_trajs_cell{iter} = traj_s;
+                [traj_s, settle_times_opt] = self.opt_traj_gen(gamma_k, ref_0, 'verbose', verbose);
+                                                          
+                 settle_times_opt_cell{iter} = settle_times_opt;
+                opt_trajs_cell{iter} = traj_s;
                 if verbose >=2
                     self.plot_ref_vs_settle(ax, gamma_k, 'LineWidth', 2);
                 end
             end
-            % results.settle_times_opt_cell =  settle_times_opt_save;
-            % results.opt_trajs_cell = opt_trajs_save;
-            % self.results = results;
             
-            step_data = self;
+            self.results.settle_times_opt_cell =  settle_times_opt_cell;
+            self.results.opt_trajs_cell = opt_trajs_cell;
+            
+            step_data = self; %#ok<NASGU>
             if self.savedata
                 save(self.file, 'step_data')
             end
@@ -228,17 +219,14 @@ classdef StepDataCLQR < StepData
             
             addParameter(p, 'S', defaultS);
             addParameter(p, 'verbose', 0);
-            addParameter(p, 'mpc_mode', 'condensed');
-            
+                        
             parse(p, varargin{:})
             S = p.Results.S;
             verbose = p.Results.verbose;
-            mpc_mode = p.Results.mpc_mode;
-            
+                        
             % Expose parameters:
             params = self.params;
    
-            gam_s = params.gam_s;
             ref_s = params.ref_s;
             du_max = params.du_max;
             N_traj = params.N_traj;
@@ -255,7 +243,7 @@ classdef StepDataCLQR < StepData
             if strcmpi(mpc_mode, 'sparse')
                 NLQR_prob = sparseMPCprob(sys, N_traj, Q, Qp, R, S);
             elseif strcmpi(mpc_mode, 'condensed')
-                NLQR_prob = condensedMPCprob(sys, N_traj, Q, Qp, R, S);
+                NLQR_prob = condensedMPCprob_OA(sys, N_traj, Q, Qp, R, S);
             end
 
             if du_max ~= 0 

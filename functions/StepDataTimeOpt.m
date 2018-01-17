@@ -138,7 +138,7 @@ classdef StepDataTimeOpt < StepData
             if force
                 self.logger(['Force = true, rebuilding time-optimal ' ...
                              'trajectories\n']);
-            if self.stepdata_struct_unchanged() 
+            elseif self.stepdata_struct_unchanged() 
                 other = load(self.file);
                 self.logger(['Data appears to be the same. Loading data ',...
                               'without re-calculation.\n\n']);
@@ -234,10 +234,8 @@ classdef StepDataTimeOpt < StepData
             
             
         end % end main function
-
-    end
-    
-end
+    end %METHODS
+end % CLASSDEF
 
 
 

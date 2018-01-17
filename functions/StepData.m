@@ -3,7 +3,6 @@ classdef StepData
     properties
         params;
         file;
-        fig_files;
         savedata;
         results;
         logger;
@@ -39,8 +38,7 @@ classdef StepData
             self.plot_single_utraj(index, ax2);
         
         end
-        
-        
+
         function status = stepdata_struct_unchanged(self)
         % This function will return 1 if
         % (a) data_struct.file exists
@@ -49,13 +47,14 @@ classdef StepData
             
             if ~exist(self.file, 'file')
                 status = 0;
-                % keyboard
+                self.logger('self.file does not exist!')
                 return 
             else
                 load(self.file);
                 % Provides: step_data
             end
             params_other = step_data.params;
+            
             if ~isequal(self.params, params_other)
                 status = 0;
                 return
