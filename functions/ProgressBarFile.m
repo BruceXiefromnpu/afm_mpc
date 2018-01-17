@@ -65,7 +65,7 @@ classdef ProgressBarFile < handle
             fracDone = iter / self.max_iter;
             percentDone = round(100 * fracDone, 0);
             
-            if percentdone > self.prior_perc_done
+            if percentDone > self.prior_perc_done
                 done_bar = repmat('+', 1, floor(self.bar_len * fracDone));
                 undone_bar = repmat(' ', 1, self.bar_len - floor(self.bar_len * fracDone));
                 whole_bar = sprintf('%s  %s: [%s%s]', datestr(now), ...
