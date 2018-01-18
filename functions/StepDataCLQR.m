@@ -154,9 +154,9 @@ classdef StepDataCLQR < StepData
                                                           
                  settle_times_opt_cell{iter} = settle_times_opt;
                 opt_trajs_cell{iter} = traj_s;
-                if verbose >=2
-                    self.plot_ref_vs_settle(ax, gamma_k, 'LineWidth', 2);
-                end
+%                 if verbose >=2
+%                     self.plot_ref_vs_settle(ax, gamma_k, 'LineWidth', 2);
+%                 end
             end
             
             self.results.settle_times_opt_cell =  settle_times_opt_cell;
@@ -247,7 +247,7 @@ classdef StepDataCLQR < StepData
             end
 
             if du_max ~= 0 
-                NLQR_prob.add_U_constraint('slew', du_max);
+                NLQR_prob.add_U_constraint('box', du_max);
             end
 
             if verbose >= 3

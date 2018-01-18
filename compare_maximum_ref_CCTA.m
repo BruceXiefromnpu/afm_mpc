@@ -131,13 +131,13 @@ ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', 
 
 step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, trun);
 step_data_lin = StepDataLin(step_params_lin, 'savedata', true,...
-    'file', 'data/lin_ref_data_test_parfor.mat', 'logger', logger,...
+    'file', fname_lin', 'logger', logger,...
     'Progbar', ProgBar);
 
 step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT,...
                     trun, N_mpc_s,'condensed');
 step_data_mpc = StepDataMPC_parfor(step_params_mpc, 'savedata', true,...
-    'file', 'data/lin_ref_data_test_parfor.mat', 'logger', logger,...
+    'file', fname_mpc', 'logger', logger,...
     'Progbar', ProgBar);
 
 
@@ -151,35 +151,35 @@ step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
 %%
 % 1.----------- Generate LIN max setpoints --------------------------------
 tic
-try
+% try
     step_data_lin = step_data_lin.build_max_setpoints('force', 0, 'verbose', 1);
     logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
-catch ME
-    errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
-     fprintf(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
-end
+% catch ME
+    %errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
+%      logger(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
+%      end
 
 % 2.----------- Generate  mpc max setpoints -------------------------------
 
 tic
-try
+% try
     step_data_mpc = step_data_mpc.build_max_setpoints('force', 1, 'verbose', 1);
    logger('Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
-catch ME
-    errMsg = getReport(ME,  'extended','hyperlinks', 'off');
-    logger('Failed to build max setpoints, mpc: %s\n\n', errMsg);    
-end
+% catch ME
+%     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
+%     logger('Failed to build max setpoints, mpc: %s\n\n', errMsg);    
+% end
 % 4.----------- Generate CLQR  trajectories -------------------------------
 %%
 tic
-try
-    step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 1, 'fid', fid, 'verbose', 1);
-    fprintf(fid, 'Finished building clqr_data. Total time = %.2f\n', toc);
-catch ME
-    errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
-    fprintf(fid, 'Failed to build clqr_data: \n%s', errMsg);
-end
-
+% try
+    step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 1, 'verbose', 1);
+    logger('Finished building clqr_data. Total time = %.2f\n', toc);
+% catch ME
+%     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
+%     logger(fid, 'Failed to build clqr_data: \n%s', errMsg);
+% end
+%%
 
 
 
