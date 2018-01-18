@@ -12,7 +12,7 @@ classdef StepDataLin < StepDataQuad
         function self = StepDataLin(Params, varargin)
             self = self@StepDataQuad(Params, varargin{:})
         end
-        function step_data = build_max_setpoints(self, varargin)
+        function self = build_max_setpoints(self, varargin)
         % step_data = build_max_setpoints(step_data, varargin) 
         %    
         % Builds a set of maximum setpoints for a family of LQR based

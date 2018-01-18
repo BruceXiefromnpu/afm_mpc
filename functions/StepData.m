@@ -27,15 +27,15 @@ classdef StepData
             self.results = [];
         end
         
-        function plot_single_traj(self, index, ax1, ax2)
+        function plot_single_traj(self, index, ax1, ax2, varargin)
             if ~exist('ax1', 'var') || ~exist('ax2', 'var')
                 fig = gcf();
                 ax1 = subplot(211);
                 ax2 = subplot(212);
             end
             
-            self.plot_single_ytraj(index, ax1);
-            self.plot_single_utraj(index, ax2);
+            self.plot_single_ytraj(index, ax1, varargin{:});
+            self.plot_single_utraj(index, ax2, varargin{:});
         
         end
 
@@ -53,14 +53,27 @@ classdef StepData
                 load(self.file);
                 % Provides: step_data
             end
-            params_other = step_data.params;
+            params_other = struct(step_data.params); 
+            tmp_self_params = struct(self.params); % Do this in case I ever make it handle class.
             
-            if ~isequal(self.params, params_other)
+            if isfield(tmp_self_params, 'Q')
+                if ~isfield(params_other, 'Q')
+                    status = 0;
+                    return
+                end
+                Qstatus = isMatrixAlmostEqual(self.params.Q, params_other.Q);
+                tmp_self_params = rmfield(tmp_self_params, 'Q');            
+                params_other = rmfield(params_other, 'Q');
+            else
+                Qstatus = 1;
+            end
+            
+            if ~isequal(tmp_self_params, params_other)
                 status = 0;
                 return
             end
             
-            status = 1;
+            status = 1 & Qstatus;
         end
 
 
@@ -69,4 +82,25 @@ classdef StepData
 end
 
 
+
+function status = isMatrixAlmostEqual(A, B, varargin)
+%  status = isMatrixAlmostEqual(A, B, varargin)
+% quick check to see if matrices A and B are almost equal. Computed is 
+% max(max(abs(A-B)))) >? tol, tol={0.001 | varargin{1} }
+
+    if length(varargin) == 1
+        tol = varargin{1}
+    else
+        tol =0.001;
+    end
+    q = A-B;
+    maxq = max(max(abs(q)));
+    fprintf('A, B differ by %f\n', maxq)
+    if maxq > tol
+        status = 0;
+    else
+        status = 1;
+    end
+
+end
 

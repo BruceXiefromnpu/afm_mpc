@@ -53,7 +53,8 @@ classdef StepDataTimeOpt < StepData
             elseif isempty(ax)
                 ax = gca();
             end
-            traj_y = self.results.opt_trajs_cell.Y_vec_s{index};
+            traj_x = self.results.opt_trajs_cell{index}.X;
+            traj_y = timeseries(traj_x.Data*self.params.sys_nodelay.C', traj_x.Time);
             hy = plot(ax, traj_y.Time, traj_y.Data, varargin{:});
             
         end
@@ -188,17 +189,22 @@ classdef StepDataTimeOpt < StepData
             warning('off', 'MATLAB:nargchk:deprecated')
             toBisect = TimeOptBisect(sys_sim, du_max);
             toBisect.max_iter = max_iter;
+            k0 = size(sys_sim.B,1);
             
             for iter = 1:length(ref_s)
-                self.logger(['Time Optimal bisection for ref=%.3f, ref_iter = %.0f ' ...
-                              'of %.0f\n'], ref_s(iter), iter, length(ref_s));
+
                 xf = Nx_sim*ref_s(iter);
-                [X, U, status]=toBisect.time_opt_bisect(x0_sim, xf);
+                [X, U, status]=toBisect.time_opt_bisect(x0_sim, xf, 'k0', k0);
                 if status
                     self.logger(['Time-optimal bisection failed at ref = ' ...
                                   '%0.3f. Exiting...'], ref_s(iter));
                     break
+                else
+                    self.logger(['Time Optimal bisection for ref=%.3f, ref_iter = %.0f ' ...
+                              'of %.0f, N*=%.0f\n\n'], ref_s(iter),...
+                              iter, length(ref_s), length(U.Time));
                 end
+                k0 = length(U.Time);
                 Y = timeseries(X.Data*sys_sim.C', X.Time);
                 U_vec_s{iter} = U;
                 X_vec_s{iter} = X;

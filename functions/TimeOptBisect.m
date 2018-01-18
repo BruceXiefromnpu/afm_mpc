@@ -13,6 +13,7 @@ classdef TimeOptBisect
               % close enough.
         max_iter; % Maximum number of times to bump while searching
                  % for the upper bound. Default is 20.
+        logger;
     end
     methods
         function self = TimeOptBisect(sys, umax)
@@ -28,6 +29,7 @@ classdef TimeOptBisect
             self.bump = 10;
             self.TOL = 5e-3;
             self.max_iter = 20;
+            self.logger = @fprintf;
 
         end
         
@@ -37,16 +39,14 @@ classdef TimeOptBisect
         % search method.
             p = inputParser;
             p.addParameter('verbose', true);
-            p.addParameter('fid', 1);
+            p.addParameter('k0', []);
             parse(p, varargin{:});
             
             verbose = p.Results.verbose;
-            fid = p.Results.fid;
             status = 0;
             % Find upper and lower bounds on N.
             [lowerBound, upperBound, status] = self.find_bounds(x0, ...
-                                                              xf, 'verbose',...
-                                                              verbose, 'fid', fid);
+                                                              xf, varargin{:});
             if status
                 xx = [];
                 uu = [];
@@ -83,12 +83,12 @@ classdef TimeOptBisect
             Jval = results.cvx_optval;
             if isnan(Jval)
                 % keyboard 
-                fprintf(fid, ['Final Jval is NaN. Exiting with status ' ...
+                self.logger(['Final Jval is NaN. Exiting with status ' ...
                               '1']);
                 status = 1;
             end
             if verbose
-                fprintf(fid, 'Final CVX Jval = %d\n', Jval);
+                self.logger('Final CVX Jval = %d\n', Jval);
             end
             
 
@@ -101,52 +101,39 @@ classdef TimeOptBisect
 
         % ---------------------------------------------------------------- %
         function [lb, ub, status] = find_bounds(self, x0, xf, varargin)
+            
             p = inputParser;
             p.addParameter('verbose', true);
-            p.addParameter('fid', 1);
+            p.addParameter('k0', []);
             parse(p, varargin{:});
-            verbose = p.Results.verbose;
-            fid = p.Results.fid;
-            status = 0;
+            k0 = p.Results.k0;
+             status = 0;
                 
-        % [lb, ub] = find_bounds(self, x0, xf)
-        % Find lower and upper bounds on maximum trajectory length, k0.
-            lowerBound = length(self.Gam);
-            upperBound = [];
-            k0 = lowerBound;
-            for i = 1:self.max_iter
-                results = self.time_opt_cvx_prob(k0, x0, xf);
-                Jval = results.cvx_optval;
-
-                if Jval > self.TOL || isnan(Jval)
-                    if i>1
-                        % Jval still too big, so bump the lower bound up
-                        lowerBound = k0;
-                    end
-                    % Add bump instead of multiply. Multiply make the bound
-                    % too large. This step takes longer, but bisection is
-                    % quick now.
-                    k0 = k0 + self.bump;
-                else
-                    upperBound = k0;
-                    if verbose
-                        fprintf(fid, 'Bounds found!\n')
-                        fprintf(fid, 'upperBound = %.0f\n', upperBound)
-                        fprintf(fid, 'lowerBound = %.0f \n', lowerBound)
-                    end
-                    break;
-                end
+            % [lb, ub] = find_bounds(self, x0, xf)
+            % Find lower and upper bounds on maximum trajectory length, k0.
+            if isempty(k0)
+                k0 = length(self.Gam);
             end
-            if isempty(upperBound)
+            results = self.time_opt_cvx_prob(k0, x0, xf);
+            Jval = results.cvx_optval;
+            if  Jval < self.TOL && ~isnan(Jval)
+                ub = k0;
+                [lb, ub,  status] = findBoundsDown(self, x0, xf, ub, self.bump, varargin{:});
+            else % Jval > tol, 
+                
+                lb = k0;
+                [lb, ub] = findBoundsUp(self, x0, xf,lb, self.bump, varargin{:});
+            end
+  
+            if isempty(ub)
                 str = sprintf(['MyWarning: Exhausted max_iter but no Upper Bound found. ',...
                        'Possible solution is to increase ',...
                         'max_iter=%0.0f'], self.max_iter);
-               fprintf(fid, '%s\n', str)
+               self.logger( '%s\n', str)
                status = 1;
             end
                             
-            lb = lowerBound;
-            ub = upperBound;
+
         end % find_bounds
         
         % ---------------------------------------------------------------- %
@@ -204,3 +191,107 @@ classdef TimeOptBisect
         end
     end % methods
 end %classdef
+
+
+
+function [lb, ub, status] = findBoundsUp(obj, x0, xf, lb, bump, varargin);
+% go up, lb is too small. (the original way)
+fprintf('inside Up\n');
+p = inputParser;
+p.addParameter('verbose', true);
+p.addParameter('k0', []);
+
+parse(p, varargin{:});
+verbose = p.Results.verbose;
+% k0 = p.Results.k0;
+status = 0;
+
+upperBound = [];
+k0 = lb;
+lowerBound = lb;
+for i = 1:obj.max_iter
+    results = obj.time_opt_cvx_prob(k0, x0, xf);
+    Jval = results.cvx_optval;
+
+    if Jval > obj.TOL || isnan(Jval)
+        if i>1
+            % Jval still too big, so bump the lower bound up
+            lowerBound = k0;
+        end
+        % Add bump instead of multiply. Multiply make the bound
+        % too large. This step takes longer, but bisection is
+        % quick now.
+        k0 = k0 + bump;
+    else
+        upperBound = k0;
+        if verbose
+            obj.logger('Bounds found!\n')
+            obj.logger('lowerBound = %.0f \n', lowerBound)
+            obj.logger('upperBound = %.0f\n', upperBound)            
+        end
+        break;
+    end
+end
+if isempty(upperBound)
+    str = sprintf(['MyWarning: Exhausted max_iter but no Upper Bound found. ',...
+           'Possible solution is to increase ',...
+            'max_iter=%0.0f'], obj.max_iter);
+   obj.logger( '%s\n', str)
+   status = 1;
+end
+
+lb = lowerBound;
+ub = upperBound;
+end % find_bounds
+
+
+function [lb, ub, status] = findBoundsDown(obj, x0, xf,ub, bump, varargin);
+p = inputParser;
+p.addParameter('verbose', true);
+p.addParameter('k0', []);
+parse(p, varargin{:});
+verbose = p.Results.verbose;
+% k0 = p.Results.k0;
+status = 0;
+
+fprintf('inside Down\n');
+lowerBound = [];
+k0 = ub;
+upperBound = k0;
+
+for i = 1:obj.max_iter
+    results = obj.time_opt_cvx_prob(k0, x0, xf);
+    Jval = results.cvx_optval;
+
+    if Jval < obj.TOL || isnan(Jval)
+        if i>1
+            % Jval still too big, so bump the lower bound up
+            upperBound = k0;
+        end
+        % Add bump instead of multiply. Multiply make the bound
+        % too large. This step takes longer, but bisection is
+        % quick now.
+        k0 = k0 - bump;
+    else
+        lowerBound = max(0, k0);
+        if verbose
+            obj.logger('Bounds found!\n')
+            obj.logger('lowerBound = %.0f \n', lowerBound)
+            obj.logger('upperBound = %.0f\n', upperBound)
+        end
+        break;
+    end
+end
+if isempty(lowerBound)
+    str = sprintf(['MyWarning: Exhausted max_iter but no Lower Bound found. ',...
+           'Possible solution is to increase ',...
+            'max_iter=%0.0f'], obj.max_iter);
+   obj.logger( '%s\n', str)
+   status = 1;
+end
+
+lb = lowerBound;
+ub = upperBound;
+end % find_bounds
+
+

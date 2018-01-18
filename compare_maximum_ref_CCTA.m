@@ -18,6 +18,7 @@ umax = 5;
 fname_lin = 'data/max_sp_data_lin_CCTA.mat';
 fname_mpc = 'data/max_sp_data_mpc_CCTA.mat';
 fname_clqr = 'data/clqr_ref_data_CCTA.mat';
+fname_timeopt = 'data/timeopt_ref_data_CCTA.mat';
 
 matpath           = getMatPath();
 dataroot          = fullfile(matpath, 'AFM_SS', 'System_Identification', 'data','data_xaxis'); 
@@ -121,11 +122,23 @@ N_mpc_s = [4, 8, 12, 16, 20]; % original
 % N_mpc_s = [12, 18, 24];
 N_traj = 800;
 trun = Ts*N_traj;
+%
+% clc
+% warning('off', 'MATLAB:nargchk:deprecated')
+% sys_sim = zero_eject(sys_nodelay);
+% toBisect = TimeOptBisect(sys_sim, du_max);
+% toBisect.logger = logger;
+% Nx_sim = SSTools.getNxNu(sys_sim);
+% x0_sim = Nx_sim*0;
+% xf = Nx_sim*1;
+% [X, U, status]=toBisect.time_opt_bisect(x0_sim, xf, 'k0', 150);
 
 
+%%
 logfile = 'log-lin-mpc-parfor_hotstart2.log';
 LG = EchoFile(logfile);
-logger = @LG.echo_file;
+% logger = @LG.echo_file;
+logger = @fprintf;
 ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', logger);
 
 
@@ -146,24 +159,30 @@ step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, gamma, PLANT, N_
 step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
     'file', fname_clqr);
 
+step_params_timeopt = StepParamsTimeOpt(sys_recyc, ref_s, du_max, sys_nodelay, Nd);
+step_data_timeopt = StepDataTimeOpt(step_params_timeopt, 'savedata', true,...
+    'file', fname_timeopt);
+%%
+
+step_data_timeopt = step_data_timeopt.build_timeopt_trajs('force', 0, 'verbose', 1);
 
 
 %%
 % 1.----------- Generate LIN max setpoints --------------------------------
 tic
-% try
+% try 
     step_data_lin = step_data_lin.build_max_setpoints('force', 0, 'verbose', 1);
     logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
 % catch ME
     %errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
 %      logger(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
 %      end
-
+%%
 % 2.----------- Generate  mpc max setpoints -------------------------------
 
 tic
 % try
-    step_data_mpc = step_data_mpc.build_max_setpoints('force', 1, 'verbose', 1);
+    step_data_mpc = step_data_mpc.build_max_setpoints('force', 0, 'verbose', 1);
    logger('Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
 % catch ME
 %     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
@@ -173,7 +192,7 @@ tic
 %%
 tic
 % try
-    step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 1, 'verbose', 1);
+    step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 0, 'verbose', 1);
     logger('Finished building clqr_data. Total time = %.2f\n', toc);
 % catch ME
 %     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
@@ -181,72 +200,68 @@ tic
 % end
 %%
 
-
-
-% if fid >1
-% %     fclose(fid);
-%     to = { 'abraker@fastmail.com', 'robr9299@colorado.edu'};
-%     ssendmail('MATLAB Report:compare_maximum_ref.mm', logfile, 'to', to)
-% %     ssendmail('test from matlab', 'body of test from matlab', 'to',...
-% %         'robr9299@colorado.edu', 'attachments', {'figures/cp_traj.svg'})
-% end
-
-
-
+% % Load time-optimal
+% to_dat = load('data/timeopt_ref_data.mat');
+% step_data_timeopt = to_dat.step_data;
+% clear to_dat
+%%
 % expose variables for plotting.
-try
-    clc
-    time_opt_settletime_s = step_data_timeopt.results.time_opt_settletime_s;
-    clqr_settletime_s = step_data_clqr.results.settle_times_opt_cell{1};
+
+ref_s = step_data_clqr.params.ref_s;
+gam_s = step_data_clqr.params.gam_s;
+ref_s_to = step_data_timeopt.params.ref_s;
+
+clc
+
+time_opt_settletime_s = step_data_timeopt.results.settle_times_opt_cell;
+clqr_settletime_s = step_data_clqr.results.settle_times_opt_cell{1};
 
 
 
-    F300=figure(300); clf
-    colrs =  get(gca, 'colororder');
-    hands = [];
-    % nh = length(hands)
-    hands(1) = plot(ref_s, time_opt_settletime_s*1000, ':', 'LineWidth', 3);
-    set(hands(end), 'DisplayName', 'Time Optimal');
-    hold on
-    hands(2) = plot(ref_s, clqr_settletime_s*1000, 'Color', colrs(1, :), 'LineWidth', 2);
-    set(hands(end), 'DisplayName', 'CLQR')
+F300=figure(300); clf
+colrs =  get(gca, 'colororder');
+hands = [];
+% nh = length(hands)
+hands(1) = plot(ref_s_to, time_opt_settletime_s*1000, ':', 'LineWidth', 3);
+set(hands(end), 'DisplayName', 'Time Optimal');
+hold on
+hands(2) = plot(ref_s, clqr_settletime_s*1000, 'Color', colrs(1, :), 'LineWidth', 2);
+set(hands(end), 'DisplayName', 'CLQR')
 
-    legend(hands)
-    xlabel('reference [v]')
-    ylabel('settle-time [ms]')
+legend(hands)
+xlabel('reference [v]')
+ylabel('settle-time [ms]')
+%%
+saveon = 0;
 
-    saveon = 1;
-
-    if saveon
-        saveas(F300, 'figures/clqrTimeOpt_sp_vs_ts_CCTA.svg')
-    end
-    
-    % Plot maximum reference vs gamma
-    F10 = figure(10); clf; hold on;
-    colrs =  get(gca, 'colororder');
-    hands_mxsp = []
-    hands_mxsp(1) = plot(max_sp_data_lin.params.gam_s, max_sp_data_lin.results{1}.max_setpoints,...
-                         '-', 'Color', colrs(1, :),...
-                'LineWidth', 2);
-    set(hands_mxsp(1), 'DisplayName', 'LQR Lin + Sat');        
-    for k = 1:length(max_sp_data_mpc.params.N_mpc_s)
-
-        hands_mxsp(k+1) = plot(max_sp_data_mpc.params.gam_s, max_sp_data_mpc.results{k}.max_setpoints,...
-                           '-', 'Color', colrs(k+1, :), 'LineWidth', 2);
-
-        stit = sprintf('MPC, N=%.0f', max_sp_data_mpc.params.N_mpc_s(k));
-        set(hands_mxsp(k+1), 'DisplayName', stit);
-    end
-    legend(hands_mxsp)
-
-    xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 14);
-    ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 14);
-
-    saveas(F10, 'figures/max_ref_vs_gamma_lin_MPC_CCTA.svg')
-
-catch
-    fprintf(fid, 'Error making plots\n')
+if saveon
+    saveas(F300, 'figures/clqrTimeOpt_sp_vs_ts_CCTA.svg')
 end
+
+% Plot maximum reference vs gamma
+F10 = figure(10); clf; hold on;
+colrs =  get(gca, 'colororder');
+hands_mxsp = []
+hands_mxsp(1) = plot(step_data_lin.params.gam_s, step_data_lin.results{1}.max_setpoints,...
+                     '-', 'Color', colrs(1, :),...
+            'LineWidth', 2);
+set(hands_mxsp(1), 'DisplayName', 'LQR Lin + Sat');        
+for k = 1:length(step_data_mpc.params.N_mpc_s)
+
+    hands_mxsp(k+1) = plot(step_data_mpc.params.gam_s, step_data_mpc.results{k}.max_setpoints,...
+                       '-', 'Color', colrs(k+1, :), 'LineWidth', 2);
+
+    stit = sprintf('MPC, N=%.0f', step_data_mpc.params.N_mpc_s(k));
+    set(hands_mxsp(k+1), 'DisplayName', stit);
+end
+legend(hands_mxsp)
+
+xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 14);
+ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 14);
+%%
+% saveas(F10, 'figures/max_ref_vs_gamma_lin_MPC_CCTA.svg')
+% logger(fid, 'Error making plots\n')
+
 
 % ======================================================================= %
 %                                                                         %
