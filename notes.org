@@ -128,6 +128,9 @@ One of the unexpected things this broke was my data logging scheme. I had previo
 
 Somewhat ironically, now that my simulation finishes in 35 minutes, I don't think I really need all this logging and data uploading...
 
+** Final Speedup result
+With all of these modifications and optimizations, running this same set of simulations on my desktop, which has 4 cores instead of my laptops 2 cores, the simulation finishes in under 14 minutes. It is worth noting that before using parfor, the desktop didn't run any faster because all of those extra cores were sitting there idle.
+
 * Footnotes
 
 [fn:1] Before I did this, I called the QP solver (wheather quadprog or my FGM solver) from a matlab function in simulink. The problem with this is that you cannnot pass a class object or a function handle into the matlab function. This means that I needed separate simulink diagrams for each of the three cases(sparse-quadprog, condensed-quadprog, and condensed FGM). This meant that every change to a simulink model, wheather variable names or whatever, had to be implemented in several different models by hand. By using an S-function which takes as a parameter a class which has the solution to QP built in as a class method, I can have a single simulink model and only change which class I use.
@@ -137,7 +140,18 @@ Somewhat ironically, now that my simulation finishes in 35 minutes, I don't thin
  
 
 
+
 * Speed Comparison Tasks
+:PROPERTIES:
+:UNNUMBERED: t
+:HTML_CONTAINER_CLASS: todosection
+:END:
+# set with C-c C-x p
+** TODO Bisect on ref-max vs gamma ??
+** TODO plot percent increases against time-optimal for linear 
+<2018-01-08 Mon 23:55>
+** TODO plot percent increases against time-optimal for MPC 
+<2018-01-08 Mon 23:56>
 ** DONE modify to also save trajectories.
 - State "DONE"       from "TODO"       [2018-01-12 Fri 16:50] \\
   That took forever. Most of today. These cell arrays and arrays of structs confuse me.
@@ -146,11 +160,6 @@ This needs to by done in
 - State "DONE"       from "TODO"       [2018-01-12 Fri 16:51]
 *** DONE [[file:functions/build_max_setpoints.m]] so that the trajectories are saved into the results.
 - State "DONE"       from "TODO"       [2018-01-12 Fri 16:51]
-** TODO plot percent increases against time-optimal for linear 
-<2018-01-08 Mon 23:55>
-** TODO plot percent increases against time-optimal for MPC 
-<2018-01-08 Mon 23:56>
-
 ** DONE StepDataCLQR class
 - State "DONE"       from "STARTED"    [2018-01-17 Wed 11:09] \\
   Finished this a couple days ago
@@ -186,7 +195,6 @@ and add plotting functions etc? Not sure its worth it at this point.
 - State "DONE"       from "TODO"       [2018-01-14 Sun 20:38] \\
   that took FOR-E-VER. This doesn't make mpc look at all beneficial. 
   Also doesn't agree with my conf paper results, but params are slightly different. Re-running with same params.
-** TODO Bisect on ref-max vs gamma ??
 
 ** DONE Implement warm-start for Max-Setpoint search<<hotstart>>
 From the data we have so far, the maximum setpoints increase monotonically with $\gamma$. Thus, instead of starting the max setpoint search from the very bottom, we should start it at the previous maximum setpoint we found for the last $\gamma$ in the list. Alternativly, we can be extra save and move back a few.
@@ -194,6 +202,10 @@ From the data we have so far, the maximum setpoints increase monotonically with 
   I ended up implemented this as looking back in the list references by 5.
 
 * State Estimation Tasks
+:PROPERTIES:
+:UNNUMBERED: t
+:HTML_CONTAINER_CLASS: todosection
+:END:
 ** TODO Try some of the LTR things. 
 e.g., $\gamma BB^{T}$, $\gamma$ large  <2018-01-08 Mon 23:56>
 
