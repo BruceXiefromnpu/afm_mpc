@@ -159,12 +159,16 @@ step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, gamma, PLANT, N_
 step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
     'file', fname_clqr);
 
+
+%%
+
 step_params_timeopt = StepParamsTimeOpt(sys_recyc, ref_s, du_max, sys_nodelay, Nd);
 step_data_timeopt = StepDataTimeOpt(step_params_timeopt, 'savedata', true,...
     'file', fname_timeopt);
-%%
 
-step_data_timeopt = step_data_timeopt.build_timeopt_trajs('force', 0, 'verbose', 1);
+
+step_data_timeopt = step_data_timeopt.build_timeopt_trajs('force', 0, 'verbose', 3, 'max_iter', 50);
+
 
 
 %%
@@ -177,7 +181,7 @@ tic
     %errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
 %      logger(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
 %      end
-%%
+
 % 2.----------- Generate  mpc max setpoints -------------------------------
 
 tic
@@ -189,7 +193,8 @@ tic
 %     logger('Failed to build max setpoints, mpc: %s\n\n', errMsg);    
 % end
 % 4.----------- Generate CLQR  trajectories -------------------------------
-%%
+
+
 tic
 % try
     step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 0, 'verbose', 1);
@@ -198,12 +203,9 @@ tic
 %     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
 %     logger(fid, 'Failed to build clqr_data: \n%s', errMsg);
 % end
-%%
 
-% % Load time-optimal
-% to_dat = load('data/timeopt_ref_data.mat');
-% step_data_timeopt = to_dat.step_data;
-% clear to_dat
+
+
 %%
 % expose variables for plotting.
 
@@ -213,12 +215,12 @@ ref_s_to = step_data_timeopt.params.ref_s;
 
 clc
 
-time_opt_settletime_s = step_data_timeopt.results.settle_times_opt_cell;
+time_opt_settletime_s = step_data_timeopt.results.settle_times_opt_cell{1};
 clqr_settletime_s = step_data_clqr.results.settle_times_opt_cell{1};
 
 
 
-F300=figure(300); clf
+F300=figure(200); 
 colrs =  get(gca, 'colororder');
 hands = [];
 % nh = length(hands)
@@ -275,37 +277,32 @@ fid = fopen('log-tsbyrefMax.txt', 'w');
 
 % fid = 1;
 rmax_s = [1, 1.5, 2.5, 5.0, 10];
-ts_by_rmax_lin = TsByMaxRefParams(max_sp_data_lin, rmax_s, 'data/ts_byrefmax_lin.mat');
-ts_by_rmax_mpc = TsByMaxRefParams(max_sp_data_mpc, rmax_s, 'data/ts_byrefmax_mpc.mat');
-tic
-try
-    ts_by_rmax_lin = ts_by_rmax_lin.run_ts_by_refs('verbose', 1, 'fid', fid);
+ts_by_rmax_lin = TsByMaxRefParams(step_data_lin, rmax_s, 'data/ts_byrefmax_lin_CCTA.mat',...
+    'logger', logger, 'ProgBar', ProgBar);
+
+ts_by_rmax_mpc = TsByMaxRefParams(step_data_mpc, rmax_s, 'data/ts_byrefmax_mpc_CCTA.mat',...
+    'logger', logger, 'ProgBar', ProgBar);
+
+% try
+    ts_by_rmax_lin = ts_by_rmax_lin.run_ts_by_refs('verbose', 1);
     fprintf(fid, 'Finished running Ts by Max Ref, linear. Total time = %.2f\n\n', toc);
-catch ME
-    errMsg = getReport(ME,  'extended','hyperlinks', 'off');
-    fprintf(fid, 'Failed to run Ts by max setpoints, linear: %s\n\n', errMsg);
-end
+% catch ME
+%     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
+%     fprintf(fid, 'Failed to run Ts by max setpoints, linear: %s\n\n', errMsg);
+% end%
 
 tic
-try
-    ts_by_rmax_mpc = ts_by_rmax_mpc.run_ts_by_refs_mpc('verbose', 1, 'fid', fid);
+% try
+clear TsByMaxRefParams
+    ts_by_rmax_mpc = ts_by_rmax_mpc.run_ts_by_refs_mpc('verbose', 1);
     fprintf(fid, 'Finished running Ts by Max Ref, MPC. Total time = %.2f\n\n', toc);
-catch ME
-    errMsg = getReport(ME,  'extended','hyperlinks', 'off');
-    fprintf(fid, 'Failed to run Ts by max setpoints, mpc: %s\n\n', errMsg);
-end
-
-
-
-% if fid >1
-% %     fclose(fid);
-%     to = { 'abraker@fastmail.com', 'robr9299@colorado.edu'};
-%     ssendmail('MATLAB Report:compare_maximum_ref.mm', logfile2, 'to', to)
-% %     ssendmail('test from matlab', 'body of test from matlab', 'to',...
-% %         'robr9299@colorado.edu', 'attachments', {'figures/cp_traj.svg'})
+% catch ME
+%     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
+%     fprintf(fid, 'Failed to run Ts by max setpoints, mpc: %s\n\n', errMsg);
 % end
-% 
 
+
+%%
 
 try
     clc
@@ -313,7 +310,6 @@ try
     figure(20)
 
     [ax, hands, leg] = ts_by_rmax_lin.plot_ts_v_r2max(gca);
-    
 
     % Copy the ref-vs-ts figure;
     f400 = copyobj(F300, 0);
@@ -366,17 +362,16 @@ try
 
         title(sprintf('Nmpc = %.0f', N_mpc))
 
-
         hleg = legend([hands2; hands3]);
         set(hleg, 'interpreter', 'latex')
 
     end
 
 catch
-    fprintf(fid, 'error making Max ref figures\n')
+   logger('error making Max ref figures\n')
 end
 
-fclose(fid)
+
 
 
 

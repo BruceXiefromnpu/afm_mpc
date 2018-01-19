@@ -17,7 +17,6 @@ classdef StepDataTimeOpt < StepData
             % p.addParameter('fig_files', '')
             % parse(p, varargin{:});
             
-            
             % self.params = Params;
             % self.file = p.Results.file;
             % self.fig_files = p.Results.fig_files;
@@ -37,30 +36,29 @@ classdef StepDataTimeOpt < StepData
                 ax = gca();
             end
             ref_s = self.params.ref_s;
-            clqr_settletime_s = self.results.settle_times_opt;
-            h = plot(ax, ref_s, clqr_settletime_s*1000, varargin{:});
-            set(h, 'DisplayName', 'CLQR')
+            topt_settletime_s = self.results.settle_times_opt{1};
+            h = plot(ax, ref_s, topt_settletime_s*1000, varargin{:});
+            set(h, 'DisplayName', 'TimeOpt')
         end
         
-        function [h, ax] = plot_single_ytraj(self, index, ax, ...
+        function [hy, ax] = plot_single_ytraj(self, index, ax, ...
                                              varargin)
-        % plot the y-trajectory held at self.results.opt_trajs_cell{1}.Y_vec_s{index}
+        % plot the y-trajectory held at 
+        % self.results.opt_trajs_cell{1}.Y_vec_s{index}.
         %   -- If ax is empty, will plot to gca().
         %   -- varargin is passed straight to matlabs plot function. 
-
             if ~exist('ax', 'var')
                 ax = gca();
             elseif isempty(ax)
                 ax = gca();
             end
-            traj_x = self.results.opt_trajs_cell{index}.X;
-            traj_y = timeseries(traj_x.Data*self.params.sys_nodelay.C', traj_x.Time);
+            traj_y = self.results.opt_trajs_cell{1}.Y_vec_s{index};
             hy = plot(ax, traj_y.Time, traj_y.Data, varargin{:});
-            
         end
 
-        function [h, ax] = plot_single_utraj(self, index, ax, varargin)
-        % Plot the u-trajectory held at self.results.opt_trajs_cell{1}.U_vec_s{index}
+        function [hu, ax] = plot_single_utraj(self, index, ax, varargin)
+        % Plot the u-trajectory held at 
+        % self.results.opt_trajs_cell{1}.U_vec_s{index}.
         %   -- If ax is empty, will plot to gca().
         %   -- varargin is passed straight to matlabs plot function. 
             if ~exist('ax', 'var')
@@ -68,12 +66,9 @@ classdef StepDataTimeOpt < StepData
             elseif isempty(ax)
                 ax = gca();
             end
-
-            traj_u = self.results.opt_trajs_cell.U_vec_s{index};
+            traj_u = self.results.opt_trajs_cell{1}.U_vec_s{index};
             hu = plot(ax, traj_u.Time, traj_u.Data, varargin{:});
-            
         end
-        % clqr_data = build_clqr_trajs(data_struct)
 
         function [self, status] = build_timeopt_trajs(self, varargin)
         % Builds Time-Optimal trajectories Will run a sequence
@@ -105,14 +100,11 @@ classdef StepDataTimeOpt < StepData
         %   Hz. I should augment this to also allow inputing an overloading
         %   function handle that will do this. 
         % 
-        % 
         %   build_timeopt_trajs(..., 'verbose', 1) 1 --> write
-        %   logging info to file id. 2 --> make plot to figure 200 also.
+        %   logging info to self.logger. 2 --> make plot of settle times at
+        %   figure 200 also. 3--> also plot all the resulting Y and U 
+        %   trajectories to figure 500.
         % 
-        %   build_timeopt_trajs(..., 'savedata', 1) save the
-        %   results and the whole object to self.file? Will be saved
-        %   as variable 'step_data'
-        %
         % Outputs
         % ------
         %   On exit, this function will populate self.results.
@@ -166,6 +158,9 @@ classdef StepDataTimeOpt < StepData
                 change_current_figure(Fig);
                 colrs = get(gca, 'colororder');
             end
+            if verbose >=2
+                Fig2 = figure(500);
+            end
 
             if do_eject
                 % Pull out open-loop pole-zero information.
@@ -178,6 +173,7 @@ classdef StepDataTimeOpt < StepData
             x0_sim = Nx_sim*0;
             
             % Pre-allocate
+            opt_trajs_cell = cell(1,1);
             settle_times_opt = ref_s*0;
             
             N_refs = length(ref_s);
@@ -200,7 +196,7 @@ classdef StepDataTimeOpt < StepData
                                   '%0.3f. Exiting...'], ref_s(iter));
                     break
                 else
-                    self.logger(['Time Optimal bisection for ref=%.3f, ref_iter = %.0f ' ...
+                    self.logger(['Time Optimal bisection for ref=%.3f, ref_iter = %.0f ',...
                               'of %.0f, N*=%.0f\n\n'], ref_s(iter),...
                               iter, length(ref_s), length(U.Time));
                 end
@@ -215,6 +211,20 @@ classdef StepDataTimeOpt < StepData
                     change_current_figure(Fig); 
                     hold on
                     hands(iter) = plot(ref_s(iter), settle_times_opt(iter)*1000, '-xk'); 
+                    drawnow()
+                end
+                if verbose >=3
+                    change_current_figure(Fig2);
+                    if mod(iter,20) ==0
+                        clf;
+                    end
+                    subplot(2,1,1); 
+                    plot(Y.Time, Y.Data); hold on
+                    xlim([0, 0.0320])
+                    subplot(2,1,2)
+                    plot(U.Time, U.Data); hold on
+                    xlim([0, 0.0320])
+                    drawnow
                 end
             end
             
@@ -227,11 +237,12 @@ classdef StepDataTimeOpt < StepData
                 U_vec_s = U_vec_s{1:iter};
                 X_vec_s = X_vec_s{1:iter};
             end
+            opt_trajs_cell{1}.Y_vec_s = Y_vec_s;
+            opt_trajs_cell{1}.X_vec_s = X_vec_s;
+            opt_trajs_cell{1}.U_vec_s = U_vec_s;
             
-            self.results.settle_times_opt =  settle_times_opt;
-            self.results.opt_trajs_cell.Y_vec_s = Y_vec_s;
-            self.results.opt_trajs_cell.X_vec_s = X_vec_s;
-            self.results.opt_trajs_cell.U_vec_s = U_vec_s;
+            self.results.opt_trajs_cell = opt_trajs_cell;
+            self.results.settle_times_opt_cell{1} =  settle_times_opt;
             
             if savedata
                 step_data = self;

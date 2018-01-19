@@ -4,9 +4,18 @@ classdef TsByMaxRefParams
         rmax_s;
         file;
         results;
+        logger;
+        ProgBar;
     end
     methods
-        function self = TsByMaxRefParams(StepData, rmax_s, file)
+        function self = TsByMaxRefParams(StepData, rmax_s, file, ...
+                                         varargin)
+            p = inputParser;
+            p.addParameter('logger', @fprintf);
+            p.addParameter('ProgBar', @ProgressBar);
+            parse(p, varargin{:});
+            self.logger = p.Results.logger;
+            self.ProgBar = p.Results.ProgBar;
             self.StepData = StepData;
             self.rmax_s = rmax_s;
             self.file = file;
@@ -17,11 +26,9 @@ classdef TsByMaxRefParams
         % in self.StepData.params.N_mpc_s.
             p = inputParser;
             p.addParameter('force', 0);
-            p.addParameter('fid', 1);
             p.addParameter('verbose', 0);
             parse(p, varargin{:});
             opts.force = p.Results.force;
-            opts.fid = p.Results.fid;
             opts.verbose = p.Results.verbose;
             
             if exist(self.file, 'file')
@@ -49,11 +56,9 @@ classdef TsByMaxRefParams
         function self = run_ts_by_refs(self, varargin)
             p = inputParser;
             p.addParameter('force', 0);
-            p.addParameter('fid', 1);
             p.addParameter('verbose', 1);
             parse(p, varargin{:});
             opts.force = p.Results.force;
-            opts.fid = p.Results.fid;
             opts.verbose = p.Results.verbose;
 
             if exist(self.file, 'file')
@@ -65,7 +70,7 @@ classdef TsByMaxRefParams
                     return
                 end
             end
-            keyboard
+            
             result = run_ts_by_refs_local(self, [], opts);
             self.results = result;
             ts_by_rmax_data = self;
@@ -170,13 +175,13 @@ function results = run_ts_by_refs_local(self, idx_N_mpc, opts)
         if opts.verbose > 0
             if isempty(N_mpc) % linear case 
                 start_str = sprintf('Lin: rmax = %.2f', rmax);
-                PB = ProgressBar(k_ref, 'start_str', ...
-                                 start_str, 'fid', opts.fid);
+                PB = self.ProgBar(k_ref, 'start_str', start_str );
+                                 
             else
                 start_str = sprintf('MPC, N=%.0f, rmax=%.2f', N_mpc, ...
                                     rmax);
-                PB = ProgressBar(k_ref, 'start_str', ...
-                                 start_str, 'fid', opts.fid);
+                PB = self.ProgBar(k_ref, 'start_str', start_str);
+                                 
             end
             PB.upd(0);
         end
@@ -230,7 +235,7 @@ function sim_struct = update_sim_struct(sim_struct, params, gamma, N_mpc_iter)
        du_max = sim_struct.du_max;
        N_mpc  = N_mpc_iter;
        Qp = dare(params.sys.a, params.sys.b, params.Q, gamma); 
-       sim_struct.mpcProb1 = condensedMPCprob(params.sys, N_mpc,...
+       sim_struct.mpcProb1 = condensedMPCprob_OA(params.sys, N_mpc,...
                                               params.Q, Qp, gamma);
        sim_struct.mpcProb1.add_U_constraint('box', [-du_max, du_max]);
        sim_struct.K_lqr = params.sys.C*0;

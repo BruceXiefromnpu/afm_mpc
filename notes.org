@@ -147,6 +147,7 @@ With all of these modifications and optimizations, running this same set of simu
 :HTML_CONTAINER_CLASS: todosection
 :END:
 # set with C-c C-x p
+** TODO BETTER METRIC THAN IF IT SETTLES!
 ** TODO Bisect on ref-max vs gamma ??
 ** TODO plot percent increases against time-optimal for linear 
 <2018-01-08 Mon 23:55>
