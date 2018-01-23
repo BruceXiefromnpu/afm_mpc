@@ -6,6 +6,9 @@ classdef StepDataQuad < StepData
         % fig_files;
         % savedata;
         % results;
+        max_ref_judge; % Handle to a function which decides if the
+                       % maximum reference has been found. This
+                       % will be passed into find_max_ref;
     end
     
     methods
@@ -32,11 +35,15 @@ classdef StepDataQuad < StepData
 
         % Initialize the "warm starting"
             sim_struct = self.params.sim_struct;
+            if ~isempty(varargin)
+                sim_struct.N_mpc = varargin{1};
+            end
             gam_s = self.params.gam_s;
             ref_s = self.params.ref_s;
             
             ref_max_prior = ref_s(1);
             max_setpoints_iter = 0*gam_s;
+            max_recommended_sps_idx = 0*gam_s;
             PB.upd(0);
             
             data = cell(1, length(gam_s));
@@ -46,14 +53,16 @@ classdef StepDataQuad < StepData
                 sim_struct = self.update_sim_struct(sim_struct, gamma);
                 % keyboard 
                 % Warm starting
-                rmax_ind = find(ref_s == ref_max_prior, 1);
-                rmax_ind = max([rmax_ind-5, 1]);
+                % rmax_ind = find(ref_s == ref_max_prior, 1);
+                % rmax_ind = max([rmax_ind-5, 1]);
+                rmax_ind = 1;
                 
                 fig_base = 10*gam_iter;
                 data_iter = find_ref_max(sim_struct, ref_s(rmax_ind:end),...
                                          'verbose', verbose,...
                                          'fig_base', fig_base);
-                max_setpoints(gam_iter) = data_iter.ref_max;
+                max_setpoints_idx(gam_iter) = data_iter.ref_max_idx;
+                max_recommended_sps_idx(gam_iter) = data_iter.ref_max_recommended_idx;
                 ref_max_prior = data_iter.ref_max;
                 data{gam_iter} = data_iter;
                 
@@ -66,6 +75,7 @@ classdef StepDataQuad < StepData
                 %     keyboard
             end % end MAIN LOOP 
                 result_s.max_setpoints = max_setpoints;
+                result_s.max_recommended_sps_idx = max_recommended_sps_idx;
                 result_s.data = data;
         end
 

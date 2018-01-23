@@ -173,15 +173,18 @@ step_data_timeopt = step_data_timeopt.build_timeopt_trajs('force', 0, 'verbose',
 
 %%
 % 1.----------- Generate LIN max setpoints --------------------------------
+clc
+clear find_ref_max
+clear StepDataQuad_parfor
 tic
 % try 
-    step_data_lin = step_data_lin.build_max_setpoints('force', 0, 'verbose', 1);
+    step_data_lin = step_data_lin.build_max_setpoints('force', 1, 'verbose', 1);
     logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
 % catch ME
     %errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
 %      logger(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
 %      end
-
+%%
 % 2.----------- Generate  mpc max setpoints -------------------------------
 
 tic
@@ -385,7 +388,7 @@ F4000 = figure(4000); clf; hold on
 sim_struct = struct(step_data_mpc.params.sim_struct);
 N_mpc_current = step_data_mpc.params.N_mpc_s(idx_nmpc);
 sim_struct.N_mpc = N_mpc_current;
-fprintf('N_mpc = %d', N_mpc_current);
+fprintf('N_mpc = %d\n', N_mpc_current);
 yerr = zeros(1, length(ref_s));
 % length(ref_s)
 for kref = 1:length(ref_s)
