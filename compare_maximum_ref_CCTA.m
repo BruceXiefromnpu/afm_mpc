@@ -15,8 +15,8 @@ ref_f = 2;
 ref_0 = 0;
 umax = 5;
 
-fname_lin = 'data/max_sp_data_lin_CCTA.mat';
-fname_mpc = 'data/max_sp_data_mpc_CCTA.mat';
+fname_lin = 'data/max_sp_data_lin_CCTA_judge.mat';
+fname_mpc = 'data/max_sp_data_mpc_CCTA_judge.mat';
 fname_clqr = 'data/clqr_ref_data_CCTA.mat';
 fname_timeopt = 'data/timeopt_ref_data_CCTA.mat';
 
@@ -149,7 +149,7 @@ step_data_lin = StepDataLin(step_params_lin, 'savedata', true,...
 
 step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT,...
                     trun, N_mpc_s,'condensed');
-step_data_mpc = StepDataMPC_parfor(step_params_mpc, 'savedata', true,...
+step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', true,...
     'file', fname_mpc', 'logger', logger,...
     'Progbar', ProgBar);
 
@@ -169,16 +169,32 @@ step_data_timeopt = StepDataTimeOpt(step_params_timeopt, 'savedata', true,...
 
 step_data_timeopt = step_data_timeopt.build_timeopt_trajs('force', 0, 'verbose', 3, 'max_iter', 50);
 
-
+% 0.----------- Generate/Load CLQR max Trajectories -----------------------
+tic
+% try
+    step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 0, 'verbose', 1);
+    logger('Finished building clqr_data. Total time = %.2f\n', toc);
+% catch ME
+%     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
+%     logger(fid, 'Failed to build clqr_data: \n%s', errMsg);
+% end
 
 %%
 % 1.----------- Generate LIN max setpoints --------------------------------
 clc
+close all
+clear StepDataLin
+clear maxSpJudge
 clear find_ref_max
-clear StepDataQuad_parfor
+clear StepDataQuad
 tic
+
+threshold = 120; % percent
+Judge = MaxSpJudge(step_data_clqr, threshold);
 % try 
-    step_data_lin = step_data_lin.build_max_setpoints('force', 1, 'verbose', 1);
+    step_data_lin.max_ref_judge = @Judge.max_sp_judge;
+    step_data_lin = step_data_lin.build_max_setpoints('force', 1, 'verbose', 2);
+    
     logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
 % catch ME
     %errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
@@ -198,14 +214,7 @@ tic
 % 4.----------- Generate CLQR  trajectories -------------------------------
 
 
-tic
-% try
-    step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 0, 'verbose', 1);
-    logger('Finished building clqr_data. Total time = %.2f\n', toc);
-% catch ME
-%     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
-%     logger(fid, 'Failed to build clqr_data: \n%s', errMsg);
-% end
+
 
 
 
