@@ -1,4 +1,4 @@
-classdef StepDataQuad_parfor < StepData
+classdef StepDataQuad < StepData
     
     properties
         % params;
@@ -9,7 +9,7 @@ classdef StepDataQuad_parfor < StepData
     end
     
     methods
-        function self = StepDataQuad_parfor(Params, varargin)
+        function self = StepDataQuad(Params, varargin)
             self = self@StepData(Params, varargin{:})
         end
         
@@ -32,9 +32,6 @@ classdef StepDataQuad_parfor < StepData
 
         % Initialize the "warm starting"
             sim_struct = self.params.sim_struct;
-            if ~isempty(varargin)
-                sim_struct.N_mpc = varargin{1};
-            end
             gam_s = self.params.gam_s;
             ref_s = self.params.ref_s;
             

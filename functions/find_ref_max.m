@@ -63,6 +63,7 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
     p = inputParser;
     addParameter(p, 'verbose', defaultVerbose, isnonnegint)
     addParameter(p, 'fig_base', defaultFigbase, isnonnegint)
+    addParameter(p, 'max_sp_judge', @max_sp_judge_default);
     parse(p, varargin{:})
     verbose = p.Results.verbose;
     fig_base = p.Results.fig_base;
@@ -84,6 +85,8 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
     % options = simset('SrcWorkspace','current');
     y_traj_s = repmat(timeseries(0,0), 1, length(ref_s));
     t_settle_s = zeros(1, length(ref_s));
+    ref_max_recommended_found = false;
+    
     for iter = 1:length(ref_s)
         ref_f = ref_s(iter);
         % sim('MPC_fp', [], options)
@@ -95,7 +98,12 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
         if verbose
             figs = plot_local(Y, U, dU, figs, fig_base, verbose);
         end
-        
+
+        if ~ref_max_recommended_found
+            ref_max_recommended_found = max_sp_judge_default(ref_f, ...
+                                                             iter, t_settle, Y);
+            ref_max_recommended_idx = max(1, iter-1);
+        end
         if isnan(t_settle)
             ts_is_nan = true;
             break
@@ -106,28 +114,36 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
         end    
     end 
     
+    if ~ref_max_recommended_found
+        ref_max_recommended_idx = iter;
+    end
+    
+    
     if ts_is_nan && iter == 1 % The smallest reference was unstable.
-        result.ref_max = NaN;
+        result.ref_max_idx = NaN;
         result.t_settle_s = [];
         result.y_traj_s = Y;
         return
     elseif ts_is_nan % we reached an unstable ref, but its not the
                      % first. So largest stable is the last one.
-        ref_max = ref_s(iter-1);
+        ref_max_idx = iter-1;
     else             % We never found an unstable ref.
-        ref_max = ref_s(iter);
+        ref_max_idx = iter;
     end
-    result.ref_max = ref_max;
+    result.ref_max_idx = ref_max_idx;
+    result.ref_max_recommended_idx = ref_max_recommended_idx;
     result.y_traj_s = y_traj_s;
     result.t_settle_s = t_settle_s;
 
 end
 
-
+function ref_max_recommended_found = max_sp_judge_default(ref_f, ...
+                                                      iter, ts_k, Y)
+    ref_max_recommended_found = false;
+end
 
 
 function figs = plot_local(y1, u1, du1, figs, fig_base, verbose)
-
     % Figure (1)
     if verbose > 2
         try
