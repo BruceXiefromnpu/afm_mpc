@@ -67,7 +67,7 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
     parse(p, varargin{:})
     verbose = p.Results.verbose;
     fig_base = p.Results.fig_base;
-    
+    max_sp_judge = p.Results.max_sp_judge;
 
     figs = [];
     if verbose > 2
@@ -100,8 +100,8 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
         end
 
         if ~ref_max_recommended_found
-            ref_max_recommended_found = max_sp_judge_default(ref_f, ...
-                                                             iter, t_settle, Y);
+            ref_max_recommended_found = max_sp_judge(ref_f, ...
+                                                     iter, t_settle, Y);
             ref_max_recommended_idx = max(1, iter-1);
         end
         if isnan(t_settle)
@@ -114,9 +114,9 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
         end    
     end 
     
-    if ~ref_max_recommended_found
-        ref_max_recommended_idx = iter;
-    end
+    % if ~ref_max_recommended_found
+    %     ref_max_recommended_idx = iter;
+    % end
     
     
     if ts_is_nan && iter == 1 % The smallest reference was unstable.
