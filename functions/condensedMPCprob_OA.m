@@ -161,7 +161,9 @@ function [H, M] = clqrProblem_builder(sys, N, Q, r, Qp, S)
     if sys.Ts == 0
         error('system "sys" should be discrete time dynamical system')
     end
-
+    if isempty(Q) || isempty(r) || isempty(Qp) || isempty(S) ||isempty(N)
+        error('System and weight matrices must not be empty!\n')
+    end
     Ns = size(sys.b, 1);
     nu = size(sys.b, 2);
 
@@ -179,7 +181,7 @@ function [H, M] = clqrProblem_builder(sys, N, Q, r, Qp, S)
 
     % make phi;
     % phi = [
-%            A; 
+    %        A; 
     %       A^2;
     %       A^3;
     %         :
@@ -207,7 +209,7 @@ function [H, M] = clqrProblem_builder(sys, N, Q, r, Qp, S)
     QQ = kron(II_nplus1, Q);
     QQ = kron(eye(N), Q);
     QQ = blkdiag(QQ, Qp);
-%     QQ(N*Ns+1-Ns:end, N*Ns+1-Ns:end) = Qp;
+    % QQ(N*Ns+1-Ns:end, N*Ns+1-Ns:end) = Qp;
 
     SS = kron(eye(N+1, N), S);
 

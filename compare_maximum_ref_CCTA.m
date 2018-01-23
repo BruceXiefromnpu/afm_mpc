@@ -317,7 +317,7 @@ try
 
     % hands2 = f400.Children.Children;
     hands2 = f400.CurrentAxes.Children;
-    hands3 = gobjects(length(ts_by_rmax_lin.rmax_s), 1)
+    hands3 = gobjects(length(ts_by_rmax_lin.rmax_s), 1);
 
     for k=1:length(ts_by_rmax_lin.rmax_s)
         rmax = ts_by_rmax_lin.rmax_s(k);
@@ -344,10 +344,10 @@ try
 
         % hands2 = f400.Children.Children;
         hands2 = fighands(mpc_iter).CurrentAxes.Children;
-        hands3 = gobjects(length(ts_by_rmax_mpc.rmax_s), 1)
+        hands3 = gobjects(length(ts_by_rmax_mpc.rmax_s), 1);
 
 
-        N_mpc = ts_by_rmax_mpc.StepData.params.N_mpc_s(mpc_iter)
+        N_mpc = ts_by_rmax_mpc.StepData.params.N_mpc_s(mpc_iter);
 
         for k=1:length(ts_by_rmax_mpc.rmax_s)
             rmax = ts_by_rmax_mpc.rmax_s(k);
@@ -360,7 +360,7 @@ try
             set(hands3(k), 'DisplayName', stit, 'LineWidth', 2);
         end
 
-        title(sprintf('Nmpc = %.0f', N_mpc))
+        title(sprintf('Nmpc = %.0f', N_mpc));
 
         hleg = legend([hands2; hands3]);
         set(hleg, 'interpreter', 'latex')
@@ -370,6 +370,69 @@ try
 catch
    logger('error making Max ref figures\n')
 end
+%%
+gam_s = step_data_mpc.params.gam_s;
+clc
+idx_nmpc=4;
+idx_gam = find(gam_s>=9399, 1, 'first')
+
+
+F1000 = figure(1000); clf; hold on
+F2000 = figure(2000); clf; hold on
+F3000 = figure(3000); clf; hold on
+F4000 = figure(4000); clf; hold on
+
+sim_struct = struct(step_data_mpc.params.sim_struct);
+N_mpc_current = step_data_mpc.params.N_mpc_s(idx_nmpc);
+sim_struct.N_mpc = N_mpc_current;
+fprintf('N_mpc = %d', N_mpc_current);
+yerr = zeros(1, length(ref_s));
+% length(ref_s)
+for kref = 1:length(ref_s)
+    
+    sim_struct = step_data_mpc.update_sim_struct(sim_struct, gam_s(idx_gam));
+    
+    Ympc = sim_MPC_fp(sim_struct, ref_s(kref));
+    
+    clqr_ytraj = step_data_clqr.results.opt_trajs_cell{1}.Y_vec_s{kref};
+    
+    ts_clqr = step_data_clqr.results.settle_times_opt_cell{1}(kref);
+    ts_mpc  = settle_time(Ympc.Time, Ympc.Data, ref_s(kref), 0.01, [], [], 30);
+    
+    change_current_figure(F3000);
+    plot(ref_s(kref), abs(ts_clqr - ts_mpc), 'xk')
+    
+    change_current_figure(F4000);
+    plot(ref_s(kref), (ts_mpc/ts_clqr)*100, 'xk')
+    
+    change_current_figure(F1000); 
+    plot(Ympc.Time, Ympc.Data);
+    plot(clqr_ytraj.Time, clqr_ytraj.Data, '--')
+
+%     keyboard
+   
+    err_k = sum((Ympc.Data(1:end-1) - clqr_ytraj.Data).^2);
+    change_current_figure(F2000); hold on
+    plot(ref_s(kref), err_k, 'xk')
+    yerr(kref) = err_k;
+
+    drawnow()
+end
+
+
+figure(4000)
+    xlabel('ref')
+    ylabel('perc increase')
+    title(sprintf('N = %d', N_mpc_current));
+figure(3000)
+    xlabel('ref')
+    ylabel('$|ts_{clqr} - ts_{mpc}|$', 'interpreter', 'latex', 'FontSize', 14)
+    title(sprintf('N = %d', N_mpc_current));
+
+figure(2000)
+    xlabel('ref')
+    ylabel('$|y_{clqr} - y_{mpc}|^2$', 'interpreter', 'latex', 'FontSize', 14)
+    title(sprintf('N = %d', N_mpc_current));
 
 
 
