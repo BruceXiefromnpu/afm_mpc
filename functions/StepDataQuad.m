@@ -14,6 +14,7 @@ classdef StepDataQuad < StepData
     methods
         function self = StepDataQuad(Params, varargin)
             self = self@StepData(Params, varargin{:})
+            self.max_ref_judge = @max_sp_judge_default;
         end
         
         function result_s = build_max_sp_local(self, PB, verbose, varargin)
@@ -86,6 +87,7 @@ classdef StepDataQuad < StepData
         end
 
         function sim_struct = update_sim_struct(self, sim_struct, gamma)
+            warning('off', 'MATLAB:structOnObject');
             params = self.params;
             if sim_struct.N_mpc == 0 % we are in linear mode then.
                 sim_struct.K_lqr = dlqr(params.sys.a, params.sys.b,...
@@ -149,3 +151,9 @@ function plot_local(t_settle_s, gam_s, ref_s, max_recommended_sps_idx,...
     drawnow()
     hold on
 end
+
+
+function ref_max_recommended_found = max_sp_judge_default(varargin)
+    ref_max_recommended_found = false;
+end
+

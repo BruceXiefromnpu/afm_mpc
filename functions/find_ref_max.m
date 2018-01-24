@@ -137,8 +137,8 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
 
 end
 
-function ref_max_recommended_found = max_sp_judge_default(ref_f, ...
-                                                      iter, ts_k, Y)
+function ref_max_recommended_found = max_sp_judge_default(varargin)
+                                                      
     ref_max_recommended_found = false;
 end
 

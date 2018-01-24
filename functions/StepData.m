@@ -44,7 +44,7 @@ classdef StepData
         % (a) data_struct.file exists
         % (b) the params fields in the loaded data struct (at data_struct.file) 
         % and the provided data are the same. 
-            
+            warning('off', 'MATLAB:structOnObject');
             if ~exist(self.file, 'file')
                 status = 0;
                 self.logger('self.file does not exist!')
