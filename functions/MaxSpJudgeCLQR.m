@@ -61,7 +61,7 @@ classdef MaxSpJudgeCLQR
             Y = sys.C*X;
             tvec = (0:1:size(U, 2)-1)*sys.Ts; 
             ts_self = settle_time(tvec, Y, ref_f, 0.01*ref_f, [], [], 30);
-            perc_increase = (ts_other/ts_self)*100
+            perc_increase = (ts_other/ts_self)*100;
             
             if perc_increase > self.thresh_hold || isnan(perc_increase)
                 ref_max_recommended_found = true;

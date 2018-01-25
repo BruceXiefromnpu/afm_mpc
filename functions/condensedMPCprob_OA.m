@@ -122,8 +122,8 @@ classdef condensedMPCprob_OA < handle
             % type: symmetric 'slew' slew rate constraint. bnds is scalar
             if strcmp('box', type) & length(bnds)==1
                 bnds = [-bnds, bnds];
-                fprintf('Type box constraint indicated but only one bound found\n')
-                fprintf('Assuming symmentric bounds of [%.3f, %.3f]\n', bnds(1), bnds(2));
+%                 fprintf('Type box constraint indicated but only one bound found\n')
+%                 fprintf('Assuming symmentric bounds of [%.3f, %.3f]\n', bnds(1), bnds(2));
             end
 
             if strcmp(type, 'box')
