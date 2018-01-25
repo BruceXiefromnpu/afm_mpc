@@ -113,9 +113,9 @@ mpc_on=0;
 % ref_s = [1.5];
 
 gamma = 100;
-gam_s = linspace(gamma, 50000, 20); % original
+gam_s = linspace(gamma, 2.8e4, 30); % original
 % gam_s = [1, 100, 1000, 2500, 5000, 10000];
-ref_s = 0.1:0.5:10;
+ref_s = 0.1:0.25:20;
 
 
 N_mpc_s = [4, 8, 12, 16, 20]; % original 
@@ -125,10 +125,10 @@ trun = Ts*N_traj;
 
 
 %
-logfile = 'log-lin-mpc-parfor_hotstart2.log';
+logfile = 'logs/log-lin-mpc-parfor_judge_dynamic.log';
 LG = EchoFile(logfile);
-% logger = @LG.echo_file;
-logger = @fprintf;
+logger = @LG.echo_file;
+% logger = @fprintf;
 ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', logger);
 
 
@@ -169,7 +169,7 @@ tic
 %     logger(fid, 'Failed to build clqr_data: \n%s', errMsg);
 % end
 
-%%
+%
 % 1.----------- Generate LIN max setpoints --------------------------------
 clc
 close all
@@ -185,27 +185,28 @@ Judge = MaxSpJudgeCLQR(step_data_clqr, threshold);
 % try 
 clc
 clear StepDataQuad
+try
     step_data_lin.max_ref_judge = Judge;
     step_data_lin = step_data_lin.build_max_setpoints('force', 1, 'verbose', 2);
     
     logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
-% catch ME
-    %errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
-%      logger(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
-%      end
+catch ME
+    errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
+     logger(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
+ end
 
 % 2.----------- Generate  mpc max setpoints -------------------------------
 
 tic
-% try
+try
     step_data_mpc.max_ref_judge = Judge;
     step_data_mpc = step_data_mpc.build_max_setpoints('force', 0, 'verbose', 1);
    logger('Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
-% catch ME
-%     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
-%     logger('Failed to build max setpoints, mpc: %s\n\n', errMsg);    
-% end
-% 4.----------- Generate CLQR  trajectories -------------------------------
+catch ME
+    errMsg = getReport(ME,  'extended','hyperlinks', 'off');
+    logger('Failed to build max setpoints, mpc: %s\n\n', errMsg);    
+end
+
 
 
 
