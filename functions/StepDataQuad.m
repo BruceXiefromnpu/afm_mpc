@@ -56,12 +56,14 @@ classdef StepDataQuad < StepData
                 % rmax_ind = find(ref_s == ref_max_prior, 1);
                 % rmax_ind = max([rmax_ind-5, 1]);
                 rmax_ind = 1;
+
+                max_ref_judge = self.max_ref_judge.build_ref_max_judge_dynamic(gamma); %#ok<PROPLC>
                 
                 fig_base = 10*gam_iter;
                 data_iter = find_ref_max(sim_struct, ref_s(rmax_ind:end),...
                                          'verbose', verbose,...
                                          'fig_base', fig_base,...
-                                         'max_sp_judge', self.max_ref_judge);
+                                         'max_sp_judge', max_ref_judge); %#ok<PROPLC>
                 
                 max_setpoints_idx(gam_iter) = data_iter.ref_max_idx;
                 max_recommended_sps_idx(gam_iter) = data_iter.ref_max_recommended_idx;

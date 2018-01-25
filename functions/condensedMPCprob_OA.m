@@ -205,16 +205,17 @@ function [H, M] = clqrProblem_builder(sys, N, Q, r, Qp, S)
     
     
     
-    II_nplus1 = eye(N+1);
-    QQ = kron(II_nplus1, Q);
-    QQ = kron(eye(N), Q);
+%     II_nplus1 = eye(N+1);
+%     QQ = kron(II_nplus1, Q);
+    II = sparse(eye(N));
+    QQ = kron(II, Q);
     QQ = blkdiag(QQ, Qp);
     % QQ(N*Ns+1-Ns:end, N*Ns+1-Ns:end) = Qp;
 
     SS = kron(eye(N+1, N), S);
 
     % RR = eye(N)*r;
-    RR = kron(eye(N), r);
+    RR = kron(II, r);
     
     H = 2*(RR + F'*QQ*F + 2*F'*SS );
 
