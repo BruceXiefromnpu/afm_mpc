@@ -30,7 +30,7 @@ classdef MaxSpJudge
             perc_increase = (ts_other/ts_self)*100;
 
             
-            fprintf('perc increase = %f\n', perc_increase);
+            % fprintf('perc increase = %f\n', perc_increase);
             
             if perc_increase > self.thresh_hold || isnan(perc_increase)
                 ref_max_recommended_found = true;

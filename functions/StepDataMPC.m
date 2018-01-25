@@ -133,8 +133,14 @@ classdef StepDataMPC < StepDataQuad
             self.results = result_s;
 
             if self.savedata
-                step_data = self;
-                save(step_data.file, 'step_data')
+                try
+                    step_data = self;
+                    save(step_data.file, 'step_data', '-v7.3')
+                catch ME
+                    errMsg = getReport(ME,  'extended','hyperlinks', 'off');
+                    self.logger('*********** DATA NOT SAVED ************* \n');
+                    self.logger('Matlab said:\n %s', errMsg);
+                end
             end
             
         end % END MAIN FUNCTION

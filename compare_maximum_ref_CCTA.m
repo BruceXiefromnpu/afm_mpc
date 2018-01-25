@@ -193,18 +193,19 @@ threshold = 120; % percent
 Judge = MaxSpJudge(step_data_clqr, threshold);
 % try 
     step_data_lin.max_ref_judge = @Judge.max_sp_judge;
-    step_data_lin = step_data_lin.build_max_setpoints('force', 1, 'verbose', 2);
+    step_data_lin = step_data_lin.build_max_setpoints('force', 0, 'verbose', 2);
     
     logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
 % catch ME
     %errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
 %      logger(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
 %      end
-%%
+%
 % 2.----------- Generate  mpc max setpoints -------------------------------
 
 tic
 % try
+    step_data_mpc.max_ref_judge = @Judge.max_sp_judge;
     step_data_mpc = step_data_mpc.build_max_setpoints('force', 0, 'verbose', 1);
    logger('Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
 % catch ME
