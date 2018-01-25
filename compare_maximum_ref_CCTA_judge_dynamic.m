@@ -113,9 +113,9 @@ mpc_on=0;
 % ref_s = [1.5];
 
 gamma = 100;
-gam_s = linspace(gamma, 50000, 20); % original
+gam_s = linspace(gamma, 2.8e4, 30); % original
 % gam_s = [1, 100, 1000, 2500, 5000, 10000];
-ref_s = 0.1:0.5:10;
+ref_s = 0.1:0.25:20;
 
 
 N_mpc_s = [4, 8, 12, 16, 20]; % original 
@@ -125,7 +125,7 @@ trun = Ts*N_traj;
 
 
 %
-logfile = 'log-lin-mpc-parfor_judge_dynamic.log';
+logfile = 'logs/log-lin-mpc-parfor_judge_dynamic.log';
 LG = EchoFile(logfile);
 logger = @LG.echo_file;
 % logger = @fprintf;
