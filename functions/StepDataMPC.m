@@ -116,7 +116,9 @@ classdef StepDataMPC < StepDataQuad
             result_s = cell(1, length(self.params.N_mpc_s));
             sim_struct.mpc_on = true;
             ProgBar = @self.ProgBar;
+            warning('OFF', 'MATLAB:mir_warning_maybe_uninitialized_temporary');
             parfor mpc_iter = 1:length(N_mpc_s)
+                warning('OFF', 'MATLAB:mir_warning_maybe_uninitialized_temporary');
                 N_mpc_iter = N_mpc_s(mpc_iter);
                 if verbose > 0
                     start_str = sprintf('MPC, N=%.0f', N_mpc_iter);
@@ -128,7 +130,7 @@ classdef StepDataMPC < StepDataQuad
                                                    N_mpc_iter);
                 result_s{mpc_iter} = result_s_iter;
             end
-
+            % warning('ON', 'MATLAB:mir_warning_maybe_uninitialized_temporary');
             % results.max_setpoints = max_setpoints;
             self.results = result_s;
 

@@ -9,12 +9,14 @@ classdef StepDataQuad < StepData
         max_ref_judge; % Handle to a function which decides if the
                        % maximum reference has been found. This
                        % will be passed into find_max_ref;
+        ts_by_rmax_results;
     end
     
     methods
         function self = StepDataQuad(Params, varargin)
             self = self@StepData(Params, varargin{:})
             self.max_ref_judge = @max_sp_judge_default;
+            ts_by_rmax_results = {};
         end
         
         function result_s = build_max_sp_local(self, PB, verbose, varargin)
@@ -87,7 +89,114 @@ classdef StepDataQuad < StepData
                 result_s.max_recommended_sps = ref_s(max_recommended_sps_idx);
                 result_s.data = data;
         end
+        
+        function [ax, h] = plot_ts_by_ref_max_judge(self, rmax, ...
+                                                          exp_idx, varargin)
+            if isempty(self.ts_by_rmax_results)
+                error(['You must generate the ts by rmax results ' ...
+                       'first. Run self. ts_by_ref_max(ref_max, exp_idx'])
+            end
+            if isempty(exp_idx)
+                exp_idx = 1;
+            end
+            if isempty(varargin)
+                f = figure;
+                ax = gca;
+            else
+                ax = varargin{1};
+                varargin(1) = [];
+            end
+            
+            h = plot(ax, self.ts_by_rmax_results{exp_idx}.ref_s, ...
+                 self.ts_by_rmax_results{exp_idx}.t_settle_s*1e3,...
+                     varargin{:});
+            h.DisplayName = sprintf('exp-idx = %.0f, rmax-des = %.2f, $\\gamma=%.0f$', ...
+                                    exp_idx,...
+                                    self.ts_by_rmax_results{exp_idx}.rmax_des,...
+                                    self ...
+                                    .ts_by_rmax_results{exp_idx}.gamma);
+            xlabel('setpoint')
+            ylabel('settle time [ms]')
+        end
+        
+        function [ax, h] = plot_ts_perc_increase_by_rmax(self,rmax, ...
+                                                         exp_idx, ts_other, varargin)
+        % [ax, h] = plot_ts_perc_increase_by_rmax(self,rmax, exp_idx, ts_other, varargin)
+        % 
+        % Plot percent increase for a maximum desired reference
+        % compared to data in ts_other
+        % 
+        % Inputs
+        % -----
+        %  rmax : 
+        %  
+        %  exp_idx : for linear, this is 1. For MPC, this is the
+        %  N_mpc index in self.params.N_mpc_s
+        %  ts_other : a vector of settling times to compare to.
+        %
+            
+            if isempty(self.ts_by_rmax_results)
+                error(['You must generate the ts by rmax results ' ...
+                       'first. Run self. ts_by_ref_max(ref_max, exp_idx'])
+            end
+            if isempty(exp_idx)
+                exp_idx = 1;
+            end
+            if isempty(varargin)
+                f = figure;
+                ax = gca;
+            else
+                ax = varargin{1};
+                varargin(1) = [];
+            end
+            ts_self = self.ts_by_rmax_results{exp_idx}.t_settle_s;
+            ref_s = self.ts_by_rmax_results{exp_idx}.ref_s;
+            
+            len_ts_self = length(ts_self);
+            
+            if len_ts_self > length(ts_other)
+                error(['The number of settle times in ' ...
+                       'self.ts_by_rmax_results must be at least ' ...
+                       'length of ts_other']);
+            end
+            
+            ts_other = ts_other(1:len_ts_self);
+            perc_increase = (ts_self./ts_other)*100;
+            h = plot(ax, ref_s, perc_increase, varargin{:});
+            h.DisplayName = sprintf('exp-idx = %.0f, rmax-des = %.2f, $\\gamma=%.0f$', ...
+                                    exp_idx,...
+                                    self.ts_by_rmax_results{exp_idx}.rmax_des,...
+                                    self.ts_by_rmax_results{exp_idx}.gamma);
+            xlabel('setpoint')
+            ylabel('settle time \% increase')
+        end
+        
+        function self = ts_by_ref_max(self, rmax, exp_idx)
+            if isempty(self.results)
+               error(['You must first load or generate results before  ' ...
+                      'this function can be used'])
+            end
+            
+            ref_s  = self.params.ref_s;
+            gam_s =  self.params.gam_s;
+            max_recommended_sps = self.results{exp_idx}.max_recommended_sps;
+            max_recommended_sps_idx = self.results{exp_idx}.max_recommended_sps_idx;
+            
+            kk = find(max_recommended_sps >=rmax, 1, 'first');
+            % keyboar
+            result.gamma = gam_s(kk);
+            ref_max_idx = max_recommended_sps_idx(kk);
+            
+            t_settle_s = self.results{exp_idx}.data{kk}.t_settle_s;
+            
+            result.ref_s = ref_s(1:ref_max_idx);
 
+            % we typically generate ALL of the trajs, so have ALL t_settle_s
+            result.t_settle_s = t_settle_s(1:ref_max_idx);
+            result.rmax_des = rmax;
+            self.ts_by_rmax_results{exp_idx} = result;
+        end
+        
         function sim_struct = update_sim_struct(self, sim_struct, gamma)
             warning('off', 'MATLAB:structOnObject');
             params = self.params;

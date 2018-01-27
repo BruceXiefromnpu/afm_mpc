@@ -24,7 +24,7 @@ classdef StepDataTimeOpt < StepData
             % self.results = [];
         end
         
-        function plot_ref_vs_settle(self,ax, varargin)
+        function[h, ax] = plot_ref_vs_settle(self,ax, varargin)
         % plot_ref_vs_settle(self,ax, varargin)
         % plot reference vs settle time for data contained in
         % self.data. 
@@ -36,7 +36,7 @@ classdef StepDataTimeOpt < StepData
                 ax = gca();
             end
             ref_s = self.params.ref_s;
-            topt_settletime_s = self.results.settle_times_opt{1};
+            topt_settletime_s = self.results.settle_times_opt_cell{1};
             h = plot(ax, ref_s, topt_settletime_s*1000, varargin{:});
             set(h, 'DisplayName', 'TimeOpt')
         end

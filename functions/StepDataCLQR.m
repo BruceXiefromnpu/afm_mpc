@@ -5,7 +5,6 @@ classdef StepDataCLQR < StepData
         % file;
         % savedata;
         % results;
-        plot_ref_vs_settle_fcn;
     end
     
     methods
@@ -13,8 +12,6 @@ classdef StepDataCLQR < StepData
         % % First, parse the inputs we care about here:
             self = self@StepData(Params, varargin{:});
             
-            self.plot_ref_vs_settle_fcn = @plot_ref_vs_settle;
-
             % p = inputParser;
             % p.addParameter('savedata', true)
             % p.addParameter('file', '')
@@ -27,10 +24,71 @@ classdef StepDataCLQR < StepData
             % self.savedata =  p.Results.savedata;
             % self.results = [];
         end
-        function [h, ax] = plot_ref_vs_settle(self, ax, gamma, varargin)
-            [h, ax]= self.plot_ref_vs_settle_fcn(self, ax, gamma, varargin{:});
+        function [h, ax] = plot_ref_vs_settle(self,ax,gam_idx, varargin)
+        % plot_ref_vs_settle(self,ax, gam_idx, varargin)
+        % plot reference vs settle time for data contained in
+        % self.data. 
+        %   -- If ax is empty, will plot to gca().
+        %   -- varargin is passed straight to matlabs plot function. 
+            if ~exist('ax', 'var') && isvalid(ax)
+                ax = gca();
+            elseif isempty(ax)
+                figure()
+                ax = gca();
+            end
+            if ~exist('gam_idx', 'var')
+                gam_idx = 1;
+            else
+                gam_idx = max([gam_idx, 1]); % NOT max(gam_idx, 1);
+            end
+            gam = self.params.gam_s(gam_idx);
+            ref_s = self.params.ref_s;
+            clqr_settletime_s = self.results.settle_times_opt_cell{gam_idx};
+            
+            h = plot(ax, ref_s, clqr_settletime_s*1000, varargin{:});
+            set(h, 'DisplayName', sprintf('CLQR: $\\gamma = %.0f$', gam));
+            
+            ylabel('settle time [ms]', 'FontSize', 16)
+            xlabel('setpoint', 'FontSize', 16)
+            drawnow()
+            grid on
+        end
+        function [ax, h, hleg] = plot_ts_perc_increase_by_rmax(self, ...
+                                                               exp_idx, ts_other, varargin)
+            if isempty(self.results)
+                error(['You must generate the trajectories ' ...
+                       'first. Run self. ts_by_ref_max(ref_max, exp_idx'])
+            end
+            if isempty(exp_idx)
+                exp_idx = 1;
+            end
+            if isempty(varargin)
+                f = figure;
+                ax = gca;
+            else
+                ax = varargin{1};
+                varargin(1) = [];
+            end
+            ts_self = self.results.settle_times_opt_cell{exp_idx};
+            ref_s = self.params.ref_s;
+            
+            if length(ts_self) ~= length(ts_other)
+                error(['The number of settle times in ' ...
+                       'self.ts_by_rmax_results must match the ' ...
+                       'length of ts_other']);
+            end
+            % keyboard
+            perc_increase = (ts_self./ts_other)*100;
+            h = plot(ax, ref_s, perc_increase, varargin{:});
+            h.DisplayName = sprintf('exp-idx = %.0f, $\\gamma=%.0f$', ...
+                                    exp_idx, self.params.gam_s(exp_idx));
+                                    
+            xlabel('setpoint')
+            ylabel('settle time \% increase')
+
         end
         
+
         function [h, ax] = plot_single_ytraj(self, index, ax, varargin)
         % plot the y-trajectory held at self.results.opt_trajs_cell{1}.Y_vec_s{index}
         %   -- If ax is empty, will plot to gca().
@@ -364,29 +422,3 @@ function Fig= plot_local(Yvec, Uvec, verbose, Fig)
 end
 
 
-function [h, ax] = plot_ref_vs_settle(self,ax,gam, varargin)
-% plot_ref_vs_settle(self,ax, varargin)
-% plot reference vs settle time for data contained in
-% self.data. 
-%   -- If ax is empty, will plot to gca().
-%   -- varargin is passed straight to matlabs plot function. 
-    if ~exist('ax', 'var') && isvalid(ax)
-        ax = gca();
-    elseif isempty(ax)
-        figure()
-        ax = gca();
-    end
-    ref_s = self.params.ref_s;
-    clqr_settletime_s = self.results.settle_times_opt_cell{1};
-    
-    h = plot(ax, ref_s, clqr_settletime_s*1000, varargin{:});
-    set(h, 'DisplayName', sprintf('$\\gamma = %.0f$', gam));
-                     
-     leg = legend(h);
-     set(leg, 'interpreter', 'latex');
-    ylabel('settle time [ms]', 'FontSize', 16)
-    xlabel('setpoint', 'FontSize', 16)
-    drawnow()
-    grid on
-    
-end
