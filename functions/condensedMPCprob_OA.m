@@ -9,7 +9,8 @@ classdef condensedMPCprob_OA < handle
 %         nu;               Number of inputs.
 %         ns;               Number of states.
 %         kappa;            Condition number of H.
-%         warm_start_data;
+%         warm_start_data;  Solution from the previous iteration. This gets
+%                           because we subclass the handle class.
 %         sys;              The associated LTI ss system.
 %
 %
@@ -31,14 +32,15 @@ classdef condensedMPCprob_OA < handle
         nu;               % Number of inputs.
         ns;               % Number of states.
         kappa;            % Condition number of H.
-        warm_start_data;
+        warm_start_data;  % Solution from the previous iteration. This gets
+                          % because we subclass the handle class.
         sys;              % The associated LTI ss system.
     end
     
     methods
         function obj = condensedMPCprob_OA(sys,N, Q,Qp, R, S)
             % obj = condensedMPCprob(sys,N, Q,Qp, R, S)
-            % Construct a conensedMPCprob_OA instance. 
+            % Construct a condensedMPCprob_OA instance. 
             if isa(sys, 'condensedMPCprob')
                 obj.H = sys.H;
                 obj.M = sys.M;
@@ -203,17 +205,12 @@ function [H, M] = clqrProblem_builder(sys, N, Q, r, Qp, S)
            phi];
     F = [zeros(Ns, nu*N); F];
     
-    
-    
-%     II_nplus1 = eye(N+1);
-%     QQ = kron(II_nplus1, Q);
+    II_nplus1 = sparse(eye(N+1));
     II = sparse(eye(N));
+    
     QQ = kron(II, Q);
     QQ = blkdiag(QQ, Qp);
-    % QQ(N*Ns+1-Ns:end, N*Ns+1-Ns:end) = Qp;
-
-    SS = kron(eye(N+1, N), S);
-
+    SS = kron(II_nplus1, S);
     % RR = eye(N)*r;
     RR = kron(II, r);
     

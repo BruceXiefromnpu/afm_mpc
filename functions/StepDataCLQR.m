@@ -77,7 +77,6 @@ classdef StepDataCLQR < StepData
                        'self.ts_by_rmax_results must match the ' ...
                        'length of ts_other']);
             end
-            % keyboard
             perc_increase = (ts_self./ts_other)*100;
             h = plot(ax, ref_s, perc_increase, varargin{:});
             h.DisplayName = sprintf('exp-idx = %.0f, $\\gamma=%.0f$', ...

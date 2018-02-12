@@ -104,7 +104,7 @@ Qp = dare(sys_recyc.a, sys_recyc.b, Q1, R1);
 R = 5;
 mpc_on=0;
 
-
+%%
 
 % *Optimal, open-loop* trajectory generation over all setpoints. This
 % provides the basiline for comparison of the other methods. 
@@ -314,7 +314,7 @@ F = figure(399);
 ax = gca();
 step_data_clqr.plot_ts_perc_increase_by_rmax(1, ts_timeopt, ax);
 title('CLQR')
-%%
+
 
 %%% plot(ref_s(kref), (ts_mpc/ts_clqr)*100, 'xk')
 % ------------------------- For LINEAR ---------------------------------- %
