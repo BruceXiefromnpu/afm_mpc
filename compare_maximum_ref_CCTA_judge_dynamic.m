@@ -8,6 +8,7 @@ clc
 close all
 addpath('functions')
 addpath('models')
+
 volts2mu = 1;
 TOL = 0.01;
 trun = 800*40e-6;
@@ -15,10 +16,10 @@ ref_f = 2;
 ref_0 = 0;
 umax = 5;
 
-fname_lin = 'data/max_sp_data_lin_CCTA_judge_dynamic.mat';
-fname_mpc = 'data/max_sp_data_mpc_CCTA_judge_dynamic.mat';
-fname_clqr = 'data/clqr_ref_data_CCTA_judge_dynamic.mat';
-fname_timeopt = 'data/timeopt_ref_data_CCTA_judge_dynamic.mat';
+fname_lin = 'data/max_sp_data_lin_CCTA_judge_dynamic_dumax_p6.mat';
+fname_mpc = 'data/max_sp_data_mpc_CCTA_judge_dynamic_dumax_p6.mat';
+fname_clqr = 'data/clqr_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
+fname_timeopt = 'data/timeopt_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
 
 matpath           = getMatPath();
 dataroot          = fullfile(matpath, 'AFM_SS', 'System_Identification', 'data','data_xaxis'); 
@@ -52,7 +53,7 @@ x0 = xss*0;
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
 N_mpc = 8;
-du_max   = 0.1;
+du_max   = 0.6;
 
 % Pull out open-loop pole-zero information.
 [wp_real_x, wz_real_x] = w_zp_real(sys);
@@ -123,7 +124,7 @@ trun = Ts*N_traj;
 
 clear StepDataMPC
 %
-logfile = 'logs/log-lin-mpc-parfor_judge_dynamic.log';
+logfile = sprintf('logs/log-lin-mpc-parfor_judge_dynamic_%s.log', date);
 LG = EchoFile(logfile);
 logger = @LG.echo_file;
 logger = @fprintf;
