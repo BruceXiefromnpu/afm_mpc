@@ -210,7 +210,7 @@ function [H, M] = clqrProblem_builder(sys, N, Q, r, Qp, S)
     
     QQ = kron(II, Q);
     QQ = blkdiag(QQ, Qp);
-    SS = kron(II_nplus1, S);
+    SS = kron(sparse(eye(N+1, N)), S);  % not the same as II_Nplus1 !!
     % RR = eye(N)*r;
     RR = kron(II, r);
     

@@ -189,7 +189,7 @@ function [H, M] = clqrProblem_local(sys, N, Q, r, Qp, S)
     
     QQ = kron(eye(N), Q);
     QQ = blkdiag(QQ, Qp);
-    SS = kron(II_Nplus1, S);
+    SS = kron(sparse(eye(N+1, N)), S); % not the same as II_Nplus1 !!
     RR = kron(II, r); % if r scalar, RR = I*r.
     
     H = 2*(RR + F'*QQ*F + 2*F'*SS );
