@@ -106,7 +106,7 @@ R = 5;
 mpc_on=0;
 
 %%
-
+clc
 % *Optimal, open-loop* trajectory generation over all setpoints. This
 % provides the basiline for comparison of the other methods. 
 % ref_s = [1.5];
@@ -169,7 +169,8 @@ try
     logger('Finished building clqr_data. Total time = %.2f\n', toc);
 catch ME
     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
-    logger(fid, 'Failed to build clqr_data: \n%s', errMsg);
+    logger('Failed to build clqr_data: \n%s', errMsg);
+    fprintf('Failed to build clqr_data: \n%s', errMsg);
 end
 
 % ------------- Generate LIN max setpoints ------------------------------ %
@@ -183,7 +184,8 @@ try
     logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
 catch ME
     errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
-     logger(fid, 'Failed to build max setpoints, linear: \n\n%s', errMsg);
+     logger('Failed to build max setpoints, linear: \n\n%s', errMsg);
+     fprintf('Failed to build max setpoints, linear: \n\n%s', errMsg);
  end
 
 % ---------------------- Generate  mpc max setpoints -------------------- %
@@ -195,7 +197,8 @@ try
    logger('Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
 catch ME
     errMsg = getReport(ME,  'extended','hyperlinks', 'off');
-    logger('Failed to build max setpoints, mpc: %s\n\n', errMsg);    
+    logger('Failed to build max setpoints, mpc: %s\n\n', errMsg); 
+    fprintf('Failed to build max setpoints, mpc: %s\n\n', errMsg); 
 end
 
 %%
