@@ -220,7 +220,7 @@ legend([hcl, hto]);
 saveon = 0;
 
 if saveon
-    saveas(F200, 'figures/clqrTimeOpt_sp_vs_ts_CCTA.svg')
+    saveas(F200, 'figures/clqrTimeOpt_sp_vs_ts_CCTA_dumaxp6.svg')
 end
 %%
 % ----------------- Plot maximum reference vs gamma -----------------------
@@ -303,10 +303,10 @@ legend(hands);
 title('Linear')
 
 
-%%
+%
 % ======================================================================= %
 %                                                                         %
-%               Settle Time Percent Increase overtime Optiomal            %
+%               Settle Time Percent Increase over time-Optimal            %
 %                       by-Maximum-Acheivable-Reference                   %
 %                                                                         %
 % ======================================================================= %
@@ -358,7 +358,7 @@ for jj = 1:length(N_mpc_s)
     legend(hands);
     grid on; zoom on;
 end
-%%
+%
 clc
 clear StepDataCLQR
 clear StepDataQuad
@@ -402,15 +402,15 @@ tilefigs(1)
           
 group0 =  [figure(300), figure(301), figure(302), figure(303), figure(304),...
           figure(305)];
-tilefigs([], group0);
+tilefigs([1], group0);
 %%
 group1 = [figure(400), figure(401), figure(402), figure(403), figure(404),...
           figure(405)];
-tilefigs([], group1)      
+tilefigs(2, group1)      
 
 %%
 group2 = [figure(501), figure(502),figure(503),figure(504)];      
-tilefigs([], group2);
+tilefigs(3, group2);
 
 
 
