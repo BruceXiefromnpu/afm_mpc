@@ -18,26 +18,29 @@ outputDataName = 'exp01outputBOTH.csv';
 
 % ---- Paths for shuffling data to labview and back. ------
 %labview reads data here
-controlDataPath = fullfile(PATH_step_exp, controlParamName); 
+controlDataPath = fullfile(PATHS.step_exp, controlParamName); 
 % labview saves experimental results/data here
-dataOut_path    = fullfile(PATH_step_exp, outputDataName); 
+dataOut_path    = fullfile(PATHS.step_exp, outputDataName); 
 % labview reads desired trajectory here
-refTrajPath     = fullfile(PATH_step_exp, refTrajName); 
+refTrajPath     = fullfile(PATHS.step_exp, refTrajName); 
 % location of the vi which runs the experiment.
 vipath ='C:\Users\arnold\Documents\labview\ACC2017_archive\play_AFMss_integral_trajTrack.vi';
 
 
 % ---------- Load Parametric Models  -----------
-modFitPath    = 'x-axis_sines_info_out_12-10-2017-04.mat';
+% modFitPath    = 'x-axis_sines_info_out_12-10-2017-04.mat';
+% load(fullfile(PATHS.sysid, modFitPath), 'modelFit')
+modFitPath    = 'ccta_modelData.mat';
+load(fullfile(PATHS.sysid, modFitPath))
 
-load(fullfile(PATH_sysid, modFitPath), 'modelFit')
 FitNum    = 'sys12';
 
 
 TOL = .01;
 umax = 10;
 
-SYS = modelFit.(FitNum);
+% SYS = modelFit.(FitNum);
+SYS = PLANT_init_x;
 Ts  = SYS.Ts;
 Nd  = SYS.InputDelay;
 %%
@@ -97,7 +100,7 @@ ref_traj.time           = t;
 % 1). Design Linar control gain, K.
 pstyle = 'b';
 p_int = 0.7; % integrator pole location
-gam_s = [1.16, 1.16, 1, 1, 1]; % factors to increase cmplx mode freqs by
+gam_s = [1.0, 1.0, 1, 1, 1]; % factors to increase cmplx mode freqs by
 alp_s = [.85 .7 .7 .7, .7]; % desired damping of cmplx modes
 rho_s = [1.2, 1]; % factors to shift real modes by
 
@@ -144,7 +147,7 @@ x0_delay = x0_full(Ns+1:end);
 x0_int   = uss_0 -ref_0*Nbar+K*x0_full;
 
 NoiseP = 0;
-sim(fullfile(PATH_sim_models, 'AFM_SS_linearFDBK_obs_IMPLEMENT_outer_integral.slx'));
+sim(fullfile(PATHS.sim_models, 'AFM_SS_linearFDBK_obs_IMPLEMENT_outer_integral.slx'));
 y_linear = yplant; 
 u_linear = u_full;
 
@@ -154,7 +157,7 @@ linOpts = stepExpOpts('pstyle', '--r', 'TOL', TOL, 'y_ref', ref_f_1,...
 sim_exp = stepExp(y_linear, u_linear, linOpts);
 
 
-F1 = figure(50);
+F1 = figure(50);clf;
 H1 = plot(sim_exp, F1);
 
 %%
@@ -164,11 +167,11 @@ clear vi; clear e;
 % delay before we start tracking, to let any transients out. Somewhere of a
 % debugging setting. 
 SettleTicks = 20;  
-Iters  = 1000
+Iters  = 200
 
 % creat and pack data. Then save it. 
 tt = t;
-yy = yref;
+yy = yref*1;
 uKx  = yy*Nbar;
 
 [y_ref, uKx, y_uKx] = pack_uKx_y(uKx, yy, tt);

@@ -27,14 +27,14 @@ classdef PATHS
             % PATH constant to where all experimental data is stored for the
             % MPC journal paper.
             
-            PATH = fullfile(PATH_MPCJ_root, 'models');
+            PATH = fullfile(PATHS.MPCJ_root, 'models');
         end
         
         function [ PATH ] = step_exp()
             %PATH_EXP Summary of this function goes here
             %   Detailed explanation goes here
             
-            PATH = fullfile(PATH_experimental, 'step-exps');
+            PATH = fullfile(PATHS.exp, 'step-exps');
             
             
         end
@@ -42,7 +42,7 @@ classdef PATHS
         function [ PATH ] = sysid()
             % PATH constant to where the system ID data is stored
             
-            PATH = fullfile(PATH_experimental, 'sysID');
+            PATH = fullfile(PATHS.exp, 'sysID');
         end
 
     end

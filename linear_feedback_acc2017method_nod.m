@@ -18,11 +18,11 @@ addpath('functions')
 
 % ---- Paths for shuffling data to labview and back. ------
 %labview reads data here
-controlDataPath = fullfile(PATH_step_exp, controlParamName); 
+controlDataPath = fullfile(PATHS.step_exp, controlParamName); 
 % labview saves experimental results/data here
-dataOut_path    = fullfile(PATH_step_exp, outputDataName); 
+dataOut_path    = fullfile(PATHS.step_exp, outputDataName); 
 % labview reads desired trajectory here
-refTrajPath     = fullfile(PATH_step_exp, refTrajName); 
+refTrajPath     = fullfile(PATHS.step_exp, refTrajName); 
 % location of the vi which runs the experiment.
 vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFMss_integral_trajTrack_nod.vi';
 
@@ -30,7 +30,7 @@ vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFMss_int
 % ---------- Load Parametric Models  -----------
 modFitPath    = 'x-axis_sines_info_out_12-10-2017-04.mat';
 
-load(fullfile(PATH_sysid, modFitPath), 'modelFit')
+load(fullfile(PATHS.sysid, modFitPath), 'modelFit')
 FitNum = 'sys12_2';
 FitNum = 'sys_x_eigen';
 
@@ -154,7 +154,7 @@ Nbar = -Ki/(Zi-1);
 % L = L2
 % L = dlqr(sys_obs.a', sys_obs.c', 55.5*(sys_obs.c'*sys_obs.c), 1)';
 % L = dlqr(sys_obs.a', sys_obs.c', blkdiag(Qw, zeros(Nd,Nd)+.000005), Rw)';
-L = dlqr(sys_obs.a', sys_obs.c', blkdiag(Qw, zeros(Nd,Nd)+.0000071), Rw)';
+L = dlqr(sys_obs.a', sys_obs.c', (blkdiag(Qw, zeros(Nd,Nd)+.0000071))*1 +sys_obs.b*sys_obs.b'*.0, Rw)';
 Nd = 0;
 
 [uss_0, uss_f, x0, xf, xss] = yss2uss(SYS, ref_f_1, ref_0); 
@@ -167,7 +167,7 @@ x0_obs   = x0_full;
 x0_int   = uss_0 -ref_0*Nbar+K*x0_full;
 
 
-sim(fullfile(PATH_sim_models, 'AFM_SS_linearFDBK_obs.slx'));
+sim(fullfile(PATHS.sim_models, 'AFM_SS_linearFDBK_obs.slx'));
 y_linear = yplant; 
 u_linear = u_full;
 
@@ -196,7 +196,7 @@ clear vi; clear e;
 % delay before we start tracking, to let any transients out. Somewhere of a
 % debugging setting. 
 SettleTicks = 20;  
-Iters  = 500
+Iters  = 150
 
 
 % creat and pack data. Then save it. 
@@ -219,7 +219,7 @@ vi.Run
 %        
 % Now, read in data, and save to structure, and plot.
 AFMdata = csvread(dataOut_path);
-[y_exp, u_exp, xhat_exp] = unpackExpData_nod(AFMdata, Ns, Ts);
+[y_exp, u_exp, xhat_exp] = unpackExpData_nod(AFMdata, Ts);
 yy = xhat_exp.Data*sys_obs.c';
 
 expOpts = stepExpOpts(linOpts, 'pstyle', 'g', 'name',  'AFM Stage');
@@ -237,5 +237,5 @@ systems.sys_obs = sys_obs;
 systems.PLANT   = PLANT;
 systems.sys_designK_aug = sys_designK_aug;
 systems.Kfdbk = Kfdbk;
-save(fullfile(PATH_step_exp, '09_12_2016_linfdbk_slewproblem_trk2.mat'), 'afm_exp', 'sim_exp',...
+save(fullfile(PATHS.step_exp, '09_12_2016_linfdbk_slewproblem_trk2.mat'), 'afm_exp', 'sim_exp',...
       'systems')
