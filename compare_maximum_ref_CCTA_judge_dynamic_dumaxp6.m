@@ -16,16 +16,10 @@ ref_f = 2;
 ref_0 = 0;
 umax = 5;
 
-% fname_lin = 'data/max_sp_data_lin_CCTA_judge_dynamic_dumax_p6.mat';
-% fname_mpc = 'data/max_sp_data_mpc_CCTA_judge_dynamic_dumax_p6.mat';
-% fname_clqr = 'data/clqr_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
-% fname_timeopt = 'data/timeopt_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
-
-fname_lin = 'data/max_sp_data_lin_CCTA_judge_dynamic.mat';
-fname_mpc = 'data/max_sp_data_mpc_CCTA_judge_dynamic.mat';
-fname_clqr = 'data/clqr_ref_data_CCTA_judge_dynamic.mat';
-fname_timeopt = 'data/timeopt_ref_data_CCTA_judge_dynamic.mat';
-
+fname_lin = 'data/max_sp_data_lin_CCTA_judge_dynamic_dumax_p6.mat';
+fname_mpc = 'data/max_sp_data_mpc_CCTA_judge_dynamic_dumax_p6.mat';
+fname_clqr = 'data/clqr_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
+fname_timeopt = 'data/timeopt_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
 
 matpath           = getMatPath();
 dataroot          = fullfile(matpath, 'AFM_SS', 'System_Identification', 'data','data_xaxis'); 
@@ -59,7 +53,7 @@ x0 = xss*0;
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
 N_mpc = 8;
-du_max   = 0.1;
+du_max   = 0.6;
 
 % Pull out open-loop pole-zero information.
 [wp_real_x, wz_real_x] = w_zp_real(sys);
@@ -112,15 +106,15 @@ R = 5;
 mpc_on=0;
 
 %%
-
+clc
 % *Optimal, open-loop* trajectory generation over all setpoints. This
 % provides the basiline for comparison of the other methods. 
 % ref_s = [1.5];
 
-gamma = 100;
-gam_s = linspace(gamma, 2.8e4, 30); % original
+gamma = 10;
+gam_s = linspace(gamma, 5000, 100); 
 % gam_s = [1, 100, 1000, 2500, 5000, 10000];
-ref_s = 0.1:0.25:20;
+ref_s = 0.1:0.25:12;
 
 
 N_mpc_s = [4, 8, 12, 16, 20]; % original 
@@ -209,6 +203,7 @@ end
 
 %%
 % expose variables for plotting.
+clc
 clear StepDataCLQR
 clear StepDataTimeOpt
 ref_s = step_data_clqr.params.ref_s;
@@ -224,11 +219,11 @@ hcl = step_data_clqr.plot_ref_vs_settle(ax,[], 'LineWidth', 2);
 hto = step_data_timeopt.plot_ref_vs_settle(ax, 'LineWidth', 2);
 legend([hcl, hto]);
 saveon = 0;
-
+%
 if saveon
-    saveas(F200, 'figures/clqrTimeOpt_sp_vs_ts_CCTA.svg')
+    saveas(F200, 'figures/clqrTimeOpt_sp_vs_ts_CCTA_dumaxp6.svg')
 end
-%%
+%
 % ----------------- Plot maximum reference vs gamma -----------------------
 F10 = figure(10); clf; hold on;
 colrs =  get(gca, 'colororder');
@@ -252,6 +247,7 @@ ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 14);
 
 
 %%
+figure
 plot(ref_s, step_data_clqr.results.settle_times_opt_cell{1})
 
 %%
