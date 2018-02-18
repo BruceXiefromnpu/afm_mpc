@@ -16,10 +16,16 @@ ref_f = 2;
 ref_0 = 0;
 umax = 5;
 
-fname_lin = 'data/max_sp_data_lin_CCTA_judge_dynamic_dumax_p6.mat';
-fname_mpc = 'data/max_sp_data_mpc_CCTA_judge_dynamic_dumax_p6.mat';
-fname_clqr = 'data/clqr_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
-fname_timeopt = 'data/timeopt_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
+% fname_lin = 'data/max_sp_data_lin_CCTA_judge_dynamic_dumax_p6.mat';
+% fname_mpc = 'data/max_sp_data_mpc_CCTA_judge_dynamic_dumax_p6.mat';
+% fname_clqr = 'data/clqr_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
+% fname_timeopt = 'data/timeopt_ref_data_CCTA_judge_dynamic_dumax_p6.mat';
+
+fname_lin = 'data/max_sp_data_lin_CCTA_judge_dynamic.mat';
+fname_mpc = 'data/max_sp_data_mpc_CCTA_judge_dynamic.mat';
+fname_clqr = 'data/clqr_ref_data_CCTA_judge_dynamic.mat';
+fname_timeopt = 'data/timeopt_ref_data_CCTA_judge_dynamic.mat';
+
 
 matpath           = getMatPath();
 dataroot          = fullfile(matpath, 'AFM_SS', 'System_Identification', 'data','data_xaxis'); 
@@ -53,7 +59,7 @@ x0 = xss*0;
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
 N_mpc = 8;
-du_max   = 0.6;
+du_max   = 0.1;
 
 % Pull out open-loop pole-zero information.
 [wp_real_x, wz_real_x] = w_zp_real(sys);
@@ -408,6 +414,8 @@ tilefigs([], group1)
 %%
 group2 = [figure(501), figure(502),figure(503),figure(504)];      
 tilefigs([], group2);
+%%
+
 
 
 
