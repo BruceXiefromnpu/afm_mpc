@@ -203,25 +203,25 @@ end
 
 %%
 % expose variables for plotting.
-clc
-clear StepDataCLQR
-clear StepDataTimeOpt
+
+
 ref_s = step_data_clqr.params.ref_s;
 gam_s = step_data_clqr.params.gam_s;
 ref_s_to = step_data_timeopt.params.ref_s;
 
 
-F200=figure(200); hold on;
+F200=figure(200);clf; hold on;
 colrs =  get(gca, 'colororder');
 ax = gca;
 
 hcl = step_data_clqr.plot_ref_vs_settle(ax,[], 'LineWidth', 2);
 hto = step_data_timeopt.plot_ref_vs_settle(ax, 'LineWidth', 2);
 legend([hcl, hto]);
+grid on
 saveon = 0;
 %
 if saveon
-    saveas(F200, 'figures/clqrTimeOpt_sp_vs_ts_CCTA_dumaxp6.svg')
+    saveas(F200, 'latex/figures/clqrTimeOpt_sp_vs_ts_CCTA_dumaxp6.svg')
 end
 %
 % ----------------- Plot maximum reference vs gamma -----------------------
@@ -244,11 +244,10 @@ legend(hands_mxsp)
 
 xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 14);
 ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 14);
-
-
-%%
-figure
-plot(ref_s, step_data_clqr.results.settle_times_opt_cell{1})
+grid on
+if saveon
+    saveas(F10, 'latex/figures/maxref_vs_gamma_dumaxp6.svg')
+end
 
 %%
 % ======================================================================= %
