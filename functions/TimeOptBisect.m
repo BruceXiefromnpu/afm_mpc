@@ -35,6 +35,7 @@ classdef TimeOptBisect
         
         % ---------------------------------------------------------------- %
         function [xx, uu, status] = time_opt_bisect(self, x0, xf, varargin)
+        % [xx, uu, status] = time_opt_bisect(self, x0, xf, varargin)
         % Solve the minimum-time problem in Discrete Time using a bisection
         % search method.
             p = inputParser;
@@ -234,8 +235,8 @@ for i = 1:obj.max_iter
 end
 if isempty(upperBound)
     str = sprintf(['MyWarning: Exhausted max_iter but no Upper Bound found. ',...
-           'Possible solution is to increase ',...
-            'max_iter=%0.0f'], obj.max_iter);
+           'Have k0 = %d. Possible solution is to increase ',...
+            'max_iter=%0.0f'], k0, obj.max_iter);
    obj.logger( '%s\n', str)
    status = 1;
 end
