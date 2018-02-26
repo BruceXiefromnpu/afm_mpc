@@ -157,3 +157,35 @@ R2 = 1e6;
 
 R1 = 250;
 fwo = ((R1+R2)/(C1*R1*R2))/2/pi
+
+%%
+
+step(GG)
+load /media/labserver/mpc-journal/x-axis_sines_info_out_2-8-2018-01.mat
+Gpow = modelFit.models.G_uz2pow
+%%
+ms = 1e3;
+period = (50*Ts)
+triang = raster(1/period, Ts, period);
+triang.Data = triang.Data*6;
+figure(3)
+subplot(3,1,1)
+plot(triang.Time*ms, triang.Data)
+grid on
+
+subplot(3,1,2)
+plot(triang.Time(1:end-1)*ms, diff(triang.Data))
+grid on
+
+du_pow = lsim(Gpow, diff(triang.Data), triang.Time(1:end-1));
+subplot(3,1,3)
+plot(triang.Time(1:end-1)*ms, du_pow)
+grid on
+
+
+
+
+
+
+
+
