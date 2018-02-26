@@ -59,5 +59,6 @@ ylim([-1000, 50])
 set(ax2, 'XTickLabel', {'$10^1$', '$10^2$', '$10^3', '$10^4$'}, 'XTick',...
     [10, 100, 1000, 10000])
 set(ax2, 'YMinorTick', 'on', 'XMinorGrid', 'on', 'XMinorTick', 'on')
-
-saveas(F2, 'latex/figures/G_uz2pow.svg')
+if saveon
+    saveas(F2, 'latex/figures/G_uz2pow.svg')
+end

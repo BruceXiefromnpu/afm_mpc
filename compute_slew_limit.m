@@ -1,5 +1,5 @@
 clear
-
+clc
 
 
 Imax = 100e-3; % 100mA
@@ -33,6 +33,7 @@ G = ss(modelFit.models.G_uz2pow);
 G.InputDelay = 0;
 %%
 Gc = d2c(G);
+pl = pole(Gc);
 Gc = zpk([], pl, 1);
 Gc = Gc*(dcgain(G)/dcgain(Gc));
 
@@ -73,6 +74,7 @@ bode(G_vh_I_z)
 % figure(20)
 % bode(Gc, GG)
 %%
+clc
 step(G)
 triang = raster(1/(100*Ts), Ts, 400*Ts);
 triang.Data = triang.Data*10;
@@ -86,14 +88,17 @@ dtri = [dtri; dtri(end)];
 t = triang.Time;
 plot(t, dtri)
 
-
+Glpf = tf(1000*2*pi, [1, 1000*2*pi]);
 y = lsim(G, triang.Data, triang.Time);
 
+ylpf = lsim(Glpf, triang.Data, triang.Time);
+dylpf = diff(ylpf);
+
 dy = lsim(G, dtri, t);
-figure(12); hold on
+figure(12); clf, hold on
 plot(t(1:end-1), diff(y))
 plot(t, dy, '--')
-
+plot(t(1:end-1), dylpf, '--')
 
 figure(13); clf
 plot(t, dy)
@@ -103,9 +108,52 @@ xlabel('time [s]')
 leg1 = legend('$\Delta y(k)$', '$\Delta u(k)$');
 set(leg1, 'FontSize', 14)
 
-save
+
+%%
 
 
 
+clc
+step(G)
+u = [0,0.5, 1,1.5, -1, 2, -2, zeros(1,20)]';
+t = [0:1:length(u)-1]'*Ts;
+
+triang = timeseries(u, t);
+figure(10);
+plot(triang.Time, triang.Data)
+
+figure(11);
+dtri = diff(triang.Data);
+% ./diff(triang.Time);
+dtri = [dtri; dtri(end)];
+t = triang.Time;
+plot(t, dtri)
+
+Glpf = tf(7000*2*pi, [1, 7000*2*pi]);
+y = lsim(G, triang.Data, triang.Time);
+
+ylpf = lsim(Glpf, triang.Data, triang.Time);
+dylpf = diff(ylpf);
+
+dy = lsim(G, dtri, t);
+figure(12); clf, hold on
+plot(t(1:end-1), diff(y))
+plot(t, dy, '--')
+% plot(t(1:end-1), dylpf, '--')
+
+figure(13); clf
+plot(t, dy)
+hold on
+plot(t, dtri)
+xlabel('time [s]')
+leg1 = legend('$\Delta y(k)$', '$\Delta u(k)$');
+set(leg1, 'FontSize', 14)
 
 
+%%
+
+C1 = 3.8e-6;
+R2 = 1e6;
+
+R1 = 250;
+fwo = ((R1+R2)/(C1*R1*R2))/2/pi
