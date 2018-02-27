@@ -1,4 +1,26 @@
 function [Y, U, dU] = sim_MPC_fp(sim_struct, ref_f)
+% [Y, U, dU] = sim_MPC_fp(sim_struct, ref_f)
+% 
+% Inputs
+% ------
+%  sim_struct : a structure which must have the following feilds
+%
+%    sim_struct.K_lqr;
+%    sim_struct.PLANT;
+%    sim_struct.trun;
+%    sim_struct.mpcProb1;
+%    sim_struct.du_max;
+%    sim_struct.mpc_on;
+%    sim_struct.xss;
+%    sim_struct.Nx;
+% 
+%  ref_f : (scalar) the setpoint to track
+% Outputs
+% -------
+%  Y : (timeseries) Plant Output
+%  U : (timeseries) Accumulated deltaU
+%  dU : (timeseries) deltaU(k) Control (ie, output of MPC block)
+%
 % ------------------------------------------------------------------- %
 % Pull out all the data stored in sim_struct to expose it to
 % simulink. There must be a better way...
