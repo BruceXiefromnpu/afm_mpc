@@ -1,7 +1,8 @@
 % Created 2018-02-21 Wed 19:30
 % Intended LaTeX compiler: pdflatex
 % \documentclass[11pt]{cu_thesis}
-\documentclass[journal,12pt,onecolumn,draftclsnofoot,,twoside]{IEEEtran/IEEEtran}
+\documentclass[journal,12pt,twocolumn,twoside]{IEEEtran/IEEEtran}
+% \documentclass[journal,12pt,onecolumn,draftclsnofoot,,twoside]{IEEEtran/IEEEtran}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
@@ -90,7 +91,7 @@ We will answer both of these questions in this paper.
 \label{sec:orgbc45dd3}
 \subsection{Modeling}
 \begin{figure}
-  \includegraphics[scale=0.7]{figures/exp_setup.pdf}
+  \includegraphics[scale=0.45]{figures/exp_setup.pdf}
   \caption{Experimental setup}
   \label{fig:exp_setup}
 \end{figure}
@@ -103,7 +104,7 @@ The black dashed curve in Fig.~\ref{fig:frf_xdir} is a state space model with 22
 
 \begin{figure}[ht!]
   \centering
-  \includesvg[scale=1]{figures/frf_xdir.svg}
+  \includesvg[scale=0.8]{figures/frf_xdir.svg}
   \caption{Frequency response of the piezo stage in the $x$-direction. The dashed black curve is a 12th order model fit to the data using a subspace realization method.}
     \label{fig:frf_xdir}
 \end{figure}
@@ -119,25 +120,47 @@ The black dashed curve in Fig.~\ref{fig:frf_xdir} is a state space model with 22
 
 The high voltage output of the C300 is current limited to 100 mA. Because the piezo stage presents as a capacitive load to the power amplifier, this translates to a rate of change limitation on the voltage control signal. To see this, we have $\dot v_{h} = \frac{1}{C} i_c(t)$, or, with a backwards difference approximation
 \begin{equation}
-  |\frac{V_{h}(k+1) - V_{h}(k)}{T_s}| \leq \frac{1}{C} 100~\text{mA}
+  |\frac{V_{h}(k) - V_{h}(k-1)}{T_s}| \leq \frac{1}{C} 100~\text{mA}
 \end{equation}
-Note that this is the rate of change limit on the high voltage signal, not the low voltage control input signal. Naively, the low voltage rate of change limitation is
+which is the rate of change limit on the high voltage signal. The stage has a measured capacitance of 3.8~$\mu$F. Using a sample rate of 40~$\mu$s (25 kHz), this translates to $\Delta u_{H}|\leq 1.053$ volts per sample period. The power amplifier maps the 20 volt range of the low voltage control input to a voltage between -20 and 150 volts, or a 180 volt range, thereby providing a times 9 amplification. Thus, the low voltage rate of change limitation is
 \begin{align}
-K_{pow}|\frac{V_{\ell}(k+1) - V_{\ell}(k)}{T_s}|  &= |\frac{V_{h}(k+1) - V_{h}(k)}{T_s}| \leq \frac{1}{C} 100~\text{mA}\\
-|V_{\ell}(k+1) - V_{\ell}(k)|  &\leq \frac{Ts}{K_{pow}C} 100~\text{mA}
+  K_{pow}|\frac{V_{\ell}(k) - V_{\ell}(k-1)}{T_s}|  &= |\frac{V_{h}(k) - V_{h}(k-1)}{T_s}|\\
+  &\leq \frac{1}{C} 100~\text{mA}\\
+|V_{\ell}(k) - V_{\ell}(k-1)|  &\leq \frac{T_s}{K_{pow}C} 100~\text{mA} \approx 0.146 \label{eqn:dvlow_max}
 \end{align}
-where $K_{pow} = 180/20 = 9$ and $v_{\ell}$ is the low voltage control input. However, as usual things are more complicated. At some point along the path from low voltage input to high voltage output, the C300 low pass filters the signal. We can identify this LPF by measuring the frequency response from low voltage input to high voltage output. This is shown in Fig.~\ref{fig:powfrf}
+where the power amplifier gain is measured at $K_{pow} = 7.2$ and $v_{\ell}$ is the low voltage control input. The maximum rate of change on the control $\Delta V_{\ell} <0.14$ is the slew rate limit will will use through the rest of this paper. 
 
-It is useful and thus interesting that in discrete time, the rate of change dynamics for linear system are the same as the standard input dynamics. Consider a state space system $G=\{A,B,C\}$ with state $x(k)$ and output $y(k)$. Then
-\begin{align}
-  \Delta y(k) &\coloneqq y(k) - y(k-1) = C\Delta x(k) = C(x(k) - x(k-1))\\
-  \Delta x(k+1) &= x(k+1) - x(k) = Ax(k) + B u(k) - [Ax(k-1) + Bu(k-1)]\\
-              &= A \Delta x(k) + B\Delta u(k).
-\end{align}
+\subsubsection{The LPF Problem}
+As usual however, things are more complicated. At some point along the path from low voltage input to high voltage output, the C300 low pass filters the signal. According to nPoint, this LPF is implemented in hardware and should have a bandwidth of around 7~kHz. Although the specific LPF circuit topology is unknown, we can identify the LPF by measuring the frequency response from low voltage input to high voltage output. This is shown in Fig.~\ref{fig:powfrf}. Note that this frequency response includes the capacitance of the stage, which presumably adds a loading affect to the LPF.
+
+Figure~\ref{fig:lpf_current} schematically illustrates the situation. The LPF will likely have other paths to ground, and thus we should have that $I_{pow} \geq I_{lpf}$. This gives us a method to experimentally validate the low voltage slew rate limit in \eqref{eqn:dvlow_max}. The idea is to drive the C300 with a ramp signal whose slope is designed to exceed the slew rate limit and to measure the rate of change at the point $V_{lpf}$ in Fig. ~\ref{fig:lpf_current}. 
+\begin{figure*}
+  \begin{minipage}{0.4\textwidth}
+    \includegraphics[scale=0.35]{figures/current_lpf.pdf}
+    \caption{Schematic representation of  LPF.}
+    \label{fig:lpf_current}
+  \end{minipage}
+\hfill
+  \begin{minipage}{0.6\textwidth}
+    \includesvg[scale=0.8]{figures/dumax_measure.svg}
+    \caption{Schematic representation of  LPF.}
+    \label{fig:lpf_current}
+  \end{minipage}
+\end{figure*}
+This indeed shows that when $\Delta V_h$ exceeds approximately 1 volt per sample, the power amplifier output breaks down. We also see from Fig. ~\ref{fig:lpf_current} that the 100~mA current limitation appears to not be a hard saturation constraint. 
+
+The implication here is that limiting $|\Delta V_{\ell}|\leq 0.12$ is more conservative than necessary. The alternative is that rather than having a pure input constraint, we could employ a a state constraint on the output of the transfer function from $V_{\ell}$ to $V_{lpf}$. However, solving the state constrained problem is computationally more demanding than than the input constrained problem and methods such as the Fast Gradient Method are not applicable to such problems. Even solving the minimum time-control problem offline becomes fraught with numerical difficulties.
+
+% It is useful and thus interesting that in discrete time, the rate of change dynamics for linear system are the same as the standard input dynamics. Consider a state space system $G=\{A,B,C\}$ with state $x(k)$ and output $y(k)$. Then
+% \begin{align}
+%   \Delta y(k) &\coloneqq y(k) - y(k-1) = C\Delta x(k) = C(x(k) - x(k-1))\\
+%   \Delta x(k+1) &= x(k+1) - x(k) = Ax(k) + B u(k) - [Ax(k-1) + Bu(k-1)]\\
+%               &= A \Delta x(k) + B\Delta u(k).
+% \end{align}
 
 
 
-\subsection{The LQR Optimal Control problems}
+\subsection{The Incremental Form}
 In the optimizations we consider, it will often be useful to work with an incremental form of \(G\) which has as its input \({\Delta u(k)\coloneqq u(k)-u(k-1)}\), rather than \(u\), which is defined by augmenting \(G_p\) with an state \x\(_{\text{u}}\)(k) such that
 \begin{equation*}
   \x_u(k) = u(k-1).
@@ -185,21 +208,22 @@ In discrete-time, the minimum-time control problem can be stated as \cite{chen_m
 \min_{u(0), u(1),\dots,u(N-1)} & N\\
 \text{s.t.}&\\
 x_{k+1} & = Ax_{k} + Bu_{k}\\
-x_{T} & = x_{f}\\
+x_{N} & = x_{f}\\
 u_{k}&\in \mathds{K},~k=0,\dots,N-1\\
 x_{k} &\neq x_{f},~k=0,\dots,N-1.
 \end{align}
-
-More practically, the problem can be solved using a bisection method which searches for the smallest feasible \(N\). In these cases, the bisection search solves sub-problem given by
-
-
+where $x_f$ is the desired final target state. 
+For a given control sequence $\{u_0,\dots, u_{N-1}\}$, and an initial condition $x_0$, the state $x_N$ at the final time is given by
+\begin{equation}
+X_N = A^Nx_0 + \sum_{i=0}^{N-1}A^{N-1-i}Bu_i.
+\end{equation}
+Practically, the problem can be solved using a bisection method which searches for the smallest feasible \(N\). In these cases, the bisection search solves sub-problem given by
 \begin{align}
 \min_{U}& || x_{f} - x_{N}||\\
 \text{s.t.} &\\
 x_{k+1} & = Ax_{k} + Bu_{k}\\
 u_{k}&\in \mathds{K},~k=0,\dots,N-1\\
 \end{align}
-
 For a given \(N\), if \(||x_{f} - x_{N}|| < \text{TOL}\), the sub-problem returns successful, otherwise it fails. The goal then is to find a the smallest \(N\) that succeeds. 
 
 It is also worth pointing out that the solution to this problem, in contrast to continuous time systems is not in general bang-bang CITE.
@@ -217,7 +241,7 @@ The reason is that the time optimal solution requires all the states to have rea
 In some sense, the slow pole-zero pair is a first order drift model, so we call it $G_{drift}$. Then, the total transfer function from the control to the piezo stage position can be factored as $G(z) = G_{drift}\hat{G}(z)$. The idea then, is to compute the time-optimal trajectory for $\hat{G}(z)$. This results in optimal trajectories for the control input, $u^*$ and plant output $y^*$ for $\hat{G}$. That optimal control sequence is will then be run through a feedforward filter which inverts the dynamics of $G_{drift}$. The scheme is illustrated in Fig.~\ref{fig:bd_ff_to}
 \begin{figure}
   \centering
-  \includegraphics[scale=0.5]{figures/bd_ff_timeopt.pdf}
+  \includegraphics[scale=0.4]{figures/bd_ff_timeopt.pdf}
   \caption{Time optimal trajectory with selected plant inversion.}
   \label{fig:bd_ff_to}
 \end{figure}
