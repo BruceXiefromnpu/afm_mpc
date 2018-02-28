@@ -12,6 +12,19 @@ classdef StepDataMPC < StepDataQuad
         function self = StepDataMPC(Params, varargin)
             self = self@StepDataQuad(Params, varargin{:})
         end
+        
+        function [Y, U, dU] = step_sim(self, N_mpc, du_max, ref_f, gam)
+        % [Y, U, dU] = step_sim(self, N_mpc, du_max, ref_f, gam)
+        % Run a simulation 
+            
+            SimS = self.params.sim_struct;
+            SimS.N_mpc = N_mpc;
+            SimS.du_max = du_max;
+            SimS = self.update_sim_struct(SimS, gam);
+            [Y, U, dU] = sim_MPC_fp(SimS, ref_f);
+        end
+        
+        
         function self = build_max_setpoints(self, varargin)
         % self = build_max_setpoints(self, varargin) 
         %    

@@ -6,7 +6,7 @@ fig_path = fullfile('latex/figures', 'frf_xdir.svg');
 load /media/labserver/mpc-journal/x-axis_sines_info_out_2-8-2018-01.mat
 % load /media/labserver/mpc-journal/sysID/x-axis_sines_info_matchTs_out_2-14-2018-01.mat
 whos
-saveon = 0;
+saveon = 1;
 G_xpow = modelFit.frf.G_xpow_cors;
 freqs = modelFit.frf.freq_s;
 
@@ -16,6 +16,9 @@ P_pow2stage = squeeze(G_xpow(1,2, :)./G_xpow(2,2, :));
 P_uz2stage = squeeze(G_xpow(1,3, :)./G_xpow(3,3, :));
 P_uz2pow = squeeze(G_xpow(2,3, :)./G_xpow(3,3, :));
 
+Vdiv_gain = 10.6;
+P_uz2pow = P_uz2pow*Vdiv_gain;
+P_pow2stage = P_pow2stage/Vdiv_gain;
 F1 = figure(1); clf
 axes('FontName','Times New Roman'); % Set axis font style
 box('on'); % Define box around whole figure
@@ -44,7 +47,8 @@ clc
 F2 = mkfig(2, 3.5, 3);
 G_uz2pow = modelFit.models.G_uz2pow;
 frfBode(P_pow2stage, freqs, F2, 'r', 'Hz');
-frfBode(G_uz2pow, freqs, F2, 'b', 'Hz');
+% frfBode(G_uz2pow, freqs, F2, 'b', 'Hz');
+frfBode(P_uz2pow, freqs, F2, 'b', 'Hz');
 
 subplot(2,1,1)
 ylim([-80, 30])

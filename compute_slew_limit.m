@@ -5,13 +5,15 @@ clc
 Imax = 100e-3; % 100mA
 Ts = 40e-6;
 % assert(1/Ts == 25e3);
-C = 4.2e-6; % muF
+C = 3.8e-6; % muF
 
 Kamp = 9;  % 20v range to 180 v range
 
 del_Vhigh_max = (Ts/C)*Imax
 
 del_Vlow_max = del_Vhigh_max/Kamp
+
+
 
 %%
 load /media/labserver/mpc-journal/x-axis_sines_info_out_2-8-2018-01.mat

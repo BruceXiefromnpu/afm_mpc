@@ -44,6 +44,10 @@ classdef PATHS
             
             PATH = fullfile(PATHS.exp, 'sysID');
         end
+        
+        function PATH = jfig()
+           PATH = fullfile(PATHS.MPCJ_root, 'latex', 'figures'); 
+        end
 
     end
     
