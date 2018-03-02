@@ -176,12 +176,13 @@ function [H, Aeq, beq] = clqrProblem_local(sys, N, Q, R, Qp, S)
     
     
     % Now build the equality constraint. This should look like:
-    %  [I 0 0  0 0 0 ][x0]   [x0]
-    %  [A B -I 0 0 0 ][u0] = [0 ]
-    %  [0 0  A B -I  ][x1]   [0 ]
-    %                 [u1]
-    %                 [x_N] 
-    
+    %  [0 0  0|    |0  0 ][u0]   [x0]
+    %  [0 0  0| I  |0  0 ][u1]   [0]
+    %  [0 0  0|    |0  0 ][uN]   [0]
+    %  [-----------------][--] = [--]
+    %  [B 0  0 |I -A  0 ][x0]    [0 ]
+    %  [0 B  0 |0  I  -A][x1]    [0 ]
+    %                    [x_N] 
     
     I_b = eye(N, N);
     Aeq_b = kron(I_b, b);
