@@ -78,7 +78,7 @@ The essential difference between the MPC scheme and the trajectory tracking sche
 
 It was our conclusion that both methods are effective at extending the stable range of a given \((Q,R)\) pair in the face of \(\Delta u\) saturation. The attractiveness of MPC here is that it does not depend on defining a list a setpoints to visit a-priori. The downside to MPC is that to significantly expand the region of rechable setpoints requires a large control horizon. Our MPC implementation used the Fast Graident Method (FGM) to solve the quadratic program associated with \eqref{eqn:opt}. Unfortunately, the convergence rate of the FGM depends heavily on the condition number of the Hessian matrix of the QP. Several factors contribute to a poorly conditioned Hessian matrx: (1) long control horizon (2), aggressive (Q,R) weights. The other factor limiting the horizon length in MPC is that the problem size grows, making the QP more difficult to solve within the required sampletime. 
 
-The question which naturually arises from our prior work and which is the main topic of this study, is "how much \emph{time}" is actually saved with either MPC or CLQR tracking?" In essence, the reachable set of setpoints using pure linear feedback can be expanded by de-rating the linear feedback gain. While we might expect this to result in a slower settling time, the question we seek to answer is \emph{how much slower}? In short, are the more complicated methods worth it?
+The question which naturually arises from our prior work and which is the main topic of this study, is "how much \emph{time} is actually saved with either MPC or CLQR tracking?" In essence, the reachable set of setpoints using pure linear feedback can be expanded by de-rating the linear feedback gain. While we might expect this to result in a slower settling time, the question we seek to answer is \emph{how much slower}? In short, are the more complicated methods worth it?
 
 A second related question is \emph{if you're going to go through the trouble of generating and tracking an optimal trajectory, why not track the time-optimal trajectory?}
 
@@ -90,45 +90,57 @@ We will answer both of these questions in this paper.
 \section{Preliminarys}
 \label{sec:orgbc45dd3}
 \subsection{Modeling}
-\begin{figure}
-  \includegraphics[scale=0.45]{figures/exp_setup.pdf}
-  \caption{Experimental setup}
-  \label{fig:exp_setup}
-\end{figure}
-The AFM in our lab consists of an Agilent 5400 which has been retrofited with an nPoint NPXY100A piezo stage, which provides lateral movement of the sample. which is driven by a C300 signal conditioner/amplifier. The C300 amplifies the low voltage ($\pm~10$ volts) control inputs to a voltage signal which drives the piezo stage and provides signal conditioning for the capacitive position sensors in the stage. All control logic is programmed into a Xilinx FPGA in a cRIO 9082 from National Instruments.
-
-
-To keep the discussion manageable, we will concentrate the discussion to the $x$-direction.  There are enough things to compare without adding another axis. A frequency response function (FRF) is shown as the red curve in Fig.~\ref{fig:frf_xdir}. The experimental FRF is obtained using a stepped sines (single frequency at a time) method. 
-
-The black dashed curve in Fig.~\ref{fig:frf_xdir} is a state space model with 22 states, 9 of which model transport delay.
-
-\begin{figure}[ht!]
+% \begin{figure}
+%   \includegraphics[scale=0.45]{figures/exp_setup.pdf}
+%   \caption{Experimental setup}
+%   \label{fig:exp_setup}
+% \end{figure}
+\begin{figure*}
+  \centering
+  \begin{minipage}{0.45\textwidth}
+  \includesvg[scale=0.8]{figures/G_uz2pow.svg}
+  \includegraphics[scale=0.4]{figures/gpow_gdrift_gvib.pdf}
+  \caption{Frequency response from control input to high voltage signal (blue) and from high voltage input to stage position (red). The red curve is the FRF for both the vibrational and drift dynamics.}
+  \label{fig:powfrf}
+\end{minipage}
+\hfill
+\begin{minipage}{0.45\textwidth}
   \centering
   \includesvg[scale=0.8]{figures/frf_xdir.svg}
   \caption{Frequency response of the piezo stage in the $x$-direction. The dashed black curve is a 12th order model fit to the data using a subspace realization method.}
-    \label{fig:frf_xdir}
-\end{figure}
+  \label{fig:frf_xdir}
+\end{minipage}
+\end{figure*}
+The AFM in our lab consists of an Agilent 5400 which has been retrofited with an nPoint NPXY100A piezo stage, which provides lateral movement of the sample. which is driven by a C300 signal conditioner/amplifier. The C300 amplifies the low voltage ($\pm~10$ volts) control inputs to a voltage signal which drives the piezo stage and provides signal conditioning for the capacitive position sensors in the stage. All control logic is programmed into a Xilinx FPGA in a cRIO 9082 from National Instruments.
+
+
+To keep the discussion manageable, we will concentrate the discussion to the $x$-direction.
+We call the transfer function from the low voltage control input $u$ to high-voltage output $V_{h}$ $G_{pow}$, whose frequency response is shown as the blue curve in Fig.~\ref{fig:powfrf}. The high voltage output of $G_{pow}$ drives the piezo stage and ultimately results in a position displacement, which we will refer to as $G_{stage}$. This frequency response is shown as the red curve in Fig.~\ref{fig:powfrf}. From our model fitting efforts, it is apparent that $G_{stage}$ has a low frequency real pole-zero pair around 50~Hz, which acts as a first order drift model. In Section~\ref{sec:mintime}, it will be useful to decompose the stage dynamics as $G_{stage} = G_{drift}G_{vib}$. 
+Thus, the complete transfer function from low voltage control to position displacement is given by the series connection
+\begin{align}
+  \frac{Y(z)}{U(z)} &= G_{stage}G_{pow}\\
+                    & =G_{vib}G_{drift}G_{pow}
+\end{align}
+These experimental frequency responses are obtained using a stepped sines (single frequency at a time) method programmed into the cRIO. Because the ADC of the cRIO is low voltage, the FRF of the power amplifier is first passed through a high-impedance ($\sim$ 22~M$\Omega$) voltage divider to drop the high voltage signal to an acceptable level. 
+
+Note the large amounts of phase lag in both $G_{pow}$ and $G_{stage}$. This is due to the C300 including its own DSP which cannot be turned off, even when run in open loop mode. To fit parametric models to these transfer functions, we use least squares method to fit $G_{pow}$ and a subspace based method to fit $G_{stage}$. 
+The total model $G$ is depicted as the black dashed curve in Fig.~\ref{fig:frf_xdir} which is a state space model with 22 states, 9 of which model transport delay.
+
 
 
 \subsection{Limitation on control voltage rate of change}
-\begin{figure}
-  \centering
-  \includesvg[scale=1]{figures/G_uz2pow.svg}
-  \caption{Frequency response from control input to high voltage signal (blue) and from high voltage input to stage position (red)}
-  \label{fig:powfrf}
-\end{figure}
 
 The high voltage output of the C300 is current limited to 100 mA. Because the piezo stage presents as a capacitive load to the power amplifier, this translates to a rate of change limitation on the voltage control signal. To see this, we have $\dot v_{h} = \frac{1}{C} i_c(t)$, or, with a backwards difference approximation
 \begin{equation}
   |\frac{V_{h}(k) - V_{h}(k-1)}{T_s}| \leq \frac{1}{C} 100~\text{mA}
 \end{equation}
-which is the rate of change limit on the high voltage signal. The stage has a measured capacitance of 3.8~$\mu$F. Using a sample rate of 40~$\mu$s (25 kHz), this translates to $\Delta u_{H}|\leq 1.053$ volts per sample period. The power amplifier maps the 20 volt range of the low voltage control input to a voltage between -20 and 150 volts, or a 180 volt range, thereby providing a times 9 amplification. Thus, the low voltage rate of change limitation is
+which is the rate of change limit on the high voltage signal. The stage has a measured capacitance of 3.8~$\mu$F. Using a sample rate of 40~$\mu$s (25 kHz), this translates to $\Delta u_{H}|\leq 1.053$ volts per sample period. The power amplifier has a gain measured at approximately $K_{pow}=7.2$. Thus, the low voltage rate of change limitation is
 \begin{align}
   K_{pow}|\frac{V_{\ell}(k) - V_{\ell}(k-1)}{T_s}|  &= |\frac{V_{h}(k) - V_{h}(k-1)}{T_s}|\\
   &\leq \frac{1}{C} 100~\text{mA}\\
 |V_{\ell}(k) - V_{\ell}(k-1)|  &\leq \frac{T_s}{K_{pow}C} 100~\text{mA} \approx 0.146 \label{eqn:dvlow_max}
 \end{align}
-where the power amplifier gain is measured at $K_{pow} = 7.2$ and $v_{\ell}$ is the low voltage control input. The maximum rate of change on the control $\Delta V_{\ell} <0.14$ is the slew rate limit will will use through the rest of this paper. 
+where $v_{\ell}$ is the low voltage control input. The maximum rate of change on the control $|\Delta V_{\ell}| <0.14$ is the slew rate limit will will use through the rest of this paper. 
 
 \subsubsection{The LPF Problem}
 As usual however, things are more complicated. At some point along the path from low voltage input to high voltage output, the C300 low pass filters the signal. According to nPoint, this LPF is implemented in hardware and should have a bandwidth of around 7~kHz. Although the specific LPF circuit topology is unknown, we can identify the LPF by measuring the frequency response from low voltage input to high voltage output. This is shown in Fig.~\ref{fig:powfrf}. Note that this frequency response includes the capacitance of the stage, which presumably adds a loading affect to the LPF.
@@ -149,7 +161,7 @@ Figure~\ref{fig:lpf_current} schematically illustrates the situation. The LPF wi
 \end{figure*}
 This indeed shows that when $\Delta V_h$ exceeds approximately 1 volt per sample, the power amplifier output breaks down. We also see from Fig. ~\ref{fig:lpf_current} that the 100~mA current limitation appears to not be a hard saturation constraint. 
 
-The implication here is that limiting $|\Delta V_{\ell}|\leq 0.12$ is more conservative than necessary. The alternative is that rather than having a pure input constraint, we could employ a a state constraint on the output of the transfer function from $V_{\ell}$ to $V_{lpf}$. However, solving the state constrained problem is computationally more demanding than than the input constrained problem and methods such as the Fast Gradient Method are not applicable to such problems. Even solving the minimum time-control problem offline becomes fraught with numerical difficulties.
+The implication here is that limiting $|\Delta V_{\ell}|\leq 0.14$ is more conservative than necessary. Ideally, we would have a \emph{state} constraint on $V_{lpf}$ rather than the low voltage input $u$. However, solving the state constrained problem is computationally more demanding than than the input constrained problem and methods such as the Fast Gradient Method are not applicable to such problems. Even solving the minimum time-control problem offline becomes fraught with numerical difficulties. 
 
 % It is useful and thus interesting that in discrete time, the rate of change dynamics for linear system are the same as the standard input dynamics. Consider a state space system $G=\{A,B,C\}$ with state $x(k)$ and output $y(k)$. Then
 % \begin{align}
@@ -192,16 +204,38 @@ For an arbitrary reference \(\y_r\), in steady state we have \({\du_{ss}=0}\) an
   \begin{bmatrix}N_{\xi} \\ N_u\end{bmatrix} &=
 \begin{bmatrix}I-\Ad & -\Bd\\\Cd & 0\end{bmatrix}^{-1}\begin{bmatrix}0\\ I\\\end{bmatrix}\label{eqn:nxnu},
 \end{align}
-which will give \(N_u\equiv 0\).
+which, due to the augmented pole at $z=1$, will give \(N_u\equiv 0\). 
 The error state, \({\xde(k)=\xd(k) - \xdss}\) has dynamics
 \begin{align}
   \xde(k+1) & = \Ad\xd(k) + \Bd\dd u(k) - \xdss \nonumber\\
-            & = \Ad \xde(k)   + \Bd \dd u(k)\nonumber.
+            & = \Ad \xde(k)   + \Bd \dd u(k)\nonumber
 \end{align}
+because $\xdss$ is in the nullspace of $(I - \Ad)$.
+
+\section{The Optimal Control formulations}
+We want to look at a few different ways of driving the stage from point to point as rapidly as possible, yet still be practical. Inspired by our past work, we will compare several methods through both simulation and experimental studies. These methods are
+\begin{itemize}
+\item\emph{Discrete time, minimum time optimal control (DTMT)}
+\item\emph{Saturated Linear state feedback (SLF)} The basic idea here to use standard linear state feedback which is saturated (on $\Delta u$) but to de-rate the design such that the closed-loop system is demonstrably stable up to a certain reference size. 
+\item\emph{Constrained Model Predictive Control (MPC)} The goal with MPC is that, instead of fully de-rating the design to account for the slew rate constraint, to directly account for the constraint as part of the control law itself. Do to limitations on the implementation, MPC must still be de-rated to some extent to be implementable, since the length of control horizon needed to achieve stabilty over the full range of the stage becomes large for an aggressive design.
+\item\emph{Constrained, Finite horizon LQR (CLQR)} The optimization is the same as the MPC optimization, just over a much longer horizon. Similarly to the DTMT idea, this would be implemented in a feedforward/tracking configuration. However, the broader goal of considering this scheme is that it shows how much optimality we have sacrificed with a relatively short horizon in MPC.
+\end{itemize}
+
+The last three control schemes can be described the optimization
+\begin{align}
+V(z,v) &= \min_{v} z_{N}Q_{p}z_{N} + \sum_{i=0}^{N-1}z_{i}^{T}Qz_{i} + v^{T}_{i}Rv_{i}\\
+ \text{s.t.}&\\
+z_{i+1} &= Az_{i} + Bv_{i}\\
+z_{0} &= x_{k}\\
+|v_i - v_{i-1}| &\coloneqq |\Delta v(i)| \leq (\Delta u)_{max}.\label{eqn:optconst}
+\end{align}
+In the case of MPC, the control at the current time step as taken $v_0$, the rest of the optimal controls are thrown away and the optimization is repeated at the next sampling instant. Here, we consider control horizons ranging from $N=4$ to $N=20$. In the case of CLQR, we consider a much longer control horizon of $N=400$. The idea then is to apply the optimal control to the system and track the optimal system output. For SLF, we set $N=1$ and eliminate the constraint \eqref{eqn:optconst}. Because we have taken $Q_p$ as the solution to the discrete algebraic Riccatti equation, this is equivalent to the standard infinite horizon LQR problem. In the case of CLF $\Delta u_k$ is saturated in software, which is more predictable than allowing it happen in hardware and ensures that the control applied to the plant matches the control seen by the state estimator.
+
+In CLQR, MPC and CLF,  the state weight $Q$ is selected via an inverse optimal control problem to yield good damping and to cancel the real pole-zero pair near 50~Hz. For MPC and CLF, we treat control weight $\gamma$ as the primary tuning parameter. In both cases, a larger $\gamma$ yields a larger maximum step size that can be tracked. Essentially, we can view each control 
 
 
 
-\subsection{The minimum-time control problem in discrete-time}
+\subsection{The minimum-time control problem in discrete-time}\label{sec:mintime}
 \label{sec:org6d1d6b6}
 In discrete-time, the minimum-time control problem can be stated as \cite{chen_minimumtime_cca}
 \begin{align}
@@ -249,7 +283,7 @@ In some sense, the slow pole-zero pair is a first order drift model, so we call 
 
 \section{Quantifying the time savings (if any) of MPC and d-rated linear feedback}
 \label{sec:org7edf36d}
-The goal of this section is to quantify the time savings (if any) of using MPC vs SLF. While is is certainly true that for a given feedback gain (i.e., $(Q,R)$ pair), we can extend the stable range of setpoints. However, that does not tell us how much time we save with that strategy. To be able to make this comparison, we need to be able to decide when a trajectory is unstable, or more generally, unacceptable. The most niave way to this would be to just look at the settling time over a sufficiently long simulation: if the trajectory never settles into the settle boundary, we decide the system was unstable for that setpoint size. The trouble with this is that there is a middle ground, where the trajectory will actually settle, but spends a lot of time oscillating (in some non-linear fashion) before it gets there. This is illustrated in Fig. REF.
+The goal of this section is to quantify the time savings (if any) of using MPC vs SLF. While is is certainly true that for a given feedback gain (i.e., $(Q,R)$ pair), we can extend the stable range of setpoints. However, that does not tell us how much time we save with that strategy. To be able to make this comparison, we need a way to decide when a trajectory is unstable, or more generally, unacceptable. The most niave way to this would be to just look at the settling time over a sufficiently long simulation: if the trajectory never settles into the settle boundary, we decide the system was unstable for that setpoint size. The trouble with this is that there is a middle ground, where the trajectory will actually settle, but spends a lot of time oscillating (in some non-linear fashion) before it gets there. This is illustrated in Fig. REF.
 
 
 \subsection{Rejection Metrics}
