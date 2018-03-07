@@ -188,7 +188,7 @@ classdef TimeOptBisect
 
             results.U = u;
             results.cvx_optval = cvx_optval;
-
+            rmpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
         end
     end % methods
 end %classdef
