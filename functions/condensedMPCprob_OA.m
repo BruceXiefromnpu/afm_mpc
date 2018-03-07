@@ -24,8 +24,11 @@ classdef condensedMPCprob_OA < handle
     properties
         H;                % The problem Hessian.
         M;                % The affine term, multiplied by xk_1.
-        Ainq;             % Inequality LHS for input constraint.
-        binq;             % Ineqauality RHS for input constraint. 
+%         Ainq;             % Inequality LHS for input constraint.
+%         binq;             % Ineqauality RHS for input constraint.
+%         lbAinq;           % Ineqaulity lower bound.
+%         ubAinq;           % Inequality upper bound.
+        CON;
         lb;               % Box constraint upper bound.
         ub;               % Box constraint lower bound.
         N_mpc;            % Control horizon.
@@ -41,54 +44,41 @@ classdef condensedMPCprob_OA < handle
         function obj = condensedMPCprob_OA(sys,N, Q,Qp, R, S)
             % obj = condensedMPCprob(sys,N, Q,Qp, R, S)
             % Construct a condensedMPCprob_OA instance. 
-            if isa(sys, 'condensedMPCprob')
-                obj.H = sys.H;
-                obj.M = sys.M;
-                obj.sys = sys;
-                obj.kappa = sys.kappa;
-                obj.Ainq = sys.Ainq;
-                obj.binq = sys.binq;
-                obj.N_mpc = sys.N_mpc;
-                obj.nu = sys.nu;
-                obj.ns = sys.ns;
-                obj.warm_start_data = sys.warm_start_data;
-            else
-                if ~exist('S', 'var')
-                    ns = size(sys.b,1);
-                    nu = size(sys.b, 2);
-                    S = zeros(ns, nu);
-                end
-                [H, M] = clqrProblem_builder(sys,N, Q, R, Qp, S);
-                obj.H     = H;
-                obj.M     = M;
-                obj.N_mpc = N;
-                obj.kappa = cond(H);
-                obj.nu = size(R,1);
-                obj.ns = size(Q,1);
-                obj.warm_start_data = qpOASES_auxInput('x0', zeros(N,1));
-                obj.sys = sys;
-                
+            if ~exist('S', 'var')
+                ns = size(sys.b,1);
+                nu = size(sys.b, 2);
+                S = zeros(ns, nu);
             end
+            [H, M] = clqrProblem_builder(sys,N, Q, R, Qp, S);
+            obj.H     = H;
+            obj.M     = M;
+            obj.N_mpc = N;
+            obj.kappa = cond(H);
+            obj.nu = size(R,1);
+            obj.ns = size(Q,1);
+            obj.warm_start_data = qpOASES_auxInput('x0', zeros(N,1));
+            obj.sys = sys;
+
         end
         
         function [U, X] = solve(self, xk_1, varargin)
-            % Solve the condensed MPC problem using the qpOASES solver.
-            % [U, X] = solve(self, xk_1, varargin)
-            %
-            % Inputs
-            % ------
-            %   xk_1 : current state (ie, initial condition) for the
-            %   optimization problem.
-            %
-            %   solve(..., 'getX', {0|1}) If 1, also return the state
-            %   sequence. Since we are in the condensed version, this is
-            %   found via lsim(...)
-            %  
-            % Outputs
-            % ------
-            %   U : vector of optimal controls
-            %   X : Empty if getX is 0 (default), otherwise, a matrix of
-            %   optmial states of size ns x N_mpc.
+        % Solve the condensed MPC problem using the qpOASES solver.
+        % [U, X] = solve(self, xk_1, varargin)
+        %
+        % Inputs
+        % ------
+        %   xk_1 : current state (ie, initial condition) for the
+        %   optimization problem.
+        %
+        %   solve(..., 'getX', {0|1}) If 1, also return the state
+        %   sequence. Since we are in the condensed version, this is
+        %   found via lsim(...)
+        %  
+        % Outputs
+        % ------
+        %   U : vector of optimal controls
+        %   X : Empty if getX is 0 (default), otherwise, a matrix of
+        %   optmial states of size ns x N_mpc.
             
             % Parse varagin.
 
@@ -97,13 +87,25 @@ classdef condensedMPCprob_OA < handle
             parse(p, varargin{:});
             getX = p.Results.getX;
             Mx0 = self.M*xk_1;
-
-            [U,~,~,iter] = qpOASES(self.H, Mx0, self.lb, self.ub,{},...
-                self.warm_start_data);
+            
+            if isempty(self.CON) 
+                % || isempty(self.lbAinq) || isempty(self.ubAinq)
+                [U,~,~,iter] = qpOASES(self.H, Mx0, self.lb, self.ub,{},...
+                    self.warm_start_data);
+            else  % Use the constraint class object. 
+                self.CON.update_binq();
+                
+                [U,~,~,iter] = qpOASES(self.H, Mx0, self.CON.Ainq, self.CON.lb,...
+                    self.CON.ub, self.CON.lbAinq, self.CON.ubAinq);
+%                 , {},...
+%                     self.warm_start_data);
+                % Propogate the state forward.
+                self.CON.update_sys(U(1:self.nu));
+            end
 
             self.warm_start_data.x0 = [U(2:end);U(end)];
             
-            if getX 
+            if nargout == 2 
                X = discrete_lsim(self.sys, U,  xk_1);
             else
                X = [];
@@ -117,32 +119,70 @@ classdef condensedMPCprob_OA < handle
             U = reshape(U, self.nu, []);
         end
         
+        
         function self = add_U_constraint(self, type, bnds)
-            % Add an input constraint to the MpcPRoblem instance.
-            % type: 'box' forms a box constraint on u between bnds(1) and
-            % bnds(2)
-            % type: symmetric 'slew' slew rate constraint. bnds is scalar
+        % Add an input constraint to the MpcPRoblem instance.
+        % type: 'box' forms a box constraint on u between bnds(1) and
+        % bnds(2)
+        % type: symmetric 'slew' slew rate constraint. bnds is scalar
+        % type: 'accum', accumlation constraint (useful for enforcing
+        % magnitude saturation constraint when working with an
+        % incremental form. bnds should be a vector.
             if strcmp('box', type) & length(bnds)==1
                 bnds = [-bnds, bnds];
-%                 fprintf('Type box constraint indicated but only one bound found\n')
-%                 fprintf('Assuming symmentric bounds of [%.3f, %.3f]\n', bnds(1), bnds(2));
             end
 
             if strcmp(type, 'box')
                 self.ub = ones(self.N_mpc, 1)*bnds(2);
                 self.lb = ones(self.N_mpc, 1)*bnds(1);
             elseif strcmp(type, 'slew')
-                error(['Slew rate constraint is currently not implemented',...
-                    'for condensedMPCprob_OA']);
-                %S = derMat(self.N_mpc);
-                %self.Ainq = [S; -S];
-                %self.binq = [zeros(2*self.N_mpc-2, 1)+bnds(1)];
+                S = derMat(self.N_mpc);
+                self.Ainq = S;
+                self.lbAinq = repmat(-bnds(1), self.N_mpc-1, 1);
+                self.ubAinq = repmat(bnds(1), self.N_mpc-1, 1);
+            elseif strcmp(type, 'accum')
+               S = accumMat(self.N_mpc);
+               self.Ainq = [self.Ainq; S];
+               self.ubAinq = [self.ubAinq
+                             repmat(bnds(2), self.N_mpc, 1)];
+               self.lbAinq = [self.ubAinq
+                             repmat(bnds(1), self.N_mpc, 1)];
+                
             end
         end
         
+%         function self = add_state_constraint(self, type, sys_aux, bnds)
+%             
+%             no = size(sys_aux.c, 1);
+%             if strcmp('type', 'slew')
+%                 f_0 = CondensedTools.init_cond_resp_matrix(sys_aux.a, 0,...
+%                       self.N_mpc-no, sys_aux.c);
+%                 f_1 = CondensedTools.init_cond_resp_matrix(sys_aux.a, 1,...
+%                       self.N_mpc, sys_aux.c);
+% 
+%                 H_0 = CondensedTools.zero_state_output_resp(sys_aux,...
+%                       self.N_mpc-1, 0);
+% 
+%                 H_1 = CondensedTools.zero_state_output_resp(sys_aux,...
+%                       self.N_mpc, 1);
+%                   
+%                 self.Ainq = [self.Ainq; H_1-H_0];
+%                 
+%             else
+%                 error('type not implmented')
+%             end
+%             
+%         end
+            
     end % METHODS
-end % CLASSDEF
 
+end % CLASSDEF
+function M = accumMat(N)
+    M = zeros(N, N);
+    for k=1:N
+       M(k, 1:k) = ones(1, k); 
+    end
+end
 function X = discrete_lsim(sys, U, x0)
     % The sparseMPC returns the N+1th state. This function does the same 
     % to maintain consistency between the two classes.

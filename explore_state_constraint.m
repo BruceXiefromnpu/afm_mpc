@@ -16,13 +16,14 @@ Gpow = minreal(Gpow*zpk([], [0 0], 1, Ts))
 
 
 dVmax = (Ts/C_stage)*Imax
-
+dVmax = 0.5;
 
 G_stage = modelFit.models.G_pow2uz/Vdiv_gain;
 
 G_stage.InputDelay = 0;
 sys_old = modelFit.models.G_uz2stage;
 sys = G_stage*Gpow;
+% sys = modelFit.models.G_uz2stage;
 F1 = figure(1);
 
 [~,~,omegas] = bode(sys);
@@ -42,26 +43,24 @@ pzplot(sys_old, 'g', sys, 'r')
 
 
 %%
-sys_nodelay = sys;
+% sys_nodelay = sys;
+sys_nodelay = modelFit.models.G_uz2stage;
 sys_nodelay.InputDelay = 0;
 % [sys_nodelay, gdrift] = eject_gdrift(sys_nodelay)
-[wp_real_x, wz_real_x] = w_zp_real(sys);
+[wp_real_x, wz_real_x] = w_zp_real(sys_nodelay);
 rho_1 = wz_real_x(1)/wp_real_x(1);
 
 % zeta_x = [.9, .8, .6, .5 .5];
 zeta_x = [.8, .7, .7, .5 .5, 0.25];
 gams_x = [1.5, 1.5, 1.2, 1, 1, 1];
-% rhos_x = [rho_1*1.05, 1, 1];
-rhos_x = [1, .5];
- 
+rhos_x = [rho_1*.99, 1, 1];
+% rhos_x = [1, .5];
+
 pint_x = 0.5*0;
 
 
-%-----------------------------------------------------
-
-
-P_x    = getCharDes(sys_nodelay, gams_x, pint_x, zeta_x, rhos_x, .25);
-K_temp = place(sys_nodelay.a, sys_nodelay.b, P_x);
+pdes   = getCharDes(sys_nodelay, gams_x, pint_x, zeta_x, rhos_x, .25);
+K_temp = place(sys_nodelay.a, sys_nodelay.b, pdes);
 [Q0, R1, K_lqr] = inverseLQR(sys_nodelay, K_temp);
 %     Q0 = blkdiag(Q0, zeros(Nd, Nd));
 
@@ -82,66 +81,193 @@ pzplot(sys_recyc, sys_cl)
 zgrid
 xlim([0.7, 1])
 ylim([-0.4, 0.4])
-
-N_mpc = 300;
-mpcProb0 = condensedMPCprob_OA(sys_recyc, N_mpc, Q1, Qp, R1);
-% mpcProb0 = sparseMPCprob(sys_recyc, N_mpc, Q1, Qp, R1);
-ref = 5;
+%%
+N_mpc = 20;
+N_mpc2 = 400;
+ref = 2;
 x0 = -Nx*ref;
-% [u, x] = mpcProb0.solve(x0, 'getX', 1);
 
-Cpowpick = [zeros(1, 12), Gpow.c, 0];
-% now, we should be able to construct a diff matrix that will pick out the 
-Ns = 15;
-ydiffMat = []
-for kk=1:N_mpc-1
-    ydiff_row = [zeros(1, (kk-1)*Ns), -Cpowpick, Cpowpick, zeros(1, N_mpc*Ns - kk*Ns)];
-%     ydiff_row = [zeros(1, (kk-1)*Ns), Cpowpick, zeros(1, N_mpc*Ns+Ns - kk*Ns)];
-%     keyboard
-    ydiffMat = [ydiffMat; ydiff_row];
-end
-%
-ydiffMat = [zeros(size(ydiffMat,1), N_mpc), ydiffMat];
-
-Ainq = [ydiffMat;
-        -ydiffMat];
-binq = ones(2*size(ydiffMat,1), 1)*dVmax;
-
-% mpcProb0.Ainq = Ainq;
-% mpcProb0.binq = binq;
-
-[u, x] = mpcProb0.solve(x0, 'getX', 1);
+% Now, try the state constraint with the condensed formulation.
 
 clc
-figure(200); clf
-xpow = x(13:14,:);
-ypow = Gpow.c*xpow;
-plot(diff(ypow))
-grid on
-title('Power Amplifer $\Delta y$')
-xlm = xlim;
-hold on;
-plot(xlm, [dVmax, dVmax], '--k')
-plot(xlm, -[dVmax, dVmax], '--k')
+x0_pow = [0;0];
+du_max = 2.0;
+CON1 = CondenCon(Gpow, x0_pow, N_mpc);
+CON1.add_state_con('box', dVmax);
+CON1.add_input_con('box', du_max);
 
-y = sys_recyc.c*(x(:,1:end-1) - x0);
+mpcProb1 = condensedMPCprob_OA(sys_recyc, N_mpc, Q1, Qp, R1);    
+mpcProb1.CON = CON1; 
 
-t = [0:1:N_mpc-1]'*sys.Ts;
-figure(9);
+% Simulate the short MPC
+sim_struct.K_lqr = K_lqr;
+sim_struct.PLANT = sys_nodelay;
+sim_struct.mpcProb1 = mpcProb1;
+sim_struct.trun = 400*Ts;
+sim_struct.du_max = du_max;
+sim_struct.xss = Nx(1:end-1);
+sim_struct.Nx = Nx;
+
+sim_struct.uss_0 = 0;
+sim_struct.Ts = Ts;
+sim_struct.mpc_on = 1;
+
+
+[Ympc, Umpc, dUmpc] = sim_MPC_fp(sim_struct, ref);
+[ypow1, t1] = lsim(Gpow, dUmpc.Data, dUmpc.Time, x0_pow);
+
+
+CON2 = CondenCon(Gpow, x0_pow, N_mpc2);
+CON2.add_state_con('box', dVmax);
+CON2.add_input_con('box', du_max);
+
+mpcProb2 = condensedMPCprob_OA(sys_recyc, N_mpc2, Q1, Qp, R1);    
+mpcProb2.CON = CON2; 
+
+
+
+[u2, X2] = mpcProb2.solve(x0, 'getX', 1);
+t2 = [0:1:N_mpc2-1]'*sys.Ts;
+ypow2 = lsim(Gpow, u2, t2, x0_pow);
+
+
+figure(200);clf
+    plot(ypow1)
+    hold on
+    plot(ypow2, '--')
+    
+    grid on
+    title('Power Amplifer $\Delta y$')
+    xlm = xlim;
+    hold on;
+    plot(xlm, [dVmax, dVmax], '--k')
+    plot(xlm, -[dVmax, dVmax], '--k')
+
+y2 = sys_recyc.c*(X2(:,1:end-1) - x0);
+
+
+figure(9); clf
 subplot(3,1,1)
-plot(t, y)
-hold on
-xlm = xlim
-plot(xlm, [ref, ref]*1.01, ':k')
-plot(xlm, [ref, ref]*0.99, ':k')
+    plot(Ympc.Time, Ympc.Data)
+    hold on
+    plot(t2, y2, '--')
 
-grid on
+    
+    xlm = xlim
+    plot(xlm, [ref, ref]*1.01, ':k')
+    plot(xlm, [ref, ref]*0.99, ':k')
+    title('y(k)')
+    grid on
 subplot(3,1,2)
-plot(t, u)
-grid on
+    hold on
+    plot(dUmpc.Time, dUmpc.Data)
+    plot(t2, u2, '--')
+    grid on
+    title('$\Delta u(k)$')
 
 subplot(3,1,3)
-plot(t, cumsum(u))
-grid on
+    hold on
+    plot(Umpc.Time, Umpc.Data)
+    plot(t2, cumsum(u2), '--')
+    grid on
+    title('u(k)')
+
+
+%%
+% ----------------------------------------------------------------------- %
+% -------------------- Now, try the time-optimal ------------------------ %
+clc
+k0 = 122
+% f_0 = CondensedTools.init_cond_resp_matrix(PHI_pow, 0, k0-no, C_pow);
+f_1 = CondensedTools.init_cond_resp_matrix(PHI_pow, 1, k0, C_pow);
+df = f_1;
+% - f_0;
+
+% H_0 = CondensedTools.zero_state_output_resp(Gpow, k0-1, 0);
+H_1 = CondensedTools.zero_state_output_resp(Gpow, k0, 1);
+dH = H_1;
+% - H_0;
+
+binq = ones(k0,1)*dVmax - df*x0_pow*0;
+sys_TO = eject_gdrift(sys_nodelay);
+% figure
+% bode(sys_TO, sys_nodelay)
+
+sys_TO = SSTools.deltaUkSys(sys_TO);
+Nx_TO = SSTools.getNxNu(sys_TO);
+
+x0_TO = Nx_TO*0;
+xf = Nx_TO*ref;
+
+addpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
+C=[];
+du_max = 0.2;
+for k=0:k0-1
+    C = [sys_TO.a^k*sys_TO.b C];
+end
+e_k0 = zeros(1,k0);
+e_k0(end) = 1; % Kth unit vector. [0 0 .... 0 0 1]. To pick out last element of u.
+I = eye(length(sys_TO.b));
+
+cvx_begin
+    variable u(k0);
+    variable t;
+    L = sys_TO.a^k0*x0_TO + C*u;
+    % minimize norm(L - xf)
+    % minimize norm(u)
+    minimize norm(t)
+    subject to
+%     norm(u, Inf) <= du_max;
+    [dH; -dH]*u <= [binq; binq];
+    % Enforce steady state requirement
+    % xss = Axss + Buss --> (I-A)xss = Buss
+    % (I-A)xss - Buss = 0. Not sure this is necessary.
+    % If minimization succeeds, should be the case anyway.
+    (I-sys_TO.a)*L - sys_TO.b*(e_k0*u) ==0;
+    L - xf == 0;
+cvx_end
+
+
+results.U = u;
+results.cvx_optval = cvx_optval;
+results
+%
+u = [u; repmat(0, 400, 1)];
+
+t = [0:1:length(u)-1]'*Ts;
+y = lsim(sys_TO, u, t, x0_TO*0);
+ypow = lsim(Gpow, u, t, x0_pow*0);
+%
+figure(9)
+subplot(3,1,1), hold on
+plot(t, y, '-.g')
+
+subplot(3,1,2), hold on
+plot(t, u, '-.g')
+plot(t(k0), u(k0), 'x')
+title('$\Delta u$')
+
+
+
+subplot(3,1,3), hold on
+plot(t, cumsum(u), '-.g')
+
+title('u(k)')
+
+figure(200)
+hold on
+plot(ypow)
+
+
+
+
+
+
+%%
+rmpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
+
+
+
+
 
 
