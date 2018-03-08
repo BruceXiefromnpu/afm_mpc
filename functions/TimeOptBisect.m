@@ -160,7 +160,7 @@ classdef TimeOptBisect
               
         
             % path for cvx
-            addpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
+            %addpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
             C=[];
             for k=0:k0-1
                 C = [self.PHI^k*self.Gam C];
@@ -171,24 +171,25 @@ classdef TimeOptBisect
 
             cvx_begin quiet
             variable u(k0);
-            variable t;
+%             variable t;
             L = self.PHI^k0*x0 + C*u;
-            % minimize norm(L - xf)
+            minimize norm(L - xf)
             % minimize norm(u)
-            minimize norm(t)
+%             minimize norm(t)
             subject to
             norm(u, Inf) <= self.umax;
+            u(end) ==0;
             % Enforce steady state requirement
             % xss = Axss + Buss --> (I-A)xss = Buss
             % (I-A)xss - Buss = 0. Not sure this is necessary.
             % If minimization succeeds, should be the case anyway.
-            (I-self.PHI)*L - self.Gam*(e_k0*u) ==0;
-            L - xf == 0;
+%             (I-self.PHI)*L - self.Gam*(e_k0*u) ==0;
+%             L - xf == 0;
             cvx_end
 
             results.U = u;
             results.cvx_optval = cvx_optval;
-            rmpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
+            %rmpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
         end
     end % methods
 end %classdef
