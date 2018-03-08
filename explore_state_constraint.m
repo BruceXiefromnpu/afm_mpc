@@ -82,22 +82,25 @@ zgrid
 xlim([0.7, 1])
 ylim([-0.4, 0.4])
 %%
-N_mpc = 20;
-N_mpc2 = 400;
-ref = 2;
-x0 = -Nx*ref;
-
 % Now, try the state constraint with the condensed formulation.
-
-clc
 x0_pow = [0;0];
 du_max = 2.0;
+
+R1 = 100; % OA works, QP fails
+N_mpc = 100; % OA works, QP fails
+N_mpc2 = 200;
+ref = 4; %OA works, QP fails
+x0 = -Nx*ref;
+
 CON1 = CondenCon(Gpow, x0_pow, N_mpc);
 CON1.add_state_con('box', dVmax);
-CON1.add_input_con('box', du_max);
+% CON1.add_input_con('box', du_max);
 
-mpcProb1 = condensedMPCprob_OA(sys_recyc, N_mpc, Q1, Qp, R1);    
-mpcProb1.CON = CON1; 
+CON1.xvec = x0_pow;
+
+mpcProb1 = condensedMPCprob_OA(sys_recyc, N_mpc, Q1, Qp, R1);
+
+mpcProb1.CON = CON1;
 
 % Simulate the short MPC
 sim_struct.K_lqr = K_lqr;
@@ -111,6 +114,8 @@ sim_struct.Nx = Nx;
 sim_struct.uss_0 = 0;
 sim_struct.Ts = Ts;
 sim_struct.mpc_on = 1;
+sim_struct.Gpow = Gpow;
+sim_struct.x0_pow = x0_pow;
 
 
 [Ympc, Umpc, dUmpc] = sim_MPC_fp(sim_struct, ref);
@@ -123,26 +128,26 @@ CON2.add_input_con('box', du_max);
 
 mpcProb2 = condensedMPCprob_OA(sys_recyc, N_mpc2, Q1, Qp, R1);    
 mpcProb2.CON = CON2; 
-
-
-
+CON2.xvec = x0_pow;
 [u2, X2] = mpcProb2.solve(x0, 'getX', 1);
+
 t2 = [0:1:N_mpc2-1]'*sys.Ts;
 ypow2 = lsim(Gpow, u2, t2, x0_pow);
-
+ypow3 = Gpow.c*CON1.xvec;
 
 figure(200);clf
     plot(ypow1)
     hold on
     plot(ypow2, '--')
-    
+    plot(ypow3, ':', 'LineWidth', 2)
+    legend('MPC', 'CLQR')
     grid on
     title('Power Amplifer $\Delta y$')
     xlm = xlim;
     hold on;
     plot(xlm, [dVmax, dVmax], '--k')
     plot(xlm, -[dVmax, dVmax], '--k')
-
+    
 y2 = sys_recyc.c*(X2(:,1:end-1) - x0);
 
 
@@ -151,9 +156,9 @@ subplot(3,1,1)
     plot(Ympc.Time, Ympc.Data)
     hold on
     plot(t2, y2, '--')
-
+    legend('MPC', 'CLQR')
     
-    xlm = xlim
+    xlm = xlim;
     plot(xlm, [ref, ref]*1.01, ':k')
     plot(xlm, [ref, ref]*0.99, ':k')
     title('y(k)')
@@ -178,20 +183,12 @@ subplot(3,1,3)
 % -------------------- Now, try the time-optimal ------------------------ %
 clc
 k0 = 122
-% f_0 = CondensedTools.init_cond_resp_matrix(PHI_pow, 0, k0-no, C_pow);
 f_1 = CondensedTools.init_cond_resp_matrix(PHI_pow, 1, k0, C_pow);
-df = f_1;
-% - f_0;
 
-% H_0 = CondensedTools.zero_state_output_resp(Gpow, k0-1, 0);
 H_1 = CondensedTools.zero_state_output_resp(Gpow, k0, 1);
-dH = H_1;
-% - H_0;
 
-binq = ones(k0,1)*dVmax - df*x0_pow*0;
+binq = ones(k0,1)*dVmax - f_1*x0_pow*0;
 sys_TO = eject_gdrift(sys_nodelay);
-% figure
-% bode(sys_TO, sys_nodelay)
 
 sys_TO = SSTools.deltaUkSys(sys_TO);
 Nx_TO = SSTools.getNxNu(sys_TO);
@@ -218,7 +215,7 @@ cvx_begin
     minimize norm(t)
     subject to
 %     norm(u, Inf) <= du_max;
-    [dH; -dH]*u <= [binq; binq];
+    [H_1; -H_1]*u <= [binq; binq];
     % Enforce steady state requirement
     % xss = Axss + Buss --> (I-A)xss = Buss
     % (I-A)xss - Buss = 0. Not sure this is necessary.
