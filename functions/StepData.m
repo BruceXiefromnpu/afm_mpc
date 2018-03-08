@@ -28,6 +28,7 @@ classdef StepData
         end
         
         function plot_single_traj(self, index, ax1, ax2, varargin)
+        % plot_single_traj(self, index, ax1, ax2, varargin)    
             if ~exist('ax1', 'var') || ~exist('ax2', 'var')
                 fig = gcf();
                 ax1 = subplot(211);
