@@ -170,7 +170,7 @@ classdef StepDataTimeOpt < StepData
                 sys_sim = SSTools.deltaUkSys(sys_nodelay);
             end
             
-            Nx_sim = SSTools.getNxNu(sys_sim);
+            [Nx_sim, Nu_sim] = SSTools.getNxNu(sys_sim);
             x0_sim = Nx_sim*0;
             
             % Pre-allocate
@@ -189,24 +189,33 @@ classdef StepDataTimeOpt < StepData
             k0 = size(sys_sim.B,1);
             
             for iter = 1:length(ref_s)
-
+                ref_f = ref_s(iter);
                 xf = Nx_sim*ref_s(iter);
                 [X, U, status]=toBisect.time_opt_bisect(x0_sim, xf, 'k0', k0);
                 if status
                     self.logger(['Time-optimal bisection failed at ref = ' ...
-                                  '%0.3f. Exiting...'], ref_s(iter));
+                                  '%0.3f. Exiting...'], ref_f);
                     break
                 else
                     self.logger(['Time Optimal bisection for ref=%.3f, ref_iter = %.0f ',...
-                              'of %.0f, N*=%.0f\n\n'], ref_s(iter),...
+                              'of %.0f, N*=%.0f\n\n'], ref_f,...
                               iter, length(ref_s), length(U.Time));
                 end
                 k0 = length(U.Time);
-                Y = timeseries(X.Data*sys_sim.C', X.Time);
-                U_vec_s{iter} = U;
-                X_vec_s{iter} = X;
-                Y_vec_s{iter} = Y;                
-                settle_times_opt(iter) = U.Time(end) + Nd*sys_sim.Ts;
+                % Extend the trajectory with steady state u values
+                u = [U.Data; ones(2*k0,1)*ref_s(iter)*Nu_sim]; % zero for deltaUk
+                t = [0:1:length(u)-1]'*sys_sim.Ts;
+                sys_sim.InputDelay = self.params.sys.InputDelay;
+                [y, t, x] = lsim(self.params.sys, u, t, x0_sim);
+                sys_sim.InputDelay = 0;
+                
+                U_vec_s{iter} = timeseries(u, t);
+                X_vec_s{iter} = timeseries(x, t);
+                Y_vec_s{iter} = timeseries(y, t);
+                settle_times_opt(iter) = settle_time(t, y, ref_f, 0.01*ref_f,...
+                                             [], [], 30);
+                
+                %U.Time(end) + Nd*sys_sim.Ts;
 
                 if verbose >=2
                     change_current_figure(Fig); 
@@ -220,10 +229,10 @@ classdef StepDataTimeOpt < StepData
                         clf;
                     end
                     subplot(2,1,1); 
-                    plot(Y.Time, Y.Data); hold on
+                    plot(t, y); hold on
                     xlim([0, 0.0320])
                     subplot(2,1,2)
-                    plot(U.Time, U.Data); hold on
+                    plot(t, u); hold on
                     xlim([0, 0.0320])
                     drawnow
                 end
