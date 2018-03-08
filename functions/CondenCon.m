@@ -70,14 +70,18 @@ classdef CondenCon < handle
         function self = CondenCon(sys, x0, N_mpc)
             self.sys = sys;
             self.x0 = x0;
+            self.xvec = x0;
             self.N_mpc = N_mpc;
             self.lbAinq_funs = {};
             self.ubAinq_funs = {};
         end
         
         function update_sys(self, uk)
-           self.x0 = self.sys.a*self.x0 + self.sys.b*uk;
-           self.xvec = [self.xvec, self.x0];
+            if ~isempty(self.sys)
+               self.x0 = self.sys.a*self.x0 + self.sys.b*uk;
+               xk = self.sys.a*self.xvec(:,end) + self.sys.b*uk;
+               self.xvec = [self.xvec, xk];
+            end
         end
         
         function update_binq(self)
@@ -111,12 +115,12 @@ classdef CondenCon < handle
         % bnds : is a 1x2 vector of upper and lower bounds. 
             no = size(self.sys.c, 1);
             if strcmp(type, 'box')
-                f_1 = CondenCon.init_cond_resp_matrix(self.sys.a, 1,...
+                f_1 = CondenCon.init_cond_resp_matrix(self.sys.a, 0,...
                       self.N_mpc, self.sys.c);
 
                 H_1 = CondenCon.zero_state_output_resp(self.sys,...
-                      self.N_mpc, 1);
-                  
+                      self.N_mpc, 0);
+                H_1 = H_1(:,1:end-1);  
                 self.Ainq = [self.Ainq; H_1];
                 ymax_s = ones(size(f_1,1), 1)*bnds(1);
                 self.ubAinq_funs{end+1} = @(x0) ymax_s - f_1*x0;

@@ -70,11 +70,13 @@ classdef TestCondenCon < matlab.unittest.TestCase
             B = self.sys.b;
             C = self.sys.c;
             I = eye(size(B, 1));
-            f = [C*A^1;
+            f = [C;
+                 C*A^1;
                  C*A^2;
                  C*A^3;
                  C*A^4];
-            Ainq_exp = [C*B, 0, 0, 0;
+            Ainq_exp = [0,   0  0, 0;
+                        C*B, 0, 0, 0;
                         C*A*B, C*B, 0, 0;
                         C*A^2*B, C*A*B, C*B, 0;
                         C*A^3*B, C*A^2*B, C*A*B, C*B];
@@ -82,15 +84,15 @@ classdef TestCondenCon < matlab.unittest.TestCase
             self.verifyEqual(con.Ainq, Ainq_exp, 'AbsTol', 1e-15);
             % We start with x0=0, so expect that lb(ub)Ainq = \pm 0.6
             con.update_binq();
-            ubAinq_exp = ones(N, 1)*yMax;
+            ubAinq_exp = ones(N+1, 1)*yMax;
             self.verifyEqual(con.ubAinq, ubAinq_exp);
             self.verifyEqual(con.lbAinq, -ubAinq_exp);
             
             % Now, make x0 non zero, and test again.
             con.x0 = [1;2];
             con.update_binq();
-            ubAinq_exp = ones(N, 1)*yMax - f*con.x0;
-            lbAinq_exp = -ones(N, 1)*yMax - f*con.x0;
+            ubAinq_exp = ones(N+1, 1)*yMax - f*con.x0;
+            lbAinq_exp = -ones(N+1, 1)*yMax - f*con.x0;
             self.verifyEqual(con.ubAinq, ubAinq_exp, 'AbsTol', 1e-15);
             self.verifyEqual(con.lbAinq, lbAinq_exp, 'AbsTol', 1e-15);
             
