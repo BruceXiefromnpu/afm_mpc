@@ -304,7 +304,10 @@ classdef StepDataCLQR < StepData
             end
 
             if du_max ~= 0 
-                NLQR_prob.add_U_constraint('box', du_max);
+                CON = CondenCon([], [], NLQR_prob.N_mpc);
+                CON.add_input_con('box', du_max);
+                NLQR_prob.CON = CON;
+                %NLQR_prob.add_U_constraint('box', du_max);
             end
 
             if verbose >= 3

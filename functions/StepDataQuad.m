@@ -209,7 +209,10 @@ classdef StepDataQuad < StepData
                 Qp = dare(params.sys.a, params.sys.b, params.Q, gamma); 
                 sim_struct.mpcProb1 = condensedMPCprob_OA(params.sys, N_mpc,...
                                                        params.Q, Qp, gamma);
-                sim_struct.mpcProb1.add_U_constraint('box', [-du_max, du_max]);
+                CON = CondenCon([], [], N_mpc);
+                CON.add_input_con('box', [-du_max, du_max]);
+                sim_struct.mpcProb1.CON = CON;
+                %sim_struct.mpcProb1.add_U_constraint('box', [-du_max, du_max]);
                 sim_struct.K_lqr = params.sys.C*0;
             end
         end
