@@ -39,6 +39,10 @@ function [Y, U, dU] = sim_MPC_fp(sim_struct, ref_f)
     x0 = sim_struct.xss*0;
     uss_0 = 0;
     Ts = PLANT.Ts;
+
+%     x0_pow = sim_struct.x0_pow;
+%     Gpow = sim_struct.Gpow;
+    
     sim('MPC_fp', [], options)
     
     Y = y_mpcDist;

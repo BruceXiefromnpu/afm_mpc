@@ -43,7 +43,12 @@ classdef MaxSpJudgeCLQR
             Q = params.Q;
             Qp = dare(sys.a, sys.b, Q, gam_current);
             NLQR_prob = condensedMPCprob_OA(sys, N_traj, Q, Qp, gam_current);
-            NLQR_prob.add_U_constraint('box', du_max);
+
+            CON = CondenCon([], [], NLQR_prob.N_mpc);
+            CON.add_input_con('box', du_max);
+            NLQR_prob.CON = CON;
+            
+            % NLQR_prob.add_U_constraint('box', du_max);
             Nx = SSTools.getNxNu(sys);
             
             % Build the function handle:

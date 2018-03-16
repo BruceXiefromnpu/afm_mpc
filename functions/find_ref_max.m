@@ -84,6 +84,7 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
     % default is the main scripts workspace.
     % options = simset('SrcWorkspace','current');
     y_traj_s = repmat(timeseries(0,0), 1, length(ref_s));
+    du_traj_s = repmat(timeseries(0,0), 1, length(ref_s));
     t_settle_s = zeros(1, length(ref_s));
     ref_max_recommended_found = false;
     
@@ -111,6 +112,7 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
             ts_is_nan = false;
             t_settle_s(iter) = t_settle;
             y_traj_s(iter) = Y;
+            du_traj_s(iter) = dU;
         end    
     end 
     
@@ -124,6 +126,7 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
         result.ref_max_recommended_idx = NaN;
         result.t_settle_s = [];
         result.y_traj_s = Y;
+        result.du_traj_s = dU;
         return
     elseif ts_is_nan % we reached an unstable ref, but its not the
                      % first. So largest stable is the last one.
@@ -134,6 +137,7 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
     result.ref_max_idx = ref_max_idx;
     result.ref_max_recommended_idx = ref_max_recommended_idx;
     result.y_traj_s = y_traj_s;
+    result.du_traj_s = du_traj_s;
     result.t_settle_s = t_settle_s;
 
 end

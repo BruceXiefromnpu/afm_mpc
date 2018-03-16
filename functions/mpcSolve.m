@@ -50,7 +50,8 @@ function CheckPrms(block)
 % make sure we know how to handle the parameter that gets passed.
   mpcProb = block.DialogPrm(1).Data;
   ok_objs = {'sparseMPCprob', 'sparseMPCprob_OA',...
-             'condensedMPCprob', 'condensedMPCprob_OA'};
+             'condensedMPCprob', 'condensedMPCprob_OA',...
+             'condensedMPCprob_QP'};
   if ~ismember(class(mpcProb), ok_objs)
     str = sprintf(repmat('%s, ', 1, length(ok_objs)), ok_objs{:});
     error('Need one on %s data type.', str);
