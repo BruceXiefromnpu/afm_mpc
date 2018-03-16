@@ -52,9 +52,9 @@ rho_1 = wz_real_x(1)/wp_real_x(1);
 
 % zeta_x = [.9, .8, .6, .5 .5];
 zeta_x = [.8, .7, .7, .5 .5, 0.25];
-gams_x = [1.5, 1.5, 1.2, 1, 1, 1];
-rhos_x = [rho_1*.99, 1, 1];
-% rhos_x = [1, .5];
+gams_x = [1.5, 1.5, 1., 1, 1, 1];
+% rhos_x = [rho_1*.99, 1, 1];
+rhos_x = [1.2, 1];
 
 pint_x = 0.5*0;
 
@@ -71,7 +71,7 @@ sys_recyc = SSTools.deltaUkSys(sys_nodelay);
 Ns_mpc = size(sys_recyc.B, 1);
 [Nx, Nu] = SSTools.getNxNu(sys_recyc);
 
-Q1 = blkdiag(Q0, 0);
+Q1 = blkdiag(Q0, 1);
 K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R1);
 Qp = dare(sys_recyc.a, sys_recyc.b, Q1, R1); 
 
@@ -86,7 +86,7 @@ ylim([-0.4, 0.4])
 x0_pow = [0;0];
 du_max = 2.0;
 
-R1 = 10; % OA works, QP fails
+R1 = 100; % OA works, QP fails
 N_mpc = 20; % OA works, QP fails
 N_mpc2 = 200;
 ref = 4; %OA works, QP fails
@@ -134,7 +134,7 @@ CON2.xvec = x0_pow;
 t2 = [0:1:N_mpc2-1]'*sys.Ts;
 ypow2 = lsim(Gpow, u2, t2, x0_pow);
 ypow3 = Gpow.c*CON1.xvec;
-%%
+%
 figure(200);clf
     h1 = plot(ypow1);
     h1.DisplayName = sprintf('MPC: N=%d', N_mpc);
@@ -186,9 +186,10 @@ subplot(3,1,3)
 % linkaxes([ax1, ax2, ax3], 'x')
 % xlim([0, 0.008])
 
+%%
 % ----------------------------------------------------------------------- %
 % -------------------- Now, try the time-optimal ------------------------ %
-%%
+
 clc
 k0 = 108
 
