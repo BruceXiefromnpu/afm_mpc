@@ -121,6 +121,7 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
     
     if ts_is_nan && iter == 1 % The smallest reference was unstable.
         result.ref_max_idx = NaN;
+        result.ref_max_recommended_idx = NaN;
         result.t_settle_s = [];
         result.y_traj_s = Y;
         return
