@@ -23,7 +23,49 @@ classdef StepDataMPC < StepDataQuad
             SimS = self.update_sim_struct(SimS, gam);
             [Y, U, dU] = sim_MPC_fp(SimS, ref_f);
         end
+        function [hy, ax] = plot_single_ytraj(self, idx_nmpc, idx_ref, idx_gam, ax, varargin)
+        % plot the y-trajectory held at self.results{1}.data{idx_gam}.y_traj_s(idx_ref)
+        %   -- If ax is empty, will plot to gca().
+        %   -- varargin is passed straight to matlabs plot function. 
+
+            if ~exist('ax', 'var')
+                ax = gca();
+            elseif isempty(ax)
+                ax = gca();
+            end
+            traj_y = self.results{idx_nmpc}.data{idx_gam}.y_traj_s(idx_ref);
+            hy = plot(ax, traj_y.Time, traj_y.Data, varargin{:});
+        end
         
+        function [hu, ax] = plot_single_utraj(self, idx_nmpc, idx_ref, idx_gam, ax, varargin)
+        % plot the u-trajectory held at self.results{1}.data{idx_gam}.u_traj_s(idx_ref)
+        %   -- If ax is empty, will plot to gca().
+        %   -- varargin is passed straight to matlabs plot function. 
+
+            if ~exist('ax', 'var')
+                ax = gca();
+            elseif isempty(ax)
+                ax = gca();
+            end
+
+            traj_u = self.results{idx_nmpc}.data{idx_gam}.du_traj_s(idx_ref);
+            hu = plot(ax, traj_u.Time, traj_u.Data, varargin{:});
+        end        
+        
+        function [ax1, ax2] = plot_single_traj(self, idx_nmpc, idx_ref, idx_gam, ax1, ax2, varargin)
+        % plot_single_traj(self, idx_nmpc,  idx_ref, idx_gam, ax1, ax2, varargin)
+        % 
+        % plot the trajectory for gam_s(idx_gam) and ref_s(idx_ref)
+        % to ax1 (for y(k)) and ax2 for u(k).
+            if ~exist('ax1', 'var') || ~exist('ax2', 'var')
+                fig = gcf();
+                ax1 = subplot(211);
+                ax2 = subplot(212);
+            end
+
+            self.plot_single_ytraj(idx_nmpc, idx_ref, idx_gam, ax1, varargin{:});
+            self.plot_single_utraj(idx_nmpc, idx_ref, idx_gam, ax2, varargin{:});
+        end
         
         function self = build_max_setpoints(self, varargin)
         % self = build_max_setpoints(self, varargin) 

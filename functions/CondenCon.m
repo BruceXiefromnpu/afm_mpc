@@ -79,8 +79,8 @@ classdef CondenCon < handle
         function update_sys(self, uk)
             if ~isempty(self.sys)
                self.x0 = self.sys.a*self.x0 + self.sys.b*uk;
-               xk = self.sys.a*self.xvec(:,end) + self.sys.b*uk;
-               self.xvec = [self.xvec, xk];
+%                xk = self.sys.a*self.xvec(:,end) + self.sys.b*uk;
+               self.xvec = [self.xvec, self.x0];
             end
         end
         

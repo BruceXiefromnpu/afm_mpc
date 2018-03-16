@@ -54,7 +54,7 @@ classdef StepDataQuad < StepData
                 gamma = gam_s(gam_iter);
                 % Update either K or the mpcProb.
                 sim_struct = self.update_sim_struct(sim_struct, gamma);
-                % keyboard 
+
                 % Warm starting
                 % rmax_ind = find(ref_s == ref_max_prior, 1);
                 % rmax_ind = max([rmax_ind-5, 1]);
@@ -172,6 +172,7 @@ classdef StepDataQuad < StepData
         end
         
         function self = ts_by_ref_max(self, rmax, exp_idx)
+        % self = ts_by_ref_max(self, rmax, exp_idx)    
             if isempty(self.results)
                error(['You must first load or generate results before  ' ...
                       'this function can be used'])
@@ -181,13 +182,13 @@ classdef StepDataQuad < StepData
             gam_s =  self.params.gam_s;
             max_recommended_sps = self.results{exp_idx}.max_recommended_sps;
             max_recommended_sps_idx = self.results{exp_idx}.max_recommended_sps_idx;
+
+            gam_idx = find(max_recommended_sps >=rmax, 1, 'first');
+
+            result.gamma = gam_s(gam_idx);
+            ref_max_idx = max_recommended_sps_idx(gam_idx);
             
-            kk = find(max_recommended_sps >=rmax, 1, 'first');
-            % keyboar
-            result.gamma = gam_s(kk);
-            ref_max_idx = max_recommended_sps_idx(kk);
-            
-            t_settle_s = self.results{exp_idx}.data{kk}.t_settle_s;
+            t_settle_s = self.results{exp_idx}.data{gam_idx}.t_settle_s;
             
             result.ref_s = ref_s(1:ref_max_idx);
 
@@ -198,17 +199,25 @@ classdef StepDataQuad < StepData
         end
         
         function sim_struct = update_sim_struct(self, sim_struct, gamma)
+        % sim_struct = update_sim_struct(self, sim_struct, gamma)
+        % 
+        % Build sim_struct based off the current data in sim_struct and
+        % control weight gamma. If sim_struct.N_mpc ==0, build the feedback
+        % gain K_lqr. Otherwise, build an condensedMPCprob_OA
+        % 
             warning('off', 'MATLAB:structOnObject');
             params = self.params;
             if sim_struct.N_mpc == 0 % we are in linear mode then.
                 sim_struct.K_lqr = dlqr(params.sys.a, params.sys.b,...
-                                        params.Q, gamma);
+                                        params.Q, gamma, self.params.S);
             else % if N_MPC_iter not empty --> in MPC mode.
                 du_max = sim_struct.du_max;
                 N_mpc  = sim_struct.N_mpc;
-                Qp = dare(params.sys.a, params.sys.b, params.Q, gamma); 
+                Qp = dare(params.sys.a, params.sys.b, params.Q, gamma,...
+                    self.params.S); 
                 sim_struct.mpcProb1 = condensedMPCprob_OA(params.sys, N_mpc,...
-                                                       params.Q, Qp, gamma);
+                                                       params.Q, Qp, gamma,...
+                                                       self.params.S);
                 CON = CondenCon([], [], N_mpc);
                 CON.add_input_con('box', [-du_max, du_max]);
                 sim_struct.mpcProb1.CON = CON;

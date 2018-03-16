@@ -12,6 +12,48 @@ classdef StepDataLin < StepDataQuad
         function self = StepDataLin(Params, varargin)
             self = self@StepDataQuad(Params, varargin{:})
         end
+        
+        function [hy, ax] = plot_single_ytraj(self, idx_ref, idx_gam, ax, varargin)
+        % plot the y-trajectory held at self.results{1}.data{idx_gam}.y_traj_s(idx_ref);
+        %   -- If ax is empty, will plot to gca().
+        %   -- varargin is passed straight to matlabs plot function. 
+            if ~exist('ax', 'var')
+                ax = gca();
+            elseif isempty(ax)
+                ax = gca();
+            end
+            traj_y = self.results{1}.data{idx_gam}.y_traj_s(idx_ref);
+            hy = plot(ax, traj_y.Time, traj_y.Data, varargin{:});
+        end
+        function [hu, ax] = plot_single_utraj(self, idx_ref, idx_gam, ax, varargin)
+        % plot the u-trajectory held at self.results{1}.data{idx_gam}.u_traj_s(idx_ref);
+        %   -- If ax is empty, will plot to gca().
+        %   -- varargin is passed straight to matlabs plot function. 
+            if ~exist('ax', 'var')
+                ax = gca();
+            elseif isempty(ax)
+                ax = gca();
+            end
+
+            traj_du = self.results{1}.data{idx_gam}.du_traj_s(idx_ref);
+            hu = plot(ax, traj_du.Time, traj_du.Data, varargin{:});
+        end
+        
+        function plot_single_traj(self, idx_ref, idx_gam, ax1, ax2, varargin)
+        % plot_single_traj(self, ref_idx, ax1, ax2, varargin)
+        %
+        % plot the trajectory for gam_s(idx_gam) and ref_s(idx_gam)
+        % to ax1 (for y(k)) and ax2 for u(k).
+            if ~exist('ax1', 'var') || isempty(ax1) || ~exist('ax2', 'var') || isempty(ax2)
+                fig = gcf();
+                ax1 = subplot(211);
+                ax2 = subplot(212);
+            end
+            
+            self.plot_single_ytraj(idx_ref, idx_gam, ax1, varargin{:});
+            self.plot_single_utraj(idx_ref, idx_gam, ax2, varargin{:});
+        end
+        
         function self = build_max_setpoints(self, varargin)
         % step_data = build_max_setpoints(step_data, varargin) 
         %    

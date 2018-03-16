@@ -42,7 +42,10 @@ classdef TimeOptBisect
             p.addParameter('verbose', true);
             p.addParameter('k0', []);
             parse(p, varargin{:});
-            
+            % path for cvx
+            P_tmp = path(); % so we can reset the path when we're done
+            addpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
+
             verbose = p.Results.verbose;
             status = 0;
             % Find upper and lower bounds on N.
@@ -92,7 +95,7 @@ classdef TimeOptBisect
                 self.logger('Final CVX Jval = %d\n', Jval);
             end
             
-
+            path(P_tmp);
             [~, t_DT, X_DT] = lsim(self.sys, u, (0:1:k0-1)'*self.Ts, x0);
 
             xx = timeseries(X_DT, t_DT);
@@ -157,10 +160,7 @@ classdef TimeOptBisect
         %   results : a cvx structure. Contains 
         %   results.U : the optimal control vector
         %   results.cvx_optval : value of optimum.
-              
         
-            % path for cvx
-            %addpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
             C=[];
             for k=0:k0-1
                 C = [self.PHI^k*self.Gam C];

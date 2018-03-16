@@ -4,6 +4,7 @@ classdef StepParamsLin
         ref_s;
         du_max;
         Q;
+        S;
         gam_s;
         plant;
         trun;
@@ -12,11 +13,15 @@ classdef StepParamsLin
         
     methods
         function self = StepParamsLin(sys, ref_s, du_max, Q, gam_s, ...
-                                      plant, trun)
+                                      plant, trun, varargin)
+            p = inputParser;
+            p.addParameter('S', sys.b*0);
+            p.parse;
             self.sys = sys;
             self.ref_s = ref_s;
             self.du_max = du_max;
             self.Q = Q;
+            self.S = p.Results.S;
             self.gam_s = gam_s;
             self.plant = plant;
             self.trun = trun;

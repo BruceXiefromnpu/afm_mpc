@@ -86,19 +86,19 @@ ylim([-0.4, 0.4])
 x0_pow = [0;0];
 du_max = 2.0;
 
-R1 = 100; % OA works, QP fails
-N_mpc = 100; % OA works, QP fails
+R1 = 10; % OA works, QP fails
+N_mpc = 20; % OA works, QP fails
 N_mpc2 = 200;
 ref = 4; %OA works, QP fails
 x0 = -Nx*ref;
 
 CON1 = CondenCon(Gpow, x0_pow, N_mpc);
 CON1.add_state_con('box', dVmax);
-% CON1.add_input_con('box', du_max);
+CON1.add_input_con('box', du_max);
 
 CON1.xvec = x0_pow;
 
-mpcProb1 = condensedMPCprob_OA(sys_recyc, N_mpc, Q1, Qp, R1);
+mpcProb1 = condensedMPCprob_QP(sys_recyc, N_mpc, Q1, Qp, R1);
 
 mpcProb1.CON = CON1;
 
@@ -134,13 +134,15 @@ CON2.xvec = x0_pow;
 t2 = [0:1:N_mpc2-1]'*sys.Ts;
 ypow2 = lsim(Gpow, u2, t2, x0_pow);
 ypow3 = Gpow.c*CON1.xvec;
-
+%%
 figure(200);clf
-    plot(ypow1)
+    h1 = plot(ypow1);
+    h1.DisplayName = sprintf('MPC: N=%d', N_mpc);
     hold on
-    plot(ypow2, '--')
-    plot(ypow3, ':', 'LineWidth', 2)
-    legend('MPC', 'CLQR')
+    h2 = plot(ypow2, '--');
+    h2.DisplayName = 'CLQR';
+    %plot(ypow3, ':', 'LineWidth', 2)
+    legend([h1, h2])
     grid on
     title('Power Amplifer $\Delta y$')
     xlm = xlim;
@@ -153,41 +155,51 @@ y2 = sys_recyc.c*(X2(:,1:end-1) - x0);
 
 figure(9); clf
 subplot(3,1,1)
-    plot(Ympc.Time, Ympc.Data)
+    h3 = plot(Ympc.Time, Ympc.Data);
+    h3.DisplayName = sprintf('MPC: N=%d', N_mpc);
     hold on
-    plot(t2, y2, '--')
-    legend('MPC', 'CLQR')
+    h4 = plot(t2, y2, '--');
+    h4.DisplayName = 'CLQR';
+    legend([h3, h4])
     
     xlm = xlim;
     plot(xlm, [ref, ref]*1.01, ':k')
     plot(xlm, [ref, ref]*0.99, ':k')
     title('y(k)')
     grid on
+    ax1 = gca;
 subplot(3,1,2)
     hold on
     plot(dUmpc.Time, dUmpc.Data)
     plot(t2, u2, '--')
     grid on
     title('$\Delta u(k)$')
-
+    ax2 = gca;
 subplot(3,1,3)
     hold on
     plot(Umpc.Time, Umpc.Data)
     plot(t2, cumsum(u2), '--')
     grid on
     title('u(k)')
+    ax3 = gca;
 
+% linkaxes([ax1, ax2, ax3], 'x')
+% xlim([0, 0.008])
 
-%%
 % ----------------------------------------------------------------------- %
 % -------------------- Now, try the time-optimal ------------------------ %
+%%
 clc
-k0 = 122
-f_1 = CondensedTools.init_cond_resp_matrix(PHI_pow, 1, k0, C_pow);
+k0 = 108
 
-H_1 = CondensedTools.zero_state_output_resp(Gpow, k0, 1);
-
-binq = ones(k0,1)*dVmax - f_1*x0_pow*0;
+CON3 = CondenCon(Gpow, x0_pow, k0);
+CON3.add_state_con('box', dVmax);
+CON3.add_input_con('box', du_max);
+CON3.update_binq
+% f_1 = CondensedTools.init_cond_resp_matrix(PHI_pow, 1, k0, C_pow);
+% H_1 = CondensedTools.zero_state_output_resp(Gpow, k0, 1);
+% 
+% binq = ones(k0,1)*dVmax - f_1*x0_pow*0;
 sys_TO = eject_gdrift(sys_nodelay);
 
 sys_TO = SSTools.deltaUkSys(sys_TO);
@@ -198,7 +210,7 @@ xf = Nx_TO*ref;
 
 addpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
 C=[];
-du_max = 0.2;
+% du_max = 0.2;
 for k=0:k0-1
     C = [sys_TO.a^k*sys_TO.b C];
 end
@@ -208,27 +220,30 @@ I = eye(length(sys_TO.b));
 
 cvx_begin
     variable u(k0);
-    variable t;
+%     variable t;
     L = sys_TO.a^k0*x0_TO + C*u;
-    % minimize norm(L - xf)
+    minimize norm(L - xf)
     % minimize norm(u)
-    minimize norm(t)
+    % minimize norm(t)
     subject to
 %     norm(u, Inf) <= du_max;
-    [H_1; -H_1]*u <= [binq; binq];
+    [CON3.Ainq; -CON3.Ainq]*u <= [CON3.ubAinq; -CON3.lbAinq];
+    u <= CON3.ub;
+    -u<= -CON3.lb;
     % Enforce steady state requirement
     % xss = Axss + Buss --> (I-A)xss = Buss
     % (I-A)xss - Buss = 0. Not sure this is necessary.
     % If minimization succeeds, should be the case anyway.
-    (I-sys_TO.a)*L - sys_TO.b*(e_k0*u) ==0;
-    L - xf == 0;
+    % (I-sys_TO.a)*L - sys_TO.b*(e_k0*u) ==0;
+    % L - xf == 0;
 cvx_end
+rmpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
 
-
+fprintf('Results optval = %f\n', cvx_optval)
 results.U = u;
 results.cvx_optval = cvx_optval;
 results
-%
+
 u = [u; repmat(0, 400, 1)];
 
 t = [0:1:length(u)-1]'*Ts;
@@ -237,8 +252,9 @@ ypow = lsim(Gpow, u, t, x0_pow*0);
 %
 figure(9)
 subplot(3,1,1), hold on
-plot(t, y, '-.g')
-
+h5 = plot(t, y, '-.g');
+h5.DisplayName = 'Time-Optimal'
+legend([h3,h4,h5]);
 subplot(3,1,2), hold on
 plot(t, u, '-.g')
 plot(t(k0), u(k0), 'x')
@@ -253,8 +269,11 @@ title('u(k)')
 
 figure(200)
 hold on
-plot(ypow)
+h6 = plot(ypow);
+h6.DisplayName = 'Time-Optimal';
 
+legend([h1, h2, h6])
+xlim([0, 300])
 
 
 

@@ -116,7 +116,7 @@ classdef StepDataTimeOpt < StepData
             p.addParameter('do_eject', true);
             p.addParameter('verbose', 1);
             p.addParameter('savedata', 1);
-
+            p.addParameter('TOL', []);
             parse(p, varargin{:});
 
             force = p.Results.force;
@@ -124,6 +124,7 @@ classdef StepDataTimeOpt < StepData
             do_eject = p.Results.do_eject;
             verbose = p.Results.verbose;
             savedata = p.Results.savedata;
+            TOL = p.Results.TOL;
             
             status = 0;
             self.logger('%s LOG (build_timeopt_trajs):\n', ...
@@ -185,6 +186,7 @@ classdef StepDataTimeOpt < StepData
             
             warning('off', 'MATLAB:nargchk:deprecated')
             toBisect = TimeOptBisect(sys_sim, du_max);
+            if ~isempty(TOL); toBisect.TOL = TOL; end
             toBisect.max_iter = max_iter;
             k0 = size(sys_sim.B,1);
             
@@ -192,6 +194,7 @@ classdef StepDataTimeOpt < StepData
                 ref_f = ref_s(iter);
                 xf = Nx_sim*ref_s(iter);
                 [X, U, status]=toBisect.time_opt_bisect(x0_sim, xf, 'k0', k0);
+                
                 if status
                     self.logger(['Time-optimal bisection failed at ref = ' ...
                                   '%0.3f. Exiting...'], ref_f);

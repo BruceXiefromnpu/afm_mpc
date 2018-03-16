@@ -27,17 +27,16 @@ classdef StepData
             self.results = [];
         end
         
-        function plot_single_traj(self, index, ax1, ax2, varargin)
-        % plot_single_traj(self, index, ax1, ax2, varargin)    
+        function plot_single_traj(self, ref_idx, ax1, ax2, varargin)
+        % plot_single_traj(self, ref_idx, ax1, ax2, varargin)    
             if ~exist('ax1', 'var') || ~exist('ax2', 'var')
                 fig = gcf();
                 ax1 = subplot(211);
                 ax2 = subplot(212);
             end
             
-            self.plot_single_ytraj(index, ax1, varargin{:});
-            self.plot_single_utraj(index, ax2, varargin{:});
-        
+            self.plot_single_ytraj(ref_idx, ax1, varargin{:});
+            self.plot_single_utraj(ref_idx, ax2, varargin{:});
         end
 
         function status = stepdata_struct_unchanged(self)
