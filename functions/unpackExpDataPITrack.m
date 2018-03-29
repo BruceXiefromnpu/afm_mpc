@@ -1,4 +1,4 @@
-% [y_exp, u_exp, xhat_exp xdelay_exp] = unpackExpData(data, Ns, )
+% [y_exp, u_exp, ypow_exp] = unpackExpData(data, Ts)
 % 
 % Unpacks the experimental data that LabView spits out into pieces that
 % make sense.
@@ -6,17 +6,15 @@
 % Inputs: 
 %   data: from labview. We expect the following format:
 %       dataBoth = [y,  X1.....Xns,  u,  Xd]
-%   Ns:   Number of states (excluding delay)
-%
+%   Ts: sample time
 % Outputs:
-%   y_exp, u_exp. Actual measured input/output to AFM.
-%   xhat_exp: the estimated states from the observer.
-%   xdelay_exp: Input delay states, from shift register. 
+%   y_exp, u_exp, ypow_exp. Actual measured input/output to AFM.
+% 
 %
-%   These are all structs, e.g. y_exp.Data, y_exp.Time.
+%   These are all timeseries objects.
 
 
-function [y_exp, u_exp] = unpackExpDataPITrack(data,  Ts)
+function [y_exp, u_exp, ypow_exp] = unpackExpDataPITrack(data,  Ts)
     % Make Data Accesible
     % dataBoth = [y,  X1.....Xns,  u,  Xd]
     y_exp      = timeseries();
@@ -24,14 +22,18 @@ function [y_exp, u_exp] = unpackExpDataPITrack(data,  Ts)
     
    
     
-    y_exp.Data = data(:,1);
-    ty = (0:Ts:(length(y_exp.Data)-1)*Ts)';
-    y_exp.Time = ty;
+    y = data(:,1);
+    t = (0:Ts:(length(y)-1)*Ts)';
+    y_exp = timeseries(y, t);
     
 %     keyboard
-    u_exp.Data = data(:, end);
-    tu = (0:Ts:(length(u_exp.Data) - 1)*Ts)';
-    u_exp.Time = tu;
+    u = data(:, 2);
+    u_exp = timeseries(u, t);
+    
+    ypow = data(:,3);
+    ypow_exp = timeseries(ypow, t);
+
+    
     
     
     
