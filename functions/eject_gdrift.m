@@ -7,7 +7,7 @@
 % Returns:
 %   sys_vibr: a state space model of just the high freq. vibrational
 %   dynamics.
-%   g_eject: a zpk model of the low freq pole zero pair.
+%   g_eject: a zpk model of the INVERSE low freq pole zero pair.
 
 function [sys_vibr, g_eject] = eject_gdrift(sys_nodelay)
     Ts = sys_nodelay.Ts;

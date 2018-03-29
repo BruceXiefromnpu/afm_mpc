@@ -32,8 +32,8 @@ frfBode(G_stage, omegas/2/pi, F1,'-k', 'Hz');
 frfBode(sys_old, omegas/2/pi, F1,'-r', 'Hz');
 frfBode(sys, omegas/2/pi, F1,'-g', 'Hz');
 
-plotPZ_freqs(sys, F1)
-plotPZ_freqs(G_stage, F1)
+plotPZ_freqs(sys, F1);
+plotPZ_freqs(G_stage, F1);
 %%
 figure(100)
 pzplot(Gpow, 'b', G_stage, 'k')
@@ -43,8 +43,11 @@ pzplot(sys_old, 'g', sys, 'r')
 
 
 %%
-% sys_nodelay = sys;
-sys_nodelay = modelFit.models.G_uz2stage;
+sys_nodelay = sys;
+% sys_nodelay = modelFit.models.G_uz2stage;
+sys2 = modelFit.models.G_uz2stage;
+[~, gdrift2] = eject_gdrift(sys2);
+
 sys_nodelay.InputDelay = 0;
 % [sys_nodelay, gdrift] = eject_gdrift(sys_nodelay)
 [wp_real_x, wz_real_x] = w_zp_real(sys_nodelay);
@@ -89,7 +92,7 @@ du_max = 2.0;
 R1 = 100; % OA works, QP fails
 N_mpc = 20; % OA works, QP fails
 N_mpc2 = 200;
-ref = 4; %OA works, QP fails
+ref = 0.5; %OA works, QP fails
 x0 = -Nx*ref;
 
 CON1 = CondenCon(Gpow, x0_pow, N_mpc);
@@ -134,7 +137,8 @@ CON2.xvec = x0_pow;
 t2 = [0:1:N_mpc2-1]'*sys.Ts;
 ypow2 = lsim(Gpow, u2, t2, x0_pow);
 ypow3 = Gpow.c*CON1.xvec;
-%
+%%
+clc
 figure(200);clf
     h1 = plot(ypow1);
     h1.DisplayName = sprintf('MPC: N=%d', N_mpc);
@@ -151,7 +155,7 @@ figure(200);clf
     plot(xlm, -[dVmax, dVmax], '--k')
     
 y2 = sys_recyc.c*(X2(:,1:end-1) - x0);
-
+%%
 
 figure(9); clf
 subplot(3,1,1)
@@ -191,26 +195,27 @@ subplot(3,1,3)
 % -------------------- Now, try the time-optimal ------------------------ %
 
 clc
-k0 = 108
+% k0 = 108 % ref=4
+k0 =105
 
 CON3 = CondenCon(Gpow, x0_pow, k0);
-CON3.add_state_con('box', dVmax);
-CON3.add_input_con('box', du_max);
+dVmax2 = 0.5
+du_max2 = .3;
+% CON3.add_state_con('box', dVmax2);
+CON3.add_input_con('box', du_max2);
 CON3.update_binq
-% f_1 = CondensedTools.init_cond_resp_matrix(PHI_pow, 1, k0, C_pow);
-% H_1 = CondensedTools.zero_state_output_resp(Gpow, k0, 1);
-% 
-% binq = ones(k0,1)*dVmax - f_1*x0_pow*0;
-sys_TO = eject_gdrift(sys_nodelay);
 
+[sys_TO, gdrift] = eject_gdrift(sys_nodelay);
+% sys_TO = sys_nodelay;
 sys_TO = SSTools.deltaUkSys(sys_TO);
 Nx_TO = SSTools.getNxNu(sys_TO);
-
+%
 x0_TO = Nx_TO*0;
-xf = Nx_TO*ref;
-
+xf = Nx_TO*ref*1;
+P = path;
 addpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
 C=[];
+%
 % du_max = 0.2;
 for k=0:k0-1
     C = [sys_TO.a^k*sys_TO.b C];
@@ -228,17 +233,12 @@ cvx_begin
     % minimize norm(t)
     subject to
 %     norm(u, Inf) <= du_max;
-    [CON3.Ainq; -CON3.Ainq]*u <= [CON3.ubAinq; -CON3.lbAinq];
+%     [CON3.Ainq; -CON3.Ainq]*u <= [CON3.ubAinq; -CON3.lbAinq];
     u <= CON3.ub;
     -u<= -CON3.lb;
-    % Enforce steady state requirement
-    % xss = Axss + Buss --> (I-A)xss = Buss
-    % (I-A)xss - Buss = 0. Not sure this is necessary.
-    % If minimization succeeds, should be the case anyway.
-    % (I-sys_TO.a)*L - sys_TO.b*(e_k0*u) ==0;
-    % L - xf == 0;
 cvx_end
-rmpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
+path(P);
+% rmpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
 
 fprintf('Results optval = %f\n', cvx_optval)
 results.U = u;
@@ -248,14 +248,22 @@ results
 u = [u; repmat(0, 400, 1)];
 
 t = [0:1:length(u)-1]'*Ts;
-y = lsim(sys_TO, u, t, x0_TO*0);
-ypow = lsim(Gpow, u, t, x0_pow*0);
+utraj_inv = lsim(gdrift, u, t);
+uref = cumsum(utraj_inv);
+% uref = cumsum(u);
 %
-figure(9)
+sys_delay = sys_nodelay;
+y = lsim(sys_nodelay, uref, t, sys_nodelay.b*0);
+sys_delay.InputDelay = 10;
+ydelay = lsim(sys_delay, uref, t, sys_delay.b*0);
+ypow = lsim(Gpow, utraj_inv, t, x0_pow*0);
+%
+F1 = figure(9);
 subplot(3,1,1), hold on
 h5 = plot(t, y, '-.g');
 h5.DisplayName = 'Time-Optimal'
-legend([h3,h4,h5]);
+grid
+% legend([h3,h4,h5]);
 subplot(3,1,2), hold on
 plot(t, u, '-.g')
 plot(t(k0), u(k0), 'x')
@@ -273,18 +281,103 @@ hold on
 h6 = plot(ypow);
 h6.DisplayName = 'Time-Optimal';
 
-legend([h1, h2, h6])
+% legend([h1, h2, h6])
 xlim([0, 300])
-
-
+    grid on
+    title('Power Amplifer $\Delta y$')
+    xlm = xlim;
+    hold on;
+    plot(xlm, [dVmax, dVmax], '--k')
+    plot(xlm, -[dVmax, dVmax], '--k')
 
 
 
 %%
-rmpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
+% ---- Paths for shuffling data to labview and back. ------
+controlParamName = 'exp01Controls.csv'; 
+refTrajName      = 'ref_traj_track.csv';
+outputDataName = 'exp01outputBOTH.csv';
+%labview reads data here
+controlDataPath = fullfile(PATHS.step_exp, controlParamName); 
+% labview saves experimental results/data here
+dataOut_path    = fullfile(PATHS.step_exp, outputDataName); 
+% labview reads desired trajectory here
+refTrajPath     = fullfile(PATHS.step_exp, refTrajName); 
+% location of the vi which runs the experiment.
+% vipath ='C:\Users\arnold\Documents\labview\ACC2017_archive\play_AFMss_integral_trajTrack.vi';
+% vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFMss_integral_trajTrack_nod.vi';
+vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFM_PI_trajTrack.vi';
 
 
+%----------------------------------------------------
+% Save the controller to .csv file for implementation
+clc
+vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFM_PI_trajTrack.vi';
+clear vi; clear e;
+% delay before we start tracking, to let any transients out. Somewhere of a
+% debugging setting. 
+SettleTicks = 20;  
+Iters  = 400
+Iters = min(Iters, length(uref)-10);
 
+
+% creat and pack data. Then save it. 
+tt = t;
+% ref_traj.Time;
+yy = ydelay;
+% ref_traj.Data;
+% uKx  = yy*Nbar;
+Nbar = 1;
+[~, ~, y_uKx] = pack_uKx_y(uref, yy, tt);
+
+% AllMatrix = packMatrix(sys_obs, L, K);
+saveControlDataPITrack(y_uKx, refTrajPath);
+%
+% -----------------------RUN THE Experiment--------------------------------
+[e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters, 'Stop', 0,...
+            'Ki', 0.02*1, 'umax', 4, 'outputData BOTH', dataOut_path,...
+            'reference traj path', refTrajPath);
+vi.Run
+% -------------------------------------------------------------------------
+
+        
+% Now, read in data, and save to structure, and plot.
+AFMdata = csvread(dataOut_path);
+%
+clc
+[y_exp, u_exp, ypow_exp] = unpackExpDataPITrack(AFMdata, Ts);
+
+figure(10), clf
+subplot(2,1,1)
+hold on
+plot(t, ydelay)
+plot(y_exp.Time, y_exp.Data)
+grid on
+
+subplot(2,1,2)
+hold on
+plot(t, uref)
+plot(u_exp.Time, u_exp.Data)
+grid on
+
+
+figure(200)
+dypow = diff(ypow_exp.Data);
+plot(dypow(3:end)*Vdiv_gain, '--k')
+%%
+sysinv = 1/zpk(sys_nodelay);
+sysinv.InputDelay = 3;
+sysinv = absorbDelay(sysinv)
+ye = lsim(sysinv, y, t);
+figure, plot(t, ye, t, y, '--')
+
+%%
+
+
+expOpts = stepExpOpts(linOpts, 'pstyle', 'k', 'name',  'AFM Stage');
+
+afm_exp = stepExp(y_exp, u_exp, expOpts);
+H2 = plot(afm_exp, F1);
 
 
 
