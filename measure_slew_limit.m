@@ -140,5 +140,33 @@ if saveon
 end
 
 
+%%
+figure(1);clf
+bode(Gpow); grid on
+
+
+
+Cp = 4e-6;
+R = 1e-3;
+L = 2*650e-9;
+
+oneoLC = 1/L/Cp;
+
+G = tf(oneoLC, [1 R/L, oneoLC]);
+
+
+hold on
+
+h = bodeplot(G);
+setoptions(h, 'FreqUnits', 'Hz')
+
+ts2 = 24e-6
+gz = c2d(G, ts2, 'foh')
+bode(gz)
+%%
+f4 = figure(20);
+frfBode(Gpow, modelFit.frf.freq_s, f4, '-r', 'Hz')
+frfBode(modelFit.frf.G_pow_frf(:)*Vdiv_gain, modelFit.frf.freq_s, f4, '--k', 'Hz')
+
 
 
