@@ -1,3 +1,5 @@
+%  F = mkfig(num, width, height)
+%
 function F = mkfig(num, width, height)
 
 F = figure(num); clf
