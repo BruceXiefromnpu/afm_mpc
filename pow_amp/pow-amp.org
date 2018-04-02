@@ -1,0 +1,81 @@
+#+TITLE: Characterizing the C300 Power Amplifier
+#+SETUPFILE: ~/.emacs.d/org-templates/level-0.org
+#+PROPERTY: TEMPLATE page_math
+#+PROPERTY: URL projects/pow_amp.html 
+#+PROPERTY: SAVE_AS projects/pow_amp.html
+#+OPTIONS: tex:t
+#+STARTUP: latexpreview
+#+TODO: TODO(t) WAITING(w@/!) | DONE(d@/!) CANCELED(c@/!) STARTED(s@/!) DEFERRED(ef@/!)
+#+STARTUP: fold
+#+STARTUP: lognotestate t
+#+SEQ_TODO: TODO STARTED WAITING DELEGATED APPT | DONE DEFERRED CANCELLED
+
+
+
+
+I am trying to characterize the limitations of the nPoint C300 power amplifier so that I can *properly* formulate an MPC problem. The C300 is current limited to 100~mA. I have known for some time [[cite:braker_fast_2017]] that this current limit can manifest in limitation on the slew rate of the control signal. For a while, operating under the assumption that the bandwidth of the C300 was flat to 10~kHz (which is what nPoint told me in an email), I have looked at ways to limit the slew rate of the control signal.
+
+The reason for the slew rate limit is that the piezo in the stage looks mostly like a capacitor. Thus, relationship of the output voltage of the power to the current is given by
+\begin{equation}
+\dot V_{amp} = \frac{1}{C_{stage}}I(t).
+\end{equation}
+I have measured $C_{stage}$ to be about $4\mu$F. Sampling at 25 kHz and approximating the derivative with a finite difference, this translates to (using $|I{max}|\leq 100$~mA)
+\begin{align}
+|\Delta V{pow}(k)|& \leq \frac{40\mu\text{s}}{4\mu\text{F}} 100~\text{mA}\\
+&= 1 \text{volts per sample period}
+\end{align}
+Since the power amp has a gain of about 10 (taking my $\pm$ 10 v control signal to between 0 and 180 volts, 
+this means that the rate of change limit on the input side should be given by
+
+\begin{equation}
+|\Delta u(k)| \leq  0.11 \text{v}/T_{s}.
+\end{equation}
+
+ However, this is would seem to be far more limiting that is necessary. The problem is that the power amp bandwidth may flat to 10~kHz *unloaded*, but when *loaded* with it starts to roll off at about 200 Hz when connected to nPoint's own stage. In short, the pow amp when connected to the peizo stage forms an aggressive LPF with a very low cutoff frequency, which means we should be able to exceed 0.11 v$/T_{s}$ for some time before the *output* voltage rate of changes catches up. 
+
+From an optimal control perspective, this means that we should be considering state constrained problem rather than an input constrained problem.
+
+This means that it is not sufficient to consider the power amp as a simple gain, it has a transfer function of its own that is incorporated into my model of the overall AFM. I can solve such a problem fairly easily offline and push the resulting trajectory into the stage. See figure.
+
+
+In contrast to the first experiment, which I thought made sense, this makes no sense. The output of the power amp now seems to be ringing and overshooting, instead of just having trouble keeping up. This is very confusing. 
+
+My analysis above has made quite a few assumptions and approximations that may or may not contribute to what I am seeing. These include
+
+1. I assume that I can approximate $\dot V_{amp}$ with $\Delta V_{amp}/T_{s}$. That analysis is really only accurate if the D/A implements a FOH rather than a ZOH. But it almost certainly is using a ZOH. This means that whatever input the power amp sees at each sample instant looks mostly like a step, but run through a LPF with (presumably) a very high bandwidth. 
+
+   Even still, that doesn't explain why the power amplifier is OVERSHOOTING. If it really were running into the current limit, I don't see how that behaivior makes sense. Also, we are really intersted in the rate of change of the ouput, as my previous analysis said, not the input, and that seems to be well within the limits.
+
+   There is however, also a limitation on just the slew rate of the power amp
+
+2. Piezos are not actually just simple capacitors. Is it possible that I am barking up the wroing tree? First, I believe that piezos are actually non-linear capacitors and that their effective capacitance can change over different operating regimes.
+   
+   Second, piezos work both ways: (1) apply a voltage and you get a movement; (2) push the peizo and you get a voltage. Is it possible that the mass of the flexure stage is moving enough during such an aggressive manourve that it pushes against the piezo and creates something like a back-voltage? That might explain the overshoot/ringing. 
+
+   *Troubleshooting step*: replace the piezo load with a simple capacitor+ resistor and see if the same thing happens. If so, this conjecture is false. If not, we can eliminate the power amplifier and focus on the piezo dynamics side of things.
+
+3. It is somehow related to the inductance of the supply cable to the stage  because that inductance makes the whole thing an RLC circuit, which can potentially have a resonance [[cite:fleming_megahertz_2009]]. My initial calculations seem to suggest that resonance is REALLY fast, and possibly not even complex for my guesses at component values.
+
+   * Troubleshooting Step:* talk to Jianglin and use their impeadance analyzer. 
+   
+4. It comes from a fast transient in the power supply to the power amp. Like the the power supply gets overloaded and over compensates (those things are often nonlinear switching supplies, right?
+   
+5. I took the top off the power amp. It is quite obvious that the driving circuit is centered around an Apex PA85 MOSFET. 
+   
+   #+caption: The inside of the C300 power amplifier. It is quite clear that the main event is the PA85, which is the TO-3 package sitting in the giant heatsink.
+   #+name: fig:npxy_innerds
+   file:figures/pow-amp/c300_innerds.jpg
+
+
+
+   So I started reading through some of the Apex documents. Of particular relevance are 
+
+   i. [[https://apexanalog.com/resources/appnotes/an25u.pdf][driving capacitive loads]] 
+
+   ii. [[https://apexanalog.com/resources/appnotes/an19u.pdf][Stability for Power Operational Amplifiers]]
+
+   iii. [[https://apexanalog.com/resources/appnotes/an44u.pdf][Driving Piezoelectric Actuators]]
+
+   One of the things that stands out is (ii). All of these OP-amp designs are negative feedback loop. In *basic* op-amp analysis, the op-amp gets approximated as a simple static gain that is really, really big. Here, they analyse the loop stability basically with normal phase margin criterion, since in reality, the OP-amp gain rolls off like a first or second order system. 
+
+   I need to print these documents out and analyze them more carefully. I think they were saying that the load impeadance could change the closed loop gain and cause stability problems. If I read that right, this could tie back into (2) above, if the effective capacitance of the piezo is changing over time. 
