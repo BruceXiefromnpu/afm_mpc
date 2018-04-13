@@ -1,0 +1,9 @@
+[My Computer]
+My Computer = "192.168.1.120"
+
+[NI-cRIO9082-2F14E67B]
+NI-cRIO9082-2F14E67B = "192.168.1.104"
+
+[RT cRIO-9082]
+RT cRIO-9082 = "169.254.22.16"
+
