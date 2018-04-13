@@ -190,6 +190,10 @@ subplot(3,1,3)
 % ----------------------------------------------------------------------- %
 % -------------------- Now, try the time-optimal ------------------------ %
 
+
+MF_Gpowcurrent = load('pow_amp/FRF_data_current_stage.mat')
+G_uz2current = MF_Gpowcurrent.modelFit.models.G_uz2current1;
+%%
 clc
 k0 = 108
 
@@ -250,7 +254,9 @@ u = [u; repmat(0, 400, 1)];
 t = [0:1:length(u)-1]'*Ts;
 y = lsim(sys_TO, u, t, x0_TO*0);
 ypow = lsim(Gpow, u, t, x0_pow*0);
-%
+
+I_current = lsim(G_uz2current, u, t);
+
 figure(9)
 subplot(3,1,1), hold on
 h5 = plot(t, y, '-.g');
@@ -272,8 +278,9 @@ figure(200)
 hold on
 h6 = plot(ypow);
 h6.DisplayName = 'Time-Optimal';
-
-legend([h1, h2, h6])
+h7 = plot(I_current);
+h7.DisplayName = 'TO current';
+legend([h1, h2, h6, h7])
 xlim([0, 300])
 
 
