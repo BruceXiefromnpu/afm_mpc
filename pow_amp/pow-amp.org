@@ -31,7 +31,7 @@ this means that the rate of change limit on the input side should be given by
 |\Delta u(k)| \leq  0.11 \text{v}/T_{s}.
 \end{equation}
 
- However, this is would seem to be far more limiting that is necessary. The problem is that the power amp bandwidth may flat to 10~kHz *unloaded*, but when *loaded* with it starts to roll off at about 200 Hz when connected to nPoint's own stage. In short, the pow amp when connected to the peizo stage forms an aggressive LPF with a very low cutoff frequency, which means we should be able to exceed 0.11 v$/T_{s}$ for some time before the *output* voltage rate of changes catches up. 
+ However, this is would seem to be far more limiting that is necessary. The problem is that the power amp bandwidth may be flat to 10~kHz *unloaded*, but when *loaded* with it starts to roll off at about 200 Hz when connected to nPoint's own stage. In short, the pow amp when connected to the peizo stage forms an aggressive LPF with a very low cutoff frequency, which means we should be able to exceed 0.11 v$/T_{s}$ for some time before the *output* voltage rate of changes catches up. 
 
 From an optimal control perspective, this means that we should be considering state constrained problem rather than an input constrained problem.
 
@@ -48,7 +48,10 @@ My analysis above has made quite a few assumptions and approximations that may o
 
    There is however, also a limitation on just the slew rate of the power amp
 
-2. Piezos are not actually just simple capacitors. Is it possible that I am barking up the wroing tree? First, I believe that piezos are actually non-linear capacitors and that their effective capacitance can change over different operating regimes.
+2. My analysis depends on the assumption that $\dot V_{amp} = 1\C I$. This is only true if the piezo actually looks like a capacitor. This is a very common assumption in the literature cite:fleming_groundedload_2005, cite:Bazghaleh_digital_2013.
+
+
+   Is it possible that I am barking up the wroing tree? First, I believe that piezos are actually non-linear capacitors and that their effective capacitance can change over different operating regimes.
    
    Second, piezos work both ways: (1) apply a voltage and you get a movement; (2) push the peizo and you get a voltage. Is it possible that the mass of the flexure stage is moving enough during such an aggressive manourve that it pushes against the piezo and creates something like a back-voltage? That might explain the overshoot/ringing. 
 
@@ -79,3 +82,8 @@ My analysis above has made quite a few assumptions and approximations that may o
    One of the things that stands out is (ii). All of these OP-amp designs are negative feedback loop. In *basic* op-amp analysis, the op-amp gets approximated as a simple static gain that is really, really big. Here, they analyse the loop stability basically with normal phase margin criterion, since in reality, the OP-amp gain rolls off like a first or second order system. 
 
    I need to print these documents out and analyze them more carefully. I think they were saying that the load impeadance could change the closed loop gain and cause stability problems. If I read that right, this could tie back into (2) above, if the effective capacitance of the piezo is changing over time. 
+
+
+
+# FOR HTML
+#+BIBLIOGRAPHY: /home/arnold/bib_pdf/main_bibliography.bib /home/arnold/bib_pdf/ieee.csl limit:t

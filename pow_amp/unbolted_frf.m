@@ -25,7 +25,9 @@ h2.DisplayName = 'Stage free on table';
 subplot(2,1,1)
 leg1 = legend([h1, h2]);
 set(leg1, 'location', 'SouthWest')
-
 F1.PaperPosition = [1.3333    2.2135    5.8333    6.5729];
-saveas(F1, '/home/arnold/matlab/afm_mpc_journal/figures/pow-amp/unbolted_frf.svg')
 
+if 0
+    F1.PaperPosition = [1.3333    2.2135    5.8333    6.5729];
+    saveas(F1, '/home/arnold/matlab/afm_mpc_journal/figures/pow-amp/unbolted_frf.svg')
+end

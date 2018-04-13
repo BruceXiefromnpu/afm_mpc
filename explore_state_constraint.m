@@ -194,9 +194,12 @@ subplot(3,1,3)
 % ----------------------------------------------------------------------- %
 % -------------------- Now, try the time-optimal ------------------------ %
 
+
+MF_Gpowcurrent = load('pow_amp/FRF_data_current_stage.mat')
+G_uz2current = MF_Gpowcurrent.modelFit.models.G_uz2current1;
+%%
 clc
-% k0 = 108 % ref=4
-k0 =105
+k0 = 108
 
 CON3 = CondenCon(Gpow, x0_pow, k0);
 dVmax2 = 0.5
