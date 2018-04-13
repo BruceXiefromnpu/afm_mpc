@@ -40,9 +40,6 @@ plotPZ_freqs(G_stage, F1);
 % 
 % figure(3)
 % pzplot(sys_old, 'g', sys, 'r')
-
-
-%%
 % sys_nodelay = sys;
 sys_nodelay = modelFit.models.G_uz2stage;
 sys2 = modelFit.models.G_uz2stage;

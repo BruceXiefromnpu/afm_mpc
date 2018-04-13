@@ -54,8 +54,11 @@ if 0
     SYS.InputDelay = nd1+nd2+2;
     Nd  = SYS.InputDelay;
 else
-%    SYS = modelFit.models.G_uz2stage_logfit12;
-   SYS = modelFit.models.G_uz2stage_logfit12_withphase_mp;
+%     SYS = modelFit.models.G_uz2stage_logfit12;
+   load('cl_fit_0p5.mat')
+   SYS = sys_fit;
+   SYS.iodelay = 0;
+%    modelFit.models.G_uz2stage_logfit12_withphase_mp;
    SYS.InputDelay = 8;
    Nd = SYS.InputDelay;
    sys_nodelay = SYS;
@@ -107,7 +110,7 @@ Ns  = length(sys_obs.b);
 N1    = 800;
 trun = Ts*N1;
 
-ref_f_1 = 1.0; % 1.5 to hit slew rate, 1.4 doesn't  
+ref_f_1 = .5; % 1.5 to hit slew rate, 1.4 doesn't  
 ref_0 = 0;
 t = [0:1:N1]'*Ts;
 
@@ -138,7 +141,7 @@ p1 = p_sort(1); z1 = z_sort(1);
 wp1 = abs(log(p1))/Ts;
 wz1 = abs(log(z1))/Ts;
 
-rho_s(1) = 1.1*wz1/wp1
+rho_s(1) = 1.0*wz1/wp1
 
 % fdbk is a class which computes the gain and also stores the data used to
 % generate K with. 
@@ -219,7 +222,7 @@ clear vi; clear e;
 % delay before we start tracking, to let any transients out. Somewhere of a
 % debugging setting. 
 SettleTicks = 20;  
-Iters  =750
+Iters = 799
 
 
 
@@ -272,9 +275,9 @@ figure(50)
 subplot(2,1,1)
 plot(u_exp.Time, yfit, '.-b')
 
-%%
+%
 sys_fit = g1*gdrift_fit;
-save('cl_fit.mat', 'sys_fit')
+save('cl_fit_0p5.mat', 'sys_fit')
 
 
 %%
