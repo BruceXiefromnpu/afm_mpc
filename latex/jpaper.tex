@@ -128,8 +128,65 @@ The total model $G$ is depicted as the black dashed curve in Fig.~\ref{fig:frf_x
 
 
 
-\subsection{Limitation on control voltage rate of change}
+\subsection{Power Amplifier Characterization and Limitations}
+In my effort at figuring this out, I attacked (2) above in two ways. First, I replaced the stage with a 4\(\mu\)F capicator and a 1M\(\Omega\) resistor in parralell, which is what we see going on inside the NPXY100. Second, I decided that estimating the current based on the voltage rate of change was too ambiguous and that I really needed a current measurement. The \textbf{basic} way to do this is to run the drive line from the power amp to its load through a small precision resistor and measure the voltage drop across that resisitor. This can be done on the high-side or low side. I first implemented this on the high the side with a 0.1\(\Omega\) resistor. 
 
+
+
+\begin{figure}[htbp]
+\centering
+\includesvg[width=.9\linewidth]{figures/stage_frfs_all}
+\caption{\label{fig:org8f9b1d0}
+Frequency responses for the stage and power amplifier in the X-direction.}
+\end{figure}
+
+
+Once we have a current measurement, the first thing we want to do is to gather frequency responses from the various inputs to the various outputs. These are shown in Figure\textasciitilde{}\ref{fig:org8f9b1d0}. There are four releavent transfer functions to consider here. They are
+
+\begin{table}
+  \centering
+  \begin{tabular}{ll}
+    name & description\\
+    \hline
+    \(G_{y_{X},u_{X}}\) & T.F. from low voltage control to stage position.\\
+    \(G_{y_{X},u_{X}}\) & T.F. from high-voltage pow-amp output voltage control to stage position.\\
+    \(G_{I_{X},u_{X}}\) & T.F. from low voltage control to power-amp output current.\\
+    \(G_{I_{X},V_{X}}\) & T.F. from high-voltage power amp-output to power amp output current.\\
+  \end{tabular}
+\end{table}
+There are a few things to notice here. First, \(G_{V_{x},u_{x}}\) rolls off at about 250\textasciitilde{}Hz. This means that if we consider constraining the rate of change of \(V_{X}\), this becomes essentially a state constrained problem (or, really, an input constrained problem with a very complicated constraint set, depending on how we formulate things). Second, the transfer function \(G_{I_{x}, V_{X}}\) has a break frequency at about 700\textasciitilde{}Hz, where it begins increasing at 40\textasciitilde{}dB per decade. Thus, if we take the viewpoint that we should constrain \(V_{X}\), then a simple rate of change limitation is insufficient. 
+
+This observation largely accounts for why my previous modeling efforts failed. Even though I was able to predict pretty accurately the \textbf{voltage} output of the power amplifier, the rate of change of that voltage is \textbf{not} propertional to the current draw.
+
+The crucial thing here though is that the transfer function \(G_{I_{x},u_{x}}\) does look almost like a pure derivative, aside from the resonance at 700\textasciitilde{}Hz. Thus, in formulating our optimal control problems, we will consider only \(G_{I_{x},u_{x}}\). Because we are only able to implement a simple box constraint, we cannot explicitely deal with the resonance at 700\textasciitilde{}Hz in that transfer function. Note however, that the excursion from looking like a capacitor is fairly small. Thus, we if we slightly overestimate the capacitance as \(C_{bnd}\), then 
+\begin{equation}
+G_{I_{X},u_{X}}(e^{j\omega T_{s}}) \leq C_{bnd}(z-1) := \tilde{G}_{I_{X}, u_{X}}(z), \quad \forall \omega
+\end{equation}
+
+This bound is illustrated by the dotted black curve in figure\textasciitilde{} \ref{fig:orgc576458}, where we have calculated \(M=1.12\).
+
+\begin{figure}[htbp]
+\centering
+\includesvg[width=.9\linewidth]{figures/stage_vs_cap}
+\caption{\label{fig:orgc576458}
+Frequency responses for the stage and power amplifier in the X-direction.}
+\end{figure}
+
+Thus, for all inputs,
+\begin{align}
+|I_{V_{X}, u_{x}}(k)| &|\leq \Delta u_{X}(k)| 1.12 \leq I_{max}
+\end{align}
+Using \(I_{max} = 0.1\) Amps, we arrive at our slew rate condition on the low voltage control input
+\begin{equation}
+|\Delta u_{X}(k)| \leq \frac{1}{1.12} 0.10 = 0.833 \text{~volts per sample}
+\end{equation}
+
+
+
+% ============================================================================================================
+% ============================================================================================================
+% ============================================================================================================
+% ============================================================================================================
 The high voltage output of the C300 is current limited to 100 mA. Because the piezo stage presents as a capacitive load to the power amplifier, this translates to a rate of change limitation on the voltage control signal. To see this, we have $\dot v_{h} = \frac{1}{C} i_c(t)$, or, with a backwards difference approximation
 \begin{equation}
   |\frac{V_{h}(k) - V_{h}(k-1)}{T_s}| \leq \frac{1}{C} 100~\text{mA}
@@ -161,7 +218,7 @@ Figure~\ref{fig:lpf_current} schematically illustrates the situation. The LPF wi
 \end{figure*}
 This indeed shows that when $\Delta V_h$ exceeds approximately 1 volt per sample, the power amplifier output breaks down. We also see from Fig. ~\ref{fig:lpf_current} that the 100~mA current limitation appears to not be a hard saturation constraint. 
 
-The implication here is that limiting $|\Delta V_{\ell}|\leq 0.14$ is more conservative than necessary. Ideally, we would have a \emph{state} constraint on $V_{lpf}$ rather than the low voltage input $u$. However, solving the state constrained problem is computationally more demanding than than the input constrained problem and methods such as the Fast Gradient Method are not applicable to such problems. Even solving the minimum time-control problem offline becomes fraught with numerical difficulties. 
+
 
 % It is useful and thus interesting that in discrete time, the rate of change dynamics for linear system are the same as the standard input dynamics. Consider a state space system $G=\{A,B,C\}$ with state $x(k)$ and output $y(k)$. Then
 % \begin{align}

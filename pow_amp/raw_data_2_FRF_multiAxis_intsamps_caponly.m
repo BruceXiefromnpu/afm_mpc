@@ -22,7 +22,7 @@ clc
 % in 'output-data-file-name' indicator in play_sysID_Z_Axis.vi'.
 
 
-FC_data_file = 'x-axis_sines_info_intsampsFourierCoef_4-13-2018caponly-02.csv';
+FC_data_file = 'x-axis_sines_infoFourierCoef_4-16-2018caponly-01.csv'; 
 
 % Run this script from inside the z-axis-swept-sines/matlab folder and this
 % will automatically get the right path for the data. 
@@ -52,12 +52,18 @@ idx_powV = 2;
 idx_uz = 1;
 
 R_sense = 0.1;
+R3 = 68.4e3;
+R4 = 10.15e6;
+I_gain = (1/R_sense)*(R3/(R3+R4));
+I_gain = 1/15.15; % Measured
+
+
 R2 = 1.732e6;
 R1 = 29.7e6;
 Vdiv_gain = R2/(R1+R2);
 %Scale the Fourier coefficients of powV  by 1/Vdiv_gain and of powI by
 %1/Rsense.
-FC_s(:,idx_powI) = FC_s(:, idx_powI)/R_sense;
+FC_s(:,idx_powI) = FC_s(:, idx_powI)*I_gain;
 FC_s(:,idx_powV) = FC_s(:, idx_powV)/Vdiv_gain;
 
 G_uz2powV = FC_s(:,idx_powV)./FC_s(:,idx_uz);

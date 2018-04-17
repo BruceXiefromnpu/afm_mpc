@@ -22,7 +22,8 @@ clc
 % in 'output-data-file-name' indicator in play_sysID_Z_Axis.vi'.
 
 
-FC_data_file = 'x-axis_sines_info_intsampsFourierCoef_4-13-2018stageonly-01.csv';
+FC_data_file = 'x-axis_sines_infoFourierCoef_4-16-2018stage-01.csv';
+% x-axis_sines_info_intsamps_out_FourierCoef_4-15-2018stageonly-01.csv';
 
 % Run this script from inside the z-axis-swept-sines/matlab folder and this
 % will automatically get the right path for the data. 
@@ -40,7 +41,7 @@ saveOn = 1; % set this to 0 to avoid saving the computed FRFs.
 
 % frf_FilePath = fullfile(dataRoot, frf_FileName);
 
-ssOpts = sweptSinesMeta('read', FC_path)
+ssOpts = sweptSinesMeta('read', FC_path);
 
 Ts = ssOpts.Ts;
 
@@ -51,13 +52,21 @@ idx_stage = 2;
 idx_powV = 3;
 idx_powI = 4;
 
+% Gains for current sensing 
 R_sense = 0.1;
+R3 = 68.4e3;
+R4 = 10.15e6;
+I_gain = (1/R_sense)*(R3/(R3+R4));
+I_gain = 1/15.15; % Measured
+% I_gain = 2.5757;
+% Gains for amplifier output voltage
+
 R2 = 1.732e6;
 R1 = 29.7e6;
 Vdiv_gain = R2/(R1+R2);
 %Scale the Fourier coefficients of powV  by 1/Vdiv_gain and of powI by
 %1/Rsense.
-FC_s(:,idx_powI) = FC_s(:, idx_powI)/R_sense;
+FC_s(:,idx_powI) = FC_s(:, idx_powI)*I_gain;
 FC_s(:,idx_powV) = FC_s(:, idx_powV)/Vdiv_gain;
 
 G_uz2stage = FC_s(:, idx_stage)./FC_s(:, idx_uz);
@@ -79,15 +88,17 @@ subplot(2,1,1)
 title('Control signal to Amplifier Voltage');
 
 F5 = figure(5); %clf
-frfBode(G_uz2powI, freqs, F5, '--k', 'Hz')
-frfBode(G_powV2powI, freqs, F5, '--m', 'Hz')
+frfBode(G_uz2powI, freqs, F5, '--k', 'Hz');
+frfBode(G_powV2powI, freqs, F5, '--m', 'Hz');
 
 subplot(2,1,1)
 title('Amplifier Current')
 legend('From control signal', 'From powV');
 
 f4 = figure(4);
-semilogx(freqs, E_s(:, 3))
+semilogx(freqs, E_s(:, idx_powV));
+hold on
+semilogx(freqs, E_s(:, idx_powI));
 xlim([0.1, 10^4])
 grid on
 title('Residual energy')
@@ -95,7 +106,7 @@ title('Residual energy')
 
 
 %%
-saveas(F5, '../figures/pow-amp/G_uz2Current.svg')
+saveas(F5, '../figures/pow-amp/G_uz2Current.svg');
 
 %%
 
