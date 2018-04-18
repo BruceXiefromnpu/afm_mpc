@@ -16,10 +16,11 @@
 %   These are all structs, e.g. y_exp.Data, y_exp.Time.
 
 
-function [y_exp, u_exp, xhat_exp] = unpackExpData_nod(data,  Ts)
+function [y_exp, u_exp, I_exp, xhat_exp] = unpackExpData_nod(data,  Ts)
     % Make Data Accesible
     % dataBoth = [y,  X1.....Xns,  u,  Xd]
     y_exp      = timeseries();
+    I_exp      = timeseries();
     u_exp      = timeseries();
     xhat_exp   = timeseries();
    
@@ -33,9 +34,11 @@ function [y_exp, u_exp, xhat_exp] = unpackExpData_nod(data,  Ts)
     tu = (0:Ts:(length(u_exp.Data) - 1)*Ts)';
     u_exp.Time = tu;
     
+    I_exp.Data = data(:,2);
+    I_exp.Time = u_exp.Time;
     
     % Pull out observer state data.    
-    xhat_exp.Data   = data(:,2:end-1);
+    xhat_exp.Data   = data(:,3:end-1);
     xhat_exp.Time   = (0:Ts:(length(xhat_exp.Data(:,1))-1)*Ts)';
     
 
