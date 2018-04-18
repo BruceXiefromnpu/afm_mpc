@@ -5,12 +5,8 @@ addpath('functions')
 % ---------- Load Parametric Models  -----------
 modFitPath    = 'x-axis_sines_info_out_12-10-2017-04.mat';
 
-load(fullfile(PATH_sysid, modFitPath));
-
-
-
+load(fullfile(PATHS.sysid, modFitPath));
 sys = modelFit.sys_x_eigen;
-
 
 if 1
     Nd =sys.InputDelay;
@@ -20,9 +16,8 @@ else
     Nd = 0;
 end
    
-
 Ts = sys.Ts;
-if 0
+if 1
     w_s = modelFit.frf.w_s;
     sys_frf = modelFit.frf.G_frf;
 else
@@ -43,10 +38,11 @@ rho_s = [1.2, 1]; % factors to shift real modes by
 % generate K with. 
 Kfdbk = fdbk(sys, 'gams', gam_s, 'alps',...
          alp_s, 'rhos', rho_s, 'doDelay', 1, 'rad', 0.1 );
-K = Kfdbk.K;      
-
+K = Kfdbk.K;
 [Q, R, K] = inverseLQR(sys, K);
-% Q = 10*sys.c'*sys.c;
+%%
+R = 100;
+Q = 10*sys.c'*sys.c;
 K = dlqr(sys.a, sys.b, Q, R);
 Nbar = getNbar(sys, K);
 syscl = ss(sys.a - sys.b*K, sys.b, sys.c, 0, Ts);
@@ -106,11 +102,11 @@ h = [h; h_i];
 % h(2) = frfBode(sys*D1, freqs, F1, '--k', 'Hz');
 
 h_i = frfBode(LL_frf, freqs, F1, '--r', 'Hz');
-h_i.DisplayName = 'L = K(zI-A)^-1B';
+h_i.DisplayName = '$L = K(zI-A)^{-1}B$';
 h = [h; h_i];
 
 h_i = frfBode(LL_obs_frf, freqs, F1, '--b', 'Hz');
-h_i.DisplayName = 'L = G(s)K(zI - A + BK + LC)L';
+h_i.DisplayName = '$L = G(s)K(zI - A + BK + LC)L$';
 h = [h;h_i];
 % h(2).DisplayName = 'G*D1';
 
@@ -155,7 +151,7 @@ if 0
     end
 
 end
-
+%%
 % Nyquist for pure state feedback loop gain
 figure(1000); clf;
 
@@ -169,15 +165,15 @@ t = 0.001:0.01:2*pi;
 
 P = dare(LL.a, LL.b, Q, R);
 
-rad = 1/(sys.b'*P*sys.b + 1)^(0.5);
+rad = sqrt(R)/sqrt(sys.b'*P*sys.b + R);
 
 x = rad*sin(t);
 y = rad*cos(t);
 
 plot(x-1,y, '--')
 plot(x-1,y, '--')
-xlim([-1.5, -0.1])
-ylim([-1., 1])
+% xlim([-1.5, -0.1])
+% ylim([-1., 1])
 grid
 title('Nyquist of Loop gain pure state feedback')
 
@@ -201,7 +197,7 @@ y = rad*cos(t);
 
 plot(x-1,y, '--')
 
-xlim([-1.5, -0.1])
-ylim([-1., 1])
+% xlim([-1.5, -0.1])
+% ylim([-1., 1])
 grid on
 title('Nyquist of Loop gain with observer')

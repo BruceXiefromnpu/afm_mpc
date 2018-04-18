@@ -10,7 +10,8 @@
 #+STARTUP: lognotestate t
 #+SEQ_TODO: TODO STARTED WAITING DELEGATED APPT | DONE DEFERRED CANCELLED
 
-
+#+LATEX_HEADER: \usepackage{mathtools}
+#+LATEX_HEADER:  \usepackage{amsmath, dsfont, amssymb, bbold, mathtools, booktabs, cases, xspace}	
 
 
 I am trying to characterize the limitations of the nPoint C300 power amplifier so that I can *properly* formulate an MPC problem. The C300 is current limited to 100~mA. I have known for some time [[cite:braker_fast_2017]] that this current limit can manifest in limitation on the slew rate of the control signal. For a while, operating under the assumption that the bandwidth of the C300 was flat to 10~kHz (which is what nPoint told me in an email), I have looked at ways to limit the slew rate of the control signal.
@@ -83,6 +84,49 @@ My analysis above has made quite a few assumptions and approximations that may o
 
    I need to print these documents out and analyze them more carefully. I think they were saying that the load impeadance could change the closed loop gain and cause stability problems. If I read that right, this could tie back into (2) above, if the effective capacitance of the piezo is changing over time. 
 
+
+* Troubleshooting results
+In my effort at figuring this out, I attacked (2) above in two ways. First, I replaced the stage with a 4\(\mu\)F capicator and a 1M\(\Omega\) resistor in parralell, which is what we see going on inside the NPXY100. Second, I decided that estimating the current based on the voltage rate of change was too ambiguous and that I really needed a current measurement. The *basic* way to do this is to run the drive line from the power amp to its load through a small precision resistor and measure the voltage drop across that resisitor. This can be done on the high-side or low side. I first implemented this on the high the side with a 0.1\(\Omega\) resistor. 
+
+
+
+#+caption: Frequency responses for the stage and power amplifier in the X-direction.
+#+name: fig:stage_frfs
+file:figures/stage_frfs_all.svg
+
+
+Once we have a current measurement, the first thing we want to do is to gather frequency responses from the various inputs to the various outputs. These are shown in Figure~[[fig:stage_frfs]]. There are four releavent transfer functions to consider here. They are
+
+| name                | description                                                              |
+|---------------------+--------------------------------------------------------------------------|
+| \(G_{y_{X},u_{X}}\) | T.F. from low voltage control to stage position.                         |
+| \(G_{y_{X},u_{X}}\) | T.F. from high-voltage pow-amp output voltage control to stage position. |
+| \(G_{I_{X},u_{X}}\) | T.F. from low voltage control to power-amp output current.               |
+| \(G_{I_{X},V_{X}}\) | T.F. from high-voltage power amp-output to power amp output current.     |
+
+There are a few things to notice here. First, $G_{V_{x},u_{x}}$ rolls off at about 250~Hz. This means that if we consider constraining the rate of change of $V_{X}$, this becomes essentially a state constrained problem (or, really, an input constrained problem with a very complicated constraint set, depending on how we formulate things). Second, the transfer function \(G_{I_{x}, V_{X}}\) has a break frequency at about 700~Hz, where it begins increasing at 40~dB per decade. Thus, if we take the viewpoint that we should constrain $V_{X}$, then a simple rate of change limitation is insufficient. 
+
+This observation largely accounts for why my previous modeling efforts failed. Even though I was able to predict pretty accurately the *voltage* output of the power amplifier, the rate of change of that voltage is *not* propertional to the current draw.
+
+The crucial thing here though is that the transfer function \(G_{I_{x},u_{x}}\) does look almost like a pure derivative, aside from the resonance at 700~Hz. Thus, in formulating our optimal control problems, we will consider only \(G_{I_{x},u_{x}}\). Because we are only able to implement a simple box constraint, we cannot explicitely deal with the resonance at 700~Hz in that transfer function. Note however, that the excursion from looking like a capacitor is fairly small. Thus, we if we slightly overestimate the capacitance as $C_{bnd}$, then 
+\begin{equation}
+G_{I_{X},u_{X}}(e^{j\omega T_{s}}) \leq C_{bnd}(z-1) := \tilde{G}_{I_{X}, u_{X}}(z), \quad \forall \omega
+\end{equation}
+
+This bound is illustrated by the dotted black curve in figure~ [[fig:stage_vs_cap]], where we have calculated \(M=1.12\).
+
+#+caption: Frequency responses for the stage and power amplifier in the X-direction.
+#+name: fig:stage_vs_cap
+file:figures/stage_vs_cap.svg
+
+Thus, for all inputs,
+\begin{align}
+|I_{V_{X}, u_{x}}(k)| &|\leq \Delta u_{X}(k)| 1.12 \leq I_{max}
+\end{align}
+Using \(I_{max} = 0.1\) Amps, we arrive at our slew rate condition on the low voltage control input
+\begin{equation}
+|\Delta u_{X}(k)| \leq \frac{1}{1.12} 0.10 = 0.833 \text{~volts per sample}
+\end{equation}
 
 
 # FOR HTML

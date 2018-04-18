@@ -1,0 +1,154 @@
+#+TITLE: Model Fitting
+#+SETUPFILE: ~/.emacs.d/org-templates/level-0.org
+#+PROPERTY: TEMPLATE page_math
+#+PROPERTY: URL projects/model-fitting-notes.html 
+#+PROPERTY: SAVE_AS projects/model-fitting-notes.html
+#+OPTIONS: tex:t
+#+STARTUP: latexpreview
+#+TODO: TODO(t) WAITING(w@/!) | DONE(d@/!) CANCELED(c@/!) STARTED(s@/!) DEFERRED(ef@/!)
+#+STARTUP: fold
+#+STARTUP: lognotestate t
+#+SEQ_TODO: TODO STARTED WAITING DELEGATED APPT | DONE DEFERRED CANCELLED
+
+#+LATEX_HEADER: \usepackage{mathtools}
+#+LATEX_HEADER:  \usepackage{amsmath, dsfont, amssymb, bbold, mathtools, booktabs, cases, xspace}	
+#+LATEX_HEADER: \newtheorem{lemma}{Lemma}
+
+#+LATEX_HEADER: \newcommand{\Gejw}{\ensuremath{G(\ejwts)}\xspace}
+# #+LATEX_HEADER: 
+# $ \usepackage{amsmath, dsfont, amssymb, bbold, mathtools, booktabs, cases, xspace}$
+$\newcommand{\ejwts}{e^{j\omega_o T_s}}$
+$\newcommand{\Gejw}{G(\ejwts)}$
+
+# This turns on equations numbers in org export. Not needed for pelican build
+#+HTML_HEAD: "<script type="text/x-mathjax-config">MathJax.Hub.Config({TeX: { equationNumbers: { autoNumber:"AMS" } }});</script>"
+
+
+I finally have a procedure that works (in that I can use an estimator that actually moves the poles the poles). Briefly, the steps are 
+
+1. Generate an initial model with the subspace method.
+
+2. Refine that model with the non-linear least square fit on (complex) logrithmic frequency data, using the model generated in (i) as the initial guess.
+
+3. Refine *only* the low frequency drift model using time domain data. 
+
+4. The drift model of the system changes with setpoint. We will show that the step input tracking performance can be significantly improved by scheduling a first order inverse drift model as a function of the setpoint. 
+
+I will now refine these ideas.
+
+* An initial model via subspace identification
+
+The result of the subspace procedure is shown in [[fig:subspace_fit]]. Note that although it seems to fit the resonances quite well, it also appears to have the relative degree wrong, since the two transfer functions do not match at rolloff. Note the real pole zero pair at about 220 Hz. We will refer to this as the "drift mode". 
+
+#+caption: The dashed black curve comes from a subspace method, while the solid red curve is the experimental frequency response data.
+#+name: fig:subspace_fit
+file:figures/subspace-fit.svg
+
+The easiest way to examine the error in the model fit is to plot the ration of \(G(e^{j\omega T-s})/\hat{G}(e^{j\omega T-s})\), which is shown in figure [[fig:subspace_err]]. A perfect fit would give us a plot with zero degrees of phase and 0~dB of gain for all frequencies. We wish to improve upon this plot in the next section. 
+
+#+caption: the ratio of the experimental data to the subspace model frequency response. Note that a perfect fit would have 0dB of gain and 0 degrees of phase for all frequencies.
+#+name: fig:subspace_err
+file:figures/subspace-err.svg
+
+Aside from like at these frequency response plots, we can also look at how well this model performs as a basis for control design. This gets rather confusing and I don't have goo answers. On the one hand, we can get a good match driving the system with an open loop trajectory designed for this model. That is, I can effectively damp most of the vibration from the flexible modes and even cancel much of the effect of the drift mode just with an open loop optimal control. On the other trying to close the loop with anything other than a very weak observer gain causes the system to go unstable or at the very least yield a very poor trajectory. 
+
+This is the frustrating thing about the control theory that gets bandied about: the common wisdom is that you should crank up the observer gain to "update the system faster" when you're model is poor. This is the thinking in both the deterministic Luenberger setting as well as the stochastic Kalman filter setting, where they try to deal with a poor model by saying you have "a lot of process noise", so you make $Q_{v}$ big, which gives you a large filter gain. The problem is that this idea is basicly garbage when you have plant-model mismatch and all that beautiful separation principle stuff flies out the window because $A\neq\hat A$. Basically, I believe ( and I should work up a simple example), the plant-model mismatch can happen in such a way that when you crank the gain up, the "actual" poles of the system start flying off into the right half plane. 
+
+That is the problem the next section is really trying to solve. 
+* First refinement via logrithmic frequency response fitting
+This idea comes from a combination of [[cite:sidman_parametric_1991]] and [[cite:Jacques_sysidfrf]]. The trouble with standard least squares based parametric model fitting techniques is that they tend to fit areas with high gain better than areas with low gain. For a system like the our AFM stage with lightly complex damped poles and zeros, this means that the zeros are fit poorly. 
+In this scenario, given frequency response data $G(\omega)$, we assume transfer function model with $n$ poles and $m$ zeros
+\begin{equation}
+\hat{G(z)} = \frac{b_{m}z^{m} + b_{m-1} z^{m-1} + \dots + b_{0}}
+{z^{n} + a_{n-1} z^{m-1} + \dots + a_{0}}
+\end{equation}
+Call this model $G(z|\theta)$, where $theta=[a_{n-1},\dots,~a_{0},~b_{m},~\dots,~b_{0}]$. Then one very commone method solves a linear least squares problem to find 
+\begin{equation}
+\hat \theta = \min_{\theta} \sum_{k=0}^{k_{max}} ||G(\omega_{k}(e^{j\omega_{k} Tsn} + \sum_{i=0}^{n-1} a_i G(\omega_{k})e^{j\omega T_{s}i} - \sum_{i=0}^{m} b_{i}G(\omega_{k} T_s i) e^{j\omega T_sk }||^2 
+\end{equation}
+
+There are at least two problems with this technique. First, the coefficients of a high order polynomial are very sensitive to perturbations. 
+
+The idea in [[cite:sidman_parametric_1991]] is to minimize the error between the complex logrithm of the data, $G(\ejwts)$ and the paramtric model, $\hat G(\ejwts)$. Sidman develops this idea for a continuous time model and a specific model structure. In what follows, I describe the same method for a discrete time model and a slightly modified model structure. I will, additionally, allow fitting a non-integer delay. Of course, because the cost function is now non-linear, we need an initial guess. It was the idea of [[cite:Jacues_sysidfrf]] (at least, it's where I saw it) to use the model from the subspace method as the initial guess for this method.
+
+
+
+Initially, I wanted to code up something quick that would (1) use matlabs lsqnonlin and find the gradient of the cost function automatically through finite differences; (2) would be flexible in terms of the model order; (3) would evaulate the frequency response at each solver iteration using freqresp(Ghat). At first, I just tried doing this with a transfer function model. That did not work so well, probably because the parameters are too sensitive. The second thing I briefly tried was using a zpk model. This seemed nice because in my objective function, I only needed to keep track of the indexes of where the zeros ended in the $\theta$ vector. The problem with this is that complex poles and zeros means the solver needs to solve over complex data (which it is capable of). This makes it cumbersome to maintain complex modes coming only in conjugate pairs and similarly will end up making the *real* poles an zeros also complex. 
+
+To solve this, I settled (similarly to [[cite:sidman_parametric_1991]]) on using the product first and second order transfer functions. The classes of transfer functions are given by
+
+\begin{align}
+g_{1} &= z + b_{1}\\
+g_{2} &= \frac{1}{z + a_{1}}\\
+g_{3} &= z^{2} + b_{2}z + b_{3}\\
+g_{4} &= \frac{1}{z^{2} + b_{2}z + b_{3}}\\
+g_{5} &= k\\
+g_{6} &= e^{j\omega T_{s}p}, \quad p\in \mathbb{R} \label{eqn:delay1}
+\end{align}
+Note that \eqref{eqn:delay1} models a *non-integer* delay. This is for two reasons. First, I am lazy and I don't want to optimize over integers. Keeping $p$ as real number lets us stay in a standard least squares kind of framework. Second, there is no guantee that the time delay in our system is actually an an integer mutliple of $T_{s}$ and this helps prevent the fit from throwing in extraneous high frequency zeros. In the end, we will round $p$ to the nearest integer and decide if the resulting phase mismatch is something we can live with. 
+
+Using these factors, our total model is given by
+
+\begin{equation}
+G(z) = \prod_{i=1}^{m} g_{i}
+\end{equation}
+
+Currently, this is implemented in a class. On instantiation, it takes as input our initial guess (e.g., from the subspace fit) and decomposes the state space system into into a vector that looks like
+\begin{equation}
+\begin{bmatrix}
+real-zero-data\\
+real-pole-data\\
+complex-zero-data\\
+complex-pole-data\\
+k\\
+p
+\end{bmatrix}
+\end{equation}
+
+It then sets as properties indexes so that the different sectors of the theta vector can be easily accessed. This is crucial for evaluating the jacobian and frequency response. There is some question in my mind if it would be better to pair two poles (or zeros) together. This would permit the solution to move to real poles into a complex conjugate pair. 
+
+Using this $\hat G$, the least squares problem we want to solve is given by
+
+\begin{align}
+\min{\theta} &=\sum_{k=1}^{N} || \log( \hat{G}(e^{j\omega_{k} T_s}, \theta) - \log G(e^{j\omega_{k}T_{s}} ||^{2} \\
+&=\sum_{k=1}^{N} || \log|\hat{G}(e^{j\omega_{k} T_s}, \theta)| + j\angle\hat{G}(e^{j\omega_{k} T_s},\theta)  - \log| G(e^{j\omega_{k}T_{s}}| - j\angle G(e^{j\omega_{k}T_{s}} ||^{2} \\
+&=\sum_{k=1}^{N} || \Re\{\log\hat{G}(e^{j\omega_{k} T_s}, \theta)\} + \Im\{\log\hat{G}(e^{j\omega_{k} T_s}, \theta)\}
+  - \Re\{\log G(e^{j\omega_{k}T_{s}}\} - \Im\{\log G(e^{j\omega_{k}T_{s}}\} \label{eqn:realcost}
+\end{align}
+The form of \eqref{eqn:realcost} will be convenient for computing the Jacobian.
+
+To give a jacobian function to matlab, we only need to compute the jacobian of the function inside the norms, not the entire thing. That is, we need to compute 
+\begin{equation}
+\begin{bmatrix}
+\nabla^{T} G(e^{j\omega_{1}T_{s}}) \\
+\nabla^{T} G(e^{j\omega_{1}T_{s}}) \\
+\vdots\\
+\nabla^{T} G(e^{j\omega_{N}T_{s}}) \\
+\end{bmatrix}
+\end{equation}
+
+where
+
+\begin{equation}
+\nabla^{T} G(e^{j\omega_{k}T_{s}})=
+\begin{bmatrix}
+\frac{\partial}{\partial b_{1}} \log(G(e^{j\omega_{k}T_{s}}))\\
+\frac{\partial}{\partial a_{1}} \log(G(e^{j\omega_{k}T_{s}}))\\
+\frac{\partial}{\partial b_{2}} \log(G(e^{j\omega_{k}T_{s}}))\\
+\frac{\partial}{\partial b_{3}} \log(G(e^{j\omega_{k}T_{s}}))\\
+\frac{\partial}{\partial a_{2}} \log(G(e^{j\omega_{k}T_{s}}))\\
+\frac{\partial}{\partial a_{3}} \log(G(e^{j\omega_{k}T_{s}}))\\
+\frac{\partial}{\partial k} \log(G(e^{j\omega_{k}T_{s}}))\\
+\frac{\partial}{\partial p} \log(G(e^{j\omega_{k}T_{s}}))\\
+\end{bmatrix}
+\end{equation}
+
+
+* Futher refinement by fitting closed-loop time domain data. 
+
+
+
+
+
+
+#+BIBLIOGRAPHY: /home/arnold/bib_pdf/main_bibliography.bib /home/arnold/bib_pdf/ieee.csl limit:t
