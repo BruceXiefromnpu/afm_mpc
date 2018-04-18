@@ -2,6 +2,7 @@
 <Project Type="Project" LVVersion="17008000">
 	<Property Name="NI.LV.All.SourceOnly" Type="Bool">false</Property>
 	<Property Name="NI.Project.Description" Type="Str"></Property>
+	<Property Name="varPersistentID:{87AA6A4D-526F-4970-BD94-F741E353FBC0}" Type="Ref">/My Computer/master_stop.lvlib/MasterStop2</Property>
 	<Item Name="My Computer" Type="My Computer">
 		<Property Name="NI.SortType" Type="Int">3</Property>
 		<Property Name="server.app.propertiesEnabled" Type="Bool">true</Property>
@@ -44,6 +45,8 @@
 		<Item Name="play_nPoint_id_slew.vi" Type="VI" URL="../play_nPoint_id_slew.vi"/>
 		<Item Name="play_nPoint_id_slew_OL_FIFO.vi" Type="VI" URL="../play_nPoint_id_slew_OL_FIFO.vi"/>
 		<Item Name="play_AFM_PI_trajTrack.vi" Type="VI" URL="../play_AFM_PI_trajTrack.vi"/>
+		<Item Name="master_stop.vi" Type="VI" URL="../controls/master_stop.vi"/>
+		<Item Name="master_stop.lvlib" Type="Library" URL="../controls/master_stop.lvlib"/>
 		<Item Name="Dependencies" Type="Dependencies">
 			<Item Name="vi.lib" Type="Folder">
 				<Item Name="BuildHelpPath.vi" Type="VI" URL="/&lt;vilib&gt;/Utility/error.llb/BuildHelpPath.vi"/>
