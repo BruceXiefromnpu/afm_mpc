@@ -1,18 +1,27 @@
 clc, clear
 C_stage = 3.8e-6;
+C1 = 4e-6;
+
 Imax = 100e-3;
 Ts = 40e-6;
+MF_I_stage = load('pow_amp/FRF_data_current_stage2.mat');
+MF_I_stage = MF_I_stage.modelFit;
+G_uz2powI = MF_I_stage.models.G_uz2current1;
+ms = 1e3;
 
 
-Vdiv = 2.56/(19.61+2.56);
-% Vdiv_gain = 1/Vdiv; % from resistor measurement
-Vdiv_gain = 10.6; % From 9v battery measurement
+R2 = 1.7e6;
+R1 = 29.7e6;
+Vdiv = R2/(R1 + R2);
+Vdiv_gain = 1/Vdiv % from resistor measurement
+
 load( fullfile(PATHS.exp, 'x-axis_sines_info_out_2-8-2018-01.mat'))
 Gpow_hat = modelFit.models.G_uz2pow;
 
 Gpow = ss(Gpow_hat*Vdiv_gain);
 Gpow.InputDelay = 0;
 Gpow = minreal(Gpow*zpk([], [0 0], 1, Ts))
+Gpow = Gpow*5.8514/dcgain(Gpow)
 
 
 dVmax = (Ts/C_stage)*Imax
@@ -51,9 +60,8 @@ sys_nodelay.InputDelay = 0;
 %%
 % Now, try the state constraint with the condensed formulation.
 x0_pow = [0;0];
-du_max = 2.0;
 
-ref = 1; %OA works, QP fails
+ref = 5; %OA works, QP fails
 Nx = SSTools.getNxNu(sys_nodelay);
 x0 = -Nx*ref;
 
@@ -62,20 +70,21 @@ x0 = -Nx*ref;
 % -------------------- Now, try the time-optimal ------------------------ %
 
 clc
-% k0 = 108 % ref=4
 k0 =78
 
+C_effective = 4.0497e-05;
+du_max = Ts*Imax/C_effective;
 
 CON3 = CondenCon(Gpow, x0_pow, k0);
-dVmax2 = 0.3
-du_max2 = 2;
-CON3.add_state_con('box', dVmax2*0.8);
-CON3.add_input_con('box', du_max2);
+dVmax_opt = 5
+
+CON3.add_state_con('box', dVmax_opt*01);
+CON3.add_input_con('box', du_max);
 CON3.update_binq
 
-[sys_TO, gdrift] = eject_gdrift(sys_nodelay);
-% sys_TO = sys_nodelay;
-sys_TO = SSTools.deltaUkSys(sys_TO);
+[sys_TO1, gdrift] = eject_gdrift(sys_nodelay);
+
+sys_TO = SSTools.deltaUkSys(sys_TO1);
 Nx_TO = SSTools.getNxNu(sys_TO);
 %
 x0_TO = Nx_TO*0;
@@ -83,8 +92,7 @@ xf = Nx_TO*ref*1;
 P = path;
 addpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
 C=[];
-%
-% du_max = 0.2;
+
 for k=0:k0-1
     C = [sys_TO.a^k*sys_TO.b C];
 end
@@ -94,19 +102,14 @@ I = eye(length(sys_TO.b));
 
 cvx_begin
     variable u(k0);
-%     variable t;
     L = sys_TO.a^k0*x0_TO + C*u;
     minimize norm(L - xf)
-    % minimize norm(u)
-    % minimize norm(t)
     subject to
-%     norm(u, Inf) <= du_max;
     [CON3.Ainq; -CON3.Ainq]*u <= [CON3.ubAinq; -CON3.lbAinq];
     u <= CON3.ub;
     -u<= -CON3.lb;
 cvx_end
 path(P);
-% rmpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
 
 fprintf('Results optval = %f\n', cvx_optval)
 results.U = u;
@@ -117,104 +120,121 @@ u = [u; repmat(0, 400, 1)];
 
 t = [0:1:length(u)-1]'*Ts;
 utraj_inv = lsim(gdrift, u, t);
+utraj_inv = u;
 uref = cumsum(utraj_inv);
-% uref = cumsum(u);
-%
+
 sys_delay = sys_nodelay;
-y = lsim(sys_nodelay, uref, t, sys_nodelay.b*0);
+% y = lsim(sys_nodelay, uref, t, sys_nodelay.b*0);
+y = lsim(sys_TO1, uref, t, sys_TO1.b*0);
 sys_delay.InputDelay = 10;
 ydelay = lsim(sys_delay, uref, t, sys_delay.b*0);
 ypow = lsim(Gpow, utraj_inv, t, x0_pow*0);
+Ipow = lsim(G_uz2powI, uref, t);
+
 %
 F1 = figure(9); clf;
 subplot(3,1,1), hold on
 h5 = plot(t, y, '-k');
-h5.DisplayName = 'Time-Optimal'
+h5.DisplayName = 'Time-Optimal';
 grid on
 
 % legend([h3,h4,h5]);
 subplot(3,1,2), hold on
-plot(t, u, '-k')
-plot(t(k0), u(k0), 'x')
-title('$\Delta u$')
+plot(t, cumsum(u), '-k')
+title('u(k)')
 grid on
 
-
 subplot(3,1,3), hold on, grid on
-plot(t, cumsum(u), '-k')
-
-title('u(k)')
+plot(t, u, '-k');
+plot(t(k0), u(k0), 'x');
+title('$\Delta u_z$ (low voltage control)')
+grid on
 
 figure(200), clf
 hold on
-h6 = plot(ypow);
+h6 = plot(t, ypow*C1/Ts);
 h6.DisplayName = 'TO sim';
-
+h6 = plot(t, Ipow, '-m');
 % legend([h1, h2, h6])
-xlim([0, 300])
+% xlim([0, ])
     grid on
-    title('Power Amplifer $\Delta y$')
+    title('Current, $I$')
     xlm = xlim;
     hold on;
-    plot(xlm, [dVmax, dVmax], '--k')
-    plot(xlm, -[dVmax, dVmax], '--k')
+    plot(xlm, [Imax, Imax], '--k')
+    plot(xlm, -[Imax, Imax], '--k')
 
 
 
 %%
 % ---- Paths for shuffling data to labview and back. ------
-controlParamName = 'exp01Controls.csv'; 
-refTrajName      = 'ref_traj_track.csv';
-outputDataName = 'exp01outputBOTH.csv';
-%labview reads data here
-controlDataPath = fullfile(PATHS.step_exp, controlParamName); 
-% labview saves experimental results/data here
-dataOut_path    = fullfile(PATHS.step_exp, outputDataName); 
-% labview reads desired trajectory here
-refTrajPath     = fullfile(PATHS.step_exp, refTrajName); 
-% location of the vi which runs the experiment.
-% vipath ='C:\Users\arnold\Documents\labview\ACC2017_archive\play_AFMss_integral_trajTrack.vi';
-% vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFMss_integral_trajTrack_nod.vi';
-vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFM_PI_trajTrack.vi';
-
-
-%----------------------------------------------------
-% Save the controller to .csv file for implementation
-clc
-vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFM_PI_trajTrack.vi';
-clear vi; clear e;
-% delay before we start tracking, to let any transients out. Somewhere of a
-% debugging setting. 
-SettleTicks = 20;  
-Iters  = 400
-Iters = min(Iters, length(uref)-10);
-
 
 % creat and pack data. Then save it. 
-tt = t;
-% ref_traj.Time;
-yy = ydelay;
-% ref_traj.Data;
-% uKx  = yy*Nbar;
-Nbar = 1;
-[~, ~, y_uKx] = pack_uKx_y(uref, yy, tt);
+if 1
+    slewfname_in = 'slewexp_datain_4-6-2018_01.csv';
+    slewfpath_in = fullfile(pwd, slewfname_in)
+    % slewfpath_in = fullfile(PATHS.exp, 'sysID', slewfname_in);
 
-% AllMatrix = packMatrix(sys_obs, L, K);
-saveControlDataPITrack(y_uKx, refTrajPath);
-%
-% -----------------------RUN THE Experiment--------------------------------
-[e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters, 'Stop', 0,...
-            'Ki', 0.02*0, 'umax', 5, 'outputData BOTH', dataOut_path,...
-            'reference traj path', refTrajPath);
-vi.Run
-% -------------------------------------------------------------------------
+    slewfname_out = 'slewexp_dataout_4-6-2018_01.csv';
+    % slewfpath_out = fullfile(PATHS.exp, 'sysID', slewfname_out);
+    slewfpath_out = fullfile(pwd, slewfname_out);
+    csvwrite(slewfpath_in, uref);
+    clear vi;
+    vipath = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_nPoint_id_slew_OL_FIFO.vi'
 
-        
+    [e, vi] = setupVI(vipath, 'Abort', 0,...
+                'umax', 9, 'data_out_path', slewfpath_out,...
+                'traj_in_path', slewfpath_in, 'TsTicks', 1600);
+    vi.Run
+end
+
+
+%%
 % Now, read in data, and save to structure, and plot.
-AFMdata = csvread(dataOut_path);
-%
+
 clc
-[y_exp, u_exp, ypow_exp] = unpackExpDataPITrack(AFMdata, Ts);
+data = csvread(slewfpath_out);
+data = data(2:end, :);
+size(data)
+
+R_sense = 0.1;
+ms = 1;
+u_exp = data(:,1);
+y_exp = data(:,2)- data(1,2);
+upow_exp = data(:,3)*Vdiv_gain;
+pow_I = data(:,4); 
+pow_I = pow_I - mean(pow_I);
+pow_I = pow_I/R_sense;
+% amp output is centered around like 65 volts. Subtract that off so we can
+% compare.
+upow_exp = upow_exp - upow_exp(1); 
+
+% upow_exp = data(:,3)*Vdiv_gain/dcgain(Gpow);
+texp = [0:1:length(u_exp)-1]'*Ts;
+
+
+figure(9);
+subplot(3,1,1), hold on;
+plot(texp*ms, y_exp, '--r')
+
+% subplot(3,1,2)
+% % plot(texp*ms, u_exp, '--r')
+% 
+% subplot(3,1,3), hold on
+
+% plot(texp(1:end-1)*ms, du_exp*C1/Ts, '--k')
+% title('(HV) $\Delta u(k)$', 'interpreter', 'latex')
+% % ylim(1.2*[min(du_exp), max(du_exp)])
+
+du_exp = diff(upow_exp);
+
+figure(200)
+plot(texp(1:end-1)*ms, du_exp*C1/Ts, '--r');
+plot(texp*ms, pow_I, '--g')
+title('current estimate')
+grid on
+
+%%
 size(y_exp.Time)
 figure(10), clf
 subplot(2,1,1)

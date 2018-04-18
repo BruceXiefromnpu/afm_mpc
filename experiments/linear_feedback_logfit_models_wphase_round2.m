@@ -48,14 +48,13 @@ if 0
     nd2 = Gstage.InputDelay;
     Gstage.InputDelay = 0;
 
-
     SYS = Gpow*Gstage;
     Ts  = SYS.Ts;
     SYS.InputDelay = nd1+nd2+2;
     Nd  = SYS.InputDelay;
 else
-%     SYS = modelFit.models.G_uz2stage_logfit12;
-   load('cl_fit_0p5.mat')
+    SYS = modelFit.models.G_uz2stage_logfit12;
+   load('cl_fit_1p0.mat')
    SYS = sys_fit;
    SYS.iodelay = 0;
 %    modelFit.models.G_uz2stage_logfit12_withphase_mp;
@@ -108,14 +107,23 @@ Ns  = length(sys_obs.b);
 
 % We will track one setpoints. Number of samples for each setpoint is 800.
 N1    = 800;
-trun = Ts*N1;
+ref_f_1 = -.5; % 1.5 to hit slew rate, 1.4 doesn't  
+if 1
+    N2    = 800;
+    trun = Ts*(N1 + N2);
+    ref_f_2 = .5; % 1.5 to hit slew rate, 1.4 doesn't  
+    ref_0 = 0;
+    t1 = [0:1:N1]'*Ts;
+    t2 = [N1+1:1:N1+N2]'*Ts;
 
-ref_f_1 = .5; % 1.5 to hit slew rate, 1.4 doesn't  
-ref_0 = 0;
-t = [0:1:N1]'*Ts;
-
-yref = [0*t + ref_f_1];
-
+    t = [t1; t2];
+    yref = [0*t1 + ref_f_1;
+            0*t2 + ref_f_2];
+else
+    trun = Ts*(N1);
+    t = t1;
+    yref = [0*t1 + ref_f_1];
+end
 ref_traj.signals.values = yref;
 ref_traj.time           = t;
 rw = 8.508757290909093e-09;
@@ -154,7 +162,6 @@ if 1
     sys_cl = ss(sys_designK_aug.a - sys_designK_aug.b*K_aug,...
             sys_designK_aug.b, sys_designK_aug.c, 0, Ts);
     figure(10); clf
-%     pzplot(PLANT);
     hold on
     pzplot(sys_cl)        
 end
@@ -167,9 +174,8 @@ L = dlqr(sys_obs.a', sys_obs.c', 55.5*(sys_obs.c'*sys_obs.c), 1)';
 Qw1 = sys_nodelay.b*sys_nodelay.b'*100;
 Qw = blkdiag(Qw1, eye(Nd)*1000);
 L = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
-% L = Lfdbk.K;      
 
-% Nd = 0;
+
 % 2). Design FeedForward gains.
 [uss_0, uss_f, x0, xf, xss] = yss2uss(SYS, ref_f_1, ref_0); 
 
@@ -212,9 +218,9 @@ if 1
     pzplot(sys_cl)        
 end
 
-F1 = figure(50); clf
+F1 = figure(59); clf
 H1 = plot(sim_exp, F1);
-figure(51); plot(thenoise.Data)
+
 %%
 %----------------------------------------------------
 % Save the controller to .csv file for implementation
@@ -222,10 +228,7 @@ clear vi; clear e;
 % delay before we start tracking, to let any transients out. Somewhere of a
 % debugging setting. 
 SettleTicks = 20;  
-Iters = 799
-
-
-
+Iters = 1599
 
 
 % creat and pack data. Then save it. 
@@ -275,9 +278,9 @@ figure(50)
 subplot(2,1,1)
 plot(u_exp.Time, yfit, '.-b')
 
-%
+%%
 sys_fit = g1*gdrift_fit;
-save('cl_fit_0p5.mat', 'sys_fit')
+save('cl_fit_1p0.mat', 'sys_fit')
 
 
 %%
