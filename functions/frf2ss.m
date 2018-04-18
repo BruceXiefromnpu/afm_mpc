@@ -34,9 +34,9 @@ classdef frf2ss
              self.freqs_rad_even = ws_even;
              
             % Interpolate the FRF we have onto the evenly spaced frequencies.
-            K_freq_max = find(ws_even <= freqs_rad(end), 1, 'last')
-            K_freq_min = find(ws_even <= freqs_rad(1), 1, 'last')
-
+            K_freq_max = find(ws_even <= freqs_rad(end), 1, 'last');
+            K_freq_min = find(ws_even <= freqs_rad(1), 1, 'last');
+            
             self.frf_even = interp1(freqs_rad, frf, ws_even(1:K_freq_max), 'spline');
 
             % Remove delay from he experimental FRF
