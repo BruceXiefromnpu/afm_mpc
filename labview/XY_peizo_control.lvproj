@@ -17,6 +17,12 @@
 		<Item Name="Project Documentation" Type="Folder"/>
 		<Item Name="Type Definitions" Type="Folder">
 			<Property Name="NI.SortType" Type="Int">0</Property>
+			<Item Name="fpga_interface" Type="Folder">
+				<Item Name="FPGA_to_HOST_1_fp_FIFO_interface.ctl" Type="VI" URL="../fpga_interface_types/FPGA_to_HOST_1_fp_FIFO_interface.ctl"/>
+				<Item Name="FPGA_to_HOST_2_fp_FIFO_interface.ctl" Type="VI" URL="../fpga_interface_types/FPGA_to_HOST_2_fp_FIFO_interface.ctl"/>
+				<Item Name="HOST_to_FPGA_and_FPGA_to_HOST_1and2_fp_FIFO_interface.ctl" Type="VI" URL="../fpga_interface_types/HOST_to_FPGA_and_FPGA_to_HOST_1and2_fp_FIFO_interface.ctl"/>
+				<Item Name="HOST_to_FPGA_fp_FIFO_interface.ctl" Type="VI" URL="../fpga_interface_types/HOST_to_FPGA_fp_FIFO_interface.ctl"/>
+			</Item>
 			<Item Name="ControlParams.ctl" Type="VI" URL="../controls/ControlParams.ctl"/>
 			<Item Name="ControlParams_TF.ctl" Type="VI" URL="../controls/ControlParams_TF.ctl"/>
 			<Item Name="controlParams_tracktraj.ctl" Type="VI" URL="../controls/controlParams_tracktraj.ctl"/>
@@ -46,13 +52,7 @@
 		<Item Name="play_AFM_PI_trajTrack.vi" Type="VI" URL="../play_AFM_PI_trajTrack.vi"/>
 		<Item Name="master_stop.vi" Type="VI" URL="../controls/master_stop.vi"/>
 		<Item Name="master_stop.lvlib" Type="Library" URL="../controls/master_stop.lvlib"/>
-		<Item Name="fpga_AFMss_integral_TYPE.ctl" Type="VI" URL="../controls/fpga_AFMss_integral_TYPE.ctl"/>
-		<Item Name="fpga_nPoint_id_slew_TYPE.ctl" Type="VI" URL="../controls/fpga_nPoint_id_slew_TYPE.ctl"/>
-		<Item Name="HOST_to_FPGA_fp_FIFO_interface.ctl" Type="VI" URL="../fpga_interface_types/HOST_to_FPGA_fp_FIFO_interface.ctl"/>
-		<Item Name="FPGA_to_HOST_1_fp_FIFO_interface.ctl" Type="VI" URL="../fpga_interface_types/FPGA_to_HOST_1_fp_FIFO_interface.ctl"/>
-		<Item Name="FPGA_to_HOST_2_fp_FIFO_interface.ctl" Type="VI" URL="../fpga_interface_types/FPGA_to_HOST_2_fp_FIFO_interface.ctl"/>
 		<Item Name="write_FP_data_to_fpga.vi" Type="VI" URL="../subVIs/write_FP_data_to_fpga.vi"/>
-		<Item Name="HOST_to_FPGA_and_FPGA_to_HOST_1and2_fp_FIFO_interface.ctl" Type="VI" URL="../fpga_interface_types/HOST_to_FPGA_and_FPGA_to_HOST_1and2_fp_FIFO_interface.ctl"/>
 		<Item Name="Dependencies" Type="Dependencies">
 			<Item Name="vi.lib" Type="Folder">
 				<Item Name="BuildHelpPath.vi" Type="VI" URL="/&lt;vilib&gt;/Utility/error.llb/BuildHelpPath.vi"/>
