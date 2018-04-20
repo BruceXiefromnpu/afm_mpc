@@ -209,7 +209,7 @@ classdef StepDataTimeOpt < StepData
                 u = [U.Data; ones(2*k0,1)*ref_s(iter)*Nu_sim]; % zero for deltaUk
                 t = [0:1:length(u)-1]'*sys_sim.Ts;
                 sys_sim.InputDelay = self.params.sys.InputDelay;
-                [y, t, x] = lsim(self.params.sys, u, t, x0_sim);
+                [y, t, x] = lsim(sys_sim, u, t, x0_sim);
                 sys_sim.InputDelay = 0;
                 
                 U_vec_s{iter} = timeseries(u, t);

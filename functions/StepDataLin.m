@@ -14,6 +14,7 @@ classdef StepDataLin < StepDataQuad
         end
         
         function [hy, ax] = plot_single_ytraj(self, idx_ref, idx_gam, ax, varargin)
+        % [hy, ax] = plot_single_ytraj(self, idx_ref, idx_gam, ax, varargin)
         % plot the y-trajectory held at self.results{1}.data{idx_gam}.y_traj_s(idx_ref);
         %   -- If ax is empty, will plot to gca().
         %   -- varargin is passed straight to matlabs plot function. 
@@ -26,6 +27,7 @@ classdef StepDataLin < StepDataQuad
             hy = plot(ax, traj_y.Time, traj_y.Data, varargin{:});
         end
         function [hu, ax] = plot_single_utraj(self, idx_ref, idx_gam, ax, varargin)
+        % [hu, ax] = plot_single_utraj(self, idx_ref, idx_gam, ax, varargin)
         % plot the u-trajectory held at self.results{1}.data{idx_gam}.u_traj_s(idx_ref);
         %   -- If ax is empty, will plot to gca().
         %   -- varargin is passed straight to matlabs plot function. 
@@ -40,7 +42,7 @@ classdef StepDataLin < StepDataQuad
         end
         
         function plot_single_traj(self, idx_ref, idx_gam, ax1, ax2, varargin)
-        % plot_single_traj(self, ref_idx, ax1, ax2, varargin)
+        % plot_single_traj(self, ref_idx, idx_gam, ax1, ax2, varargin)
         %
         % plot the trajectory for gam_s(idx_gam) and ref_s(idx_gam)
         % to ax1 (for y(k)) and ax2 for u(k).

@@ -25,7 +25,7 @@ classdef StepParamsMPC
             end
             p = inputParser;
             p.addParameter('S', sys.b*0);
-            p.parse;
+            p.parse(varargin{:});
             
             self.sys = sys;
             self.ref_s = ref_s;

@@ -6,7 +6,10 @@ classdef StepDataCLQR < StepData
         % savedata;
         % results;
     end
-    
+    properties (Access = private)
+      
+      traj_fig = [];
+    end
     methods
         function self = StepDataCLQR(Params, varargin)
         % % First, parse the inputs we care about here:
@@ -198,22 +201,17 @@ classdef StepDataCLQR < StepData
             opt_trajs_cell = cell(1, length(gam_s)); 
             
             if verbose >= 2
-                Fig = figure(200);
-                ax = gca();
-                hands = [];
-                change_current_figure(Fig);
+                self.traj_fig = figure(200);
+                change_current_figure(self.traj_fig);
             end
             ref_0 = 0;
-            parfor iter = 1:length(gam_s)
+            for iter = 1:length(gam_s)
                 gamma_k = gam_s(iter);
 
                 [traj_s, settle_times_opt] = self.opt_traj_gen(gamma_k, ref_0, 'verbose', verbose);
                                                           
                  settle_times_opt_cell{iter} = settle_times_opt;
                 opt_trajs_cell{iter} = traj_s;
-%                 if verbose >=2
-%                     self.plot_ref_vs_settle(ax, gamma_k, 'LineWidth', 2);
-%                 end
             end
             
             self.results.settle_times_opt_cell =  settle_times_opt_cell;
@@ -221,6 +219,7 @@ classdef StepDataCLQR < StepData
             
             step_data = self; %#ok<NASGU>
             if self.savedata
+                self.traj_fig = []; % otherwise, we save the whole figure.
                 save(self.file, 'step_data')
             end
             % end build_CLQR_trajs
@@ -272,13 +271,9 @@ classdef StepDataCLQR < StepData
             sys = self.params.sys;
             p = inputParser;
             
-            defaultS = zeros(size(sys.b, 1), size(sys.b, 2));
-            
-            addParameter(p, 'S', defaultS);
             addParameter(p, 'verbose', 0);
                         
             parse(p, varargin{:})
-            S = p.Results.S;
             verbose = p.Results.verbose;
                         
             % Expose parameters:
@@ -289,6 +284,7 @@ classdef StepDataCLQR < StepData
             N_traj = params.N_traj;
             mpc_mode = params.mpc_mode;
             Q = params.Q;
+            S = params.S;
             
             if length(ref_0_s) == 1
                 ref_0_s = 0*ref_s + ref_0_s;
@@ -296,7 +292,7 @@ classdef StepDataCLQR < StepData
                 error('length(ref_0_s) must be either one or the same as length(ref_s)')
             end
             
-            Qp = dare(sys.a, sys.b, Q, R);
+            Qp = dare(sys.a, sys.b, Q, R, S);
             if strcmpi(mpc_mode, 'sparse')
                 NLQR_prob = sparseMPCprob(sys, N_traj, Q, Qp, R, S);
             elseif strcmpi(mpc_mode, 'condensed')
@@ -308,13 +304,6 @@ classdef StepDataCLQR < StepData
                 CON.add_input_con('box', du_max);
                 NLQR_prob.CON = CON;
                 %NLQR_prob.add_U_constraint('box', du_max);
-            end
-
-            if verbose >= 3
-                %     mkfig(verbose)
-                Fig = figure();
-            else
-                Fig = 0;
             end
 
             Nx = SSTools.getNxNu(sys);
@@ -354,13 +343,16 @@ classdef StepDataCLQR < StepData
                 % the last one. 
                 Xvec = timeseries(X(:,1:end-1)', tvec);
                 Yvec = timeseries(Y(:,1:end-1)', tvec);
-                
+
                 U_vec_s{iter} = Uvec;
                 X_vec_s{iter} = Xvec;
                 Y_vec_s{iter} = Yvec;
                 
                 if verbose >= 3
-                    Fig = plot_local(Yvec, Uvec, verbose, Fig);
+                  if ~isvalid(self.traj_fig)
+                    self.traj_fig = figure();
+                  end 
+                   plot_local(Yvec, Uvec, verbose, self.traj_fig);
                 end
                 
                 upd.upd(iter);
@@ -382,11 +374,7 @@ end
 function Fig= plot_local(Yvec, Uvec, verbose, Fig)
 % Local plotting 
     
-    if ~isvalid(Fig)
-        Fig = figure();
-        
-    end % if ~isvalid(Fig)
-        
+      
     change_current_figure(Fig);
         
     if verbose == 1
