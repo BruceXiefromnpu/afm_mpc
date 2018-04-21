@@ -73,7 +73,7 @@ leg1 = legend([h30_1p,h30_2p,h30_3p,h30_4p]);
 set(leg1, 'location', 'southwest', 'FontSize', 14);
 ylim([-1000, 300])
 
-saveon = 1;
+saveon = 0;
 
 if saveon == 1
   saveas(F10, fullfile(PATHS.jfig, 'stage_vs_cap.svg'))

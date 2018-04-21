@@ -20,6 +20,8 @@
 \usepackage{subfigure}
 \usepackage{xspace, dsfont}
 \usepackage{mathtools}
+\usepackage{multirow}
+
 \newcommand{\Dm}{\ensuremath{\mathcal{D}_{-} }\xspace}
 \newcommand{\U}{\ensuremath{\mathcal{U} }\xspace}
 \newcommand{\DU}{\ensuremath{\Delta \mathcal{U} }\xspace}
@@ -87,7 +89,7 @@ We will answer both of these questions in this paper.
 
 
 
-\section{Preliminarys}
+\section{System Modeling}
 \label{sec:orgbc45dd3}
 \subsection{Modeling}
 % \begin{figure}
@@ -98,8 +100,7 @@ We will answer both of these questions in this paper.
 \begin{figure*}
   \centering
   \begin{minipage}{0.45\textwidth}
-  \includesvg[scale=0.8]{figures/G_uz2pow.svg}
-  \includegraphics[scale=0.4]{figures/gpow_gdrift_gvib.pdf}
+  \includesvg[scale=01]{figures/G_uz2pow.svg}
   \caption{Frequency response from control input to high voltage signal (blue) and from high voltage input to stage position (red). The red curve is the FRF for both the vibrational and drift dynamics.}
   \label{fig:powfrf}
 \end{minipage}
@@ -121,114 +122,104 @@ Thus, the complete transfer function from low voltage control to position displa
   \frac{Y(z)}{U(z)} &= G_{stage}G_{pow}\\
                     & =G_{vib}G_{drift}G_{pow}
 \end{align}
-These experimental frequency responses are obtained using a stepped sines (single frequency at a time) method programmed into the cRIO. Because the ADC of the cRIO is low voltage, the FRF of the power amplifier is first passed through a high-impedance ($\sim$ 22~M$\Omega$) voltage divider to drop the high voltage signal to an acceptable level. 
+These experimental frequency responses are obtained using a sine dwell (single frequency at a time) method programmed into the cRIO. In characterizing the power amplifier (C300) limitations in Section~\ref{sec:powcharct}, it will be useful to have measurements of the C300 high voltage output and current directly. To obtain these measurements, the C300 drive signal is re-routed as shown in Fig.~\ref{fig:c300_meas}. The voltage divider output provides a (scaled) measurement of the C300 output voltage and is given by
+\begin{equation}
+V_X = \frac{R_1 + R_2}{R_2}V_{div}
+\end{equation}
+Note that the impedance of the divider is high (about $32.5\text{M}\Omega$) to avoid perturbing the amplifier output.
+
+ A small, $0.1~\Omega$ resistor on the return side of the piezo provides a current measurement. The voltage across this resistor is amplified by a simple op-amp circuit so that
+\begin{equation}
+I_{X} = \frac{V_{op}}{K_{op}R_{\text{sense}}}
+\end{equation}
+where $K_{op}$ is the gain of the operational amplifier.
 
 Note the large amounts of phase lag in both $G_{pow}$ and $G_{stage}$. This is due to the C300 including its own DSP which cannot be turned off, even when run in open loop mode. To fit parametric models to these transfer functions, we use least squares method to fit $G_{pow}$ and a subspace based method to fit $G_{stage}$. 
 The total model $G$ is depicted as the black dashed curve in Fig.~\ref{fig:frf_xdir} which is a state space model with 22 states, 9 of which model transport delay.
 
+\begin{figure}
+  \includegraphics[width=0.5\textwidth]{figures/c300_measurement_schematic.pdf}
+  \caption{Schematic of the augmented high voltage output measurement and current measurement used in characterizing the C300.}
+  \label{fig:c300_meas}
+\end{figure}
 
+\subsection{Power Amplifier Characterization and Limitations}\label{sec:powcharct}
+The high voltage output of the C300 is current limited to 100 mA. Because the piezo stage largely presents as a capacitive load to the power amplifier, this roughly translates to a rate of change limitation on the voltage control signal since
+\begin{equation}
+\dot v_{h} = \frac{1}{C} i_c(t)
+\end{equation}
+To determine what the voltage rate of change limit is, we implemented a low-side (which prevents issues with a large common-mode voltage) current measurement. This was done by re-routing the power amplifier return line from the piezo stage through a $0.1~\Omega$ current sensing a resistor. The voltage drop across this resistor was amplified with a simple op-amp circuit.
 
-\subsection{Power Amplifier Characterization and Limitations}
-In my effort at figuring this out, I attacked (2) above in two ways. First, I replaced the stage with a 4\(\mu\)F capicator and a 1M\(\Omega\) resistor in parralell, which is what we see going on inside the NPXY100. Second, I decided that estimating the current based on the voltage rate of change was too ambiguous and that I really needed a current measurement. The \textbf{basic} way to do this is to run the drive line from the power amp to its load through a small precision resistor and measure the voltage drop across that resisitor. This can be done on the high-side or low side. I first implemented this on the high the side with a 0.1\(\Omega\) resistor. 
-
-
-
-\begin{figure}[htbp]
+\begin{figure*}[htbp]
+  \begin{minipage}{0.48\textwidth}
 \centering
 \includesvg[width=.9\linewidth]{figures/stage_frfs_all}
 \caption{\label{fig:org8f9b1d0}
 Frequency responses for the stage and power amplifier in the X-direction.}
-\end{figure}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includesvg[width=1.1\linewidth]{figures/stage_vs_cap}
+\caption{\label{fig:orgc576458}
+  Frequency responses for the stage and power amplifier in the X-direction.}
+\end{minipage}
+\end{figure*}
 
-
-Once we have a current measurement, the first thing we want to do is to gather frequency responses from the various inputs to the various outputs. These are shown in Figure\textasciitilde{}\ref{fig:org8f9b1d0}. There are four releavent transfer functions to consider here. They are
+This new measurement allows us to measure the frequency responses between several interesting points, enumerated in Table~\ref{tab:TFS} and shown in Figure~\ref{fig:org8f9b1d0}.
 
 \begin{table}
   \centering
   \begin{tabular}{ll}
     name & description\\
     \hline
-    \(G_{y_{X},u_{X}}\) & T.F. from low voltage control to stage position.\\
-    \(G_{y_{X},u_{X}}\) & T.F. from high-voltage pow-amp output voltage control to stage position.\\
-    \(G_{I_{X},u_{X}}\) & T.F. from low voltage control to power-amp output current.\\
-    \(G_{I_{X},V_{X}}\) & T.F. from high-voltage power amp-output to power amp output current.\\
+    \(G_{y_{X},u_{X}}\) & \multirow{2}{2.5in}{T.F. from low voltage control to stage position.}\\
+    &\\
+    \(G_{y_{X},u_{X}}\) & \multirow{2}{2.5in}{T.F. from high-voltage C300 output voltage control to stage position.}\\
+    &\\
+    \(G_{I_{X},u_{X}}\) & \multirow{2}{2.5in}{T.F. from low voltage control to C300 output current.}\\
+    &\\
+    \(G_{I_{X},V_{X}}\) & \multirow{2}{2.5in}{T.F. from high-voltage C300 output to C300 output current.}\\
   \end{tabular}
+  \label{tab:TFS}
 \end{table}
-There are a few things to notice here. First, \(G_{V_{x},u_{x}}\) rolls off at about 250\textasciitilde{}Hz. This means that if we consider constraining the rate of change of \(V_{X}\), this becomes essentially a state constrained problem (or, really, an input constrained problem with a very complicated constraint set, depending on how we formulate things). Second, the transfer function \(G_{I_{x}, V_{X}}\) has a break frequency at about 700\textasciitilde{}Hz, where it begins increasing at 40\textasciitilde{}dB per decade. Thus, if we take the viewpoint that we should constrain \(V_{X}\), then a simple rate of change limitation is insufficient. 
 
-This observation largely accounts for why my previous modeling efforts failed. Even though I was able to predict pretty accurately the \textbf{voltage} output of the power amplifier, the rate of change of that voltage is \textbf{not} propertional to the current draw.
+It is tempting to think that we ought to constrain the rate of change of the power amplifier voltage output, since this is the voltage actually running through the piezo. There are two difficulties with this approach. First, \(G_{V_{x},u_{x}}\) rolls off at about 250~Hz, which means that such a constrain will lead to a constraint on the states of \(G_{V_{x},u_{x}}\). Second, the transfer function \(G_{I_{x}, V_{X}}\) has a break frequency at about 700~Hz, where it begins increasing at 40~dB per decade. Thus, for control signals with high frequency content, a simple rate of change requirement would \emph{under-estimate} the actual current draw.
 
-The crucial thing here though is that the transfer function \(G_{I_{x},u_{x}}\) does look almost like a pure derivative, aside from the resonance at 700\textasciitilde{}Hz. Thus, in formulating our optimal control problems, we will consider only \(G_{I_{x},u_{x}}\). Because we are only able to implement a simple box constraint, we cannot explicitely deal with the resonance at 700\textasciitilde{}Hz in that transfer function. Note however, that the excursion from looking like a capacitor is fairly small. Thus, we if we slightly overestimate the capacitance as \(C_{bnd}\), then 
+However, if we consider \(G_{I_{x},u_{x}}\) we see that it can be upper-bounded by a pure derivative
+In other words, 
 \begin{equation}
-G_{I_{X},u_{X}}(e^{j\omega T_{s}}) \leq C_{bnd}(z-1) := \tilde{G}_{I_{X}, u_{X}}(z), \quad \forall \omega
+G_{I_{X},u_{X}}(e^{j\omega T_{s}}) \leq k_d(z-1), \quad \forall \omega \in[0, \pi/T_s]
 \end{equation}
-
-This bound is illustrated by the dotted black curve in figure\textasciitilde{} \ref{fig:orgc576458}, where we have calculated \(M=1.12\).
-
-\begin{figure}[htbp]
-\centering
-\includesvg[width=.9\linewidth]{figures/stage_vs_cap}
-\caption{\label{fig:orgc576458}
-Frequency responses for the stage and power amplifier in the X-direction.}
-\end{figure}
-
-Thus, for all inputs,
+where, from our experimental data, $k_d=0.506$. The bound $k_d(z-1)$ is shown as the dotted-black curve in Fig.~\ref{fig:orgc576458}. Thus, for all inputs,
 \begin{align}
-|I_{V_{X}, u_{x}}(k)| &|\leq \Delta u_{X}(k)| 1.12 \leq I_{max}
+|I_{X}(k)| &\leq k_d(u_X(k) - u_X(k-1)|
 \end{align}
-Using \(I_{max} = 0.1\) Amps, we arrive at our slew rate condition on the low voltage control input
+Thus, we need to enforce
 \begin{equation}
-|\Delta u_{X}(k)| \leq \frac{1}{1.12} 0.10 = 0.833 \text{~volts per sample}
+|\Delta u_X(k)| \leq I_{\text{max}}/k_d = 0.198. 
 \end{equation}
+We note that this condition is more conservative than is strictly necessary. For inputs with significant frequency content above 1000~Hz, a pure derivative overestimates the amount of actual current draw. Ideally, we would develop a parametric model of \(G_{I_{x},u_{x}}\) and enforce a constraint on the output of that model. However, such an approach renders the constraint set for $u_X$ complex and is it not feasible to solve that problem using the fast gradient method. Moreover, it is likely ill advised to allow the controller to heap control energy above 1000 Hz anyway, as we don not model the modes of the stage past that frequency anyway. 
 
+\subsection{Model Fitting}
+To obtain a parametric model of $G_{X,u_X}$ for control design requires several steps. We obtain a preliminary model using an Eigenspace Realization methods. These methods will not generally produce a model with poles at $z=0$. Thus, the delay in the frequency response is divided out out before passing it to the ERA algorithm. the ERA does a fair job of identifying the resonances and anti-resonances. However, it gets the relative degree wrong which, in our experince, causes sever robustness problems when a a state estimator is added to the system.
 
-
-% ============================================================================================================
-% ============================================================================================================
-% ============================================================================================================
-% ============================================================================================================
-The high voltage output of the C300 is current limited to 100 mA. Because the piezo stage presents as a capacitive load to the power amplifier, this translates to a rate of change limitation on the voltage control signal. To see this, we have $\dot v_{h} = \frac{1}{C} i_c(t)$, or, with a backwards difference approximation
+Thus, the second step is to use the model generated by the ERA as the initial guess to a non-linear least squares problem \cite{sidman_parametric_1991} which minimizes the ratio of the logarithm of the experimental frequency response to that of the model. Though Sidman et al. develop the idea for a continuous time models, their strategy is easily adopted to fit a discrete time model. The model is parametrized by first and second-order factors
 \begin{equation}
-  |\frac{V_{h}(k) - V_{h}(k-1)}{T_s}| \leq \frac{1}{C} 100~\text{mA}
+  \hat{G}(z|\theta) =k \frac{\prod (z-b_i) \prod(z^2 +b_jz + b_{j+1})}
+  { \prod_{l=1}(z-a_l) \prod(z^2 +a_mz + a_{m+1})}z^{-p}
 \end{equation}
-which is the rate of change limit on the high voltage signal. The stage has a measured capacitance of 3.8~$\mu$F. Using a sample rate of 40~$\mu$s (25 kHz), this translates to $\Delta u_{H}|\leq 1.053$ volts per sample period. The power amplifier has a gain measured at approximately $K_{pow}=7.2$. Thus, the low voltage rate of change limitation is
+Note that the model includes a fractional delay $z^{-p}$. This allows us to include the delay as a term in the decision variable and obviates the need to optimize over integers. This is further beneficial because we are not guaranteed that the latency from input to output is actually an exact integer and allowing a fractional delay helps the optimization to more accurately match the phase. The optimization is given by
 \begin{align}
-  K_{pow}|\frac{V_{\ell}(k) - V_{\ell}(k-1)}{T_s}|  &= |\frac{V_{h}(k) - V_{h}(k-1)}{T_s}|\\
-  &\leq \frac{1}{C} 100~\text{mA}\\
-|V_{\ell}(k) - V_{\ell}(k-1)|  &\leq \frac{T_s}{K_{pow}C} 100~\text{mA} \approx 0.146 \label{eqn:dvlow_max}
+\min_{\theta} \sum_{i=1}^M| \log(G(e^{j\omega_iT_s})) - \log(\hat{G}(e^{j\omega_iT_s}|\theta))|^2
+\label{eqn:logfit}
 \end{align}
-where $v_{\ell}$ is the low voltage control input. The maximum rate of change on the control $|\Delta V_{\ell}| <0.14$ is the slew rate limit will will use through the rest of this paper. 
+where $\omega_i$ is each frequency in the experimental frequency response. Because the logarithm of the products is the sum of the logs, the Jacobian for this cost function is surprisingly easy to calculate. Details can be found in \cite{sidman_parametric_1991}.
 
-\subsubsection{The LPF Problem}
-As usual however, things are more complicated. At some point along the path from low voltage input to high voltage output, the C300 low pass filters the signal. According to nPoint, this LPF is implemented in hardware and should have a bandwidth of around 7~kHz. Although the specific LPF circuit topology is unknown, we can identify the LPF by measuring the frequency response from low voltage input to high voltage output. This is shown in Fig.~\ref{fig:powfrf}. Note that this frequency response includes the capacitance of the stage, which presumably adds a loading affect to the LPF.
-
-Figure~\ref{fig:lpf_current} schematically illustrates the situation. The LPF will likely have other paths to ground, and thus we should have that $I_{pow} \geq I_{lpf}$. This gives us a method to experimentally validate the low voltage slew rate limit in \eqref{eqn:dvlow_max}. The idea is to drive the C300 with a ramp signal whose slope is designed to exceed the slew rate limit and to measure the rate of change at the point $V_{lpf}$ in Fig. ~\ref{fig:lpf_current}. 
-\begin{figure*}
-  \begin{minipage}{0.4\textwidth}
-    \includegraphics[scale=0.35]{figures/current_lpf.pdf}
-    \caption{Schematic representation of  LPF.}
-    \label{fig:lpf_current}
-  \end{minipage}
-\hfill
-  \begin{minipage}{0.6\textwidth}
-    \includesvg[scale=0.8]{figures/dumax_measure.svg}
-    \caption{Schematic representation of  LPF.}
-    \label{fig:lpf_current}
-  \end{minipage}
-\end{figure*}
-This indeed shows that when $\Delta V_h$ exceeds approximately 1 volt per sample, the power amplifier output breaks down. We also see from Fig. ~\ref{fig:lpf_current} that the 100~mA current limitation appears to not be a hard saturation constraint. 
+In this work, we do not model the modes above 1100~Hz. Thus, the optimization \eqref{eqn:logfit} is only done over frequency up to 1100~Hz. 
 
 
-
-% It is useful and thus interesting that in discrete time, the rate of change dynamics for linear system are the same as the standard input dynamics. Consider a state space system $G=\{A,B,C\}$ with state $x(k)$ and output $y(k)$. Then
-% \begin{align}
-%   \Delta y(k) &\coloneqq y(k) - y(k-1) = C\Delta x(k) = C(x(k) - x(k-1))\\
-%   \Delta x(k+1) &= x(k+1) - x(k) = Ax(k) + B u(k) - [Ax(k-1) + Bu(k-1)]\\
-%               &= A \Delta x(k) + B\Delta u(k).
-% \end{align}
-
-
-
+\section{Control Setup}
 \subsection{The Incremental Form}
 In the optimizations we consider, it will often be useful to work with an incremental form of \(G\) which has as its input \({\Delta u(k)\coloneqq u(k)-u(k-1)}\), rather than \(u\), which is defined by augmenting \(G_p\) with an state \x\(_{\text{u}}\)(k) such that
 \begin{equation*}
@@ -269,6 +260,10 @@ The error state, \({\xde(k)=\xd(k) - \xdss}\) has dynamics
 \end{align}
 because $\xdss$ is in the nullspace of $(I - \Ad)$.
 
+\subsection{Observer Design}
+
+We use the method outlined in \cite{doyle_robustness_1979}.
+
 \section{The Optimal Control formulations}
 We want to look at a few different ways of driving the stage from point to point as rapidly as possible, yet still be practical. Inspired by our past work, we will compare several methods through both simulation and experimental studies. These methods are
 \begin{itemize}
@@ -289,8 +284,6 @@ z_{0} &= x_{k}\\
 In the case of MPC, the control at the current time step as taken $v_0$, the rest of the optimal controls are thrown away and the optimization is repeated at the next sampling instant. Here, we consider control horizons ranging from $N=4$ to $N=20$. In the case of CLQR, we consider a much longer control horizon of $N=400$. The idea then is to apply the optimal control to the system and track the optimal system output. For SLF, we set $N=1$ and eliminate the constraint \eqref{eqn:optconst}. Because we have taken $Q_p$ as the solution to the discrete algebraic Riccatti equation, this is equivalent to the standard infinite horizon LQR problem. In the case of CLF $\Delta u_k$ is saturated in software, which is more predictable than allowing it happen in hardware and ensures that the control applied to the plant matches the control seen by the state estimator.
 
 In CLQR, MPC and CLF,  the state weight $Q$ is selected via an inverse optimal control problem to yield good damping and to cancel the real pole-zero pair near 50~Hz. For MPC and CLF, we treat control weight $\gamma$ as the primary tuning parameter. In both cases, a larger $\gamma$ yields a larger maximum step size that can be tracked. Essentially, we can view each control 
-
-
 
 \subsection{The minimum-time control problem in discrete-time}\label{sec:mintime}
 \label{sec:org6d1d6b6}

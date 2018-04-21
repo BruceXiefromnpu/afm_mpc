@@ -53,6 +53,9 @@ LG.solve_lsq(2, LGopts)
 sys_stage_log.InputDelay = max(round(p, 0), 0);
 fprintf('LG says delay = %.2f\n', p);
 
+frfBode(sys_stage_log, freqs, F4, '--k', 'Hz')
+plotPZ_freqs(sys_stage_log, F4)
+
 figure(50);
 pzplot(sys_stage_log);
 
@@ -73,7 +76,7 @@ sys_stage_log.InputDelay = max(round(p, 0), 0);
 frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
 
 plotPZ_freqs(sys_stage_log, F4);
-
+%%
 
 % Visualize everything
 F1 = figure(1); clf
