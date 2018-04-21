@@ -15,7 +15,10 @@ classdef PATHS
                 PATH = '/media/labserver/mpc-journal';
             end
         end
-        
+        function PATH = sim_data()
+          % Path to simulation data folder.
+          PATH = fullfile(PATHS.MPCJ_root(), 'data');
+        end
         function [ PATH ] = MPCJ_root()
             % PATH constant to where all experimental data is stored for the 
             % MPC journal paper.

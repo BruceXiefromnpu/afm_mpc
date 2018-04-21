@@ -80,7 +80,17 @@ classdef StepDataQuad < StepData
                                max_setpoints_idx, gam_iter, self.logger);
                 end
                 PB.upd(gam_iter);
-                
+                if data_iter.ref_max_recommended_idx == length(ref_s) 
+                  self.logger('maximum setpoint gamma reached, terminating.\n');
+                  PB.upd(length(gam_s));
+                  % We need to fill in the data we didn't compute
+                  max_setpoints_idx(gam_iter+1:end) = max_setpoints_idx(gam_iter);
+                  max_recommended_sps_idx(gam_iter+1:end) = max_recommended_sps_idx(gam_iter);
+                  break
+                else
+                  self.logger('maximum setpoint = %.2f, gamma = %.4f.\n', ...
+                    ref_s(data_iter.ref_max_recommended_idx), gamma);
+                end
                 %     keyboard
             end % end MAIN LOOP 
                 result_s.max_setpoints_idx = max_setpoints_idx;
@@ -216,13 +226,12 @@ classdef StepDataQuad < StepData
                 Qp = dare(params.sys.a, params.sys.b, params.Q, gamma,...
                     self.params.S); 
                 sim_struct.mpcProb1 = condensedMPCprob_OA(params.sys, N_mpc,...
-                                                       params.Q, Qp, gamma,...
-                                                       self.params.S);
+                                      params.Q, Qp, gamma, self.params.S);
                 CON = CondenCon([], [], N_mpc);
                 CON.add_input_con('box', [-du_max, du_max]);
                 sim_struct.mpcProb1.CON = CON;
                 %sim_struct.mpcProb1.add_U_constraint('box', [-du_max, du_max]);
-                sim_struct.K_lqr = params.sys.C*0;
+                sim_struct.K_lqr = params.sys.C*0; % So we don't get confused by bad data
             end
         end
         

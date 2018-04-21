@@ -31,6 +31,8 @@ classdef MaxSpJudgeCLQR
             
         function ref_max_judge = build_ref_max_judge_dynamic(self, ...
                                                              gam_current)
+        % This is a factory function that builds a function handle to the
+        % function max_sp_judge_dynamic based on the current gamma. 
             self.step_data_clqr.params.gam_s = gam_current;
             
             % Expose parameters and build CLQR problem for current gamma:
@@ -41,8 +43,10 @@ classdef MaxSpJudgeCLQR
             N_traj = params.N_traj;
             mpc_mode = params.mpc_mode;
             Q = params.Q;
-            Qp = dare(sys.a, sys.b, Q, gam_current);
-            NLQR_prob = condensedMPCprob_OA(sys, N_traj, Q, Qp, gam_current);
+            S = params.S;
+            Qp = dare(sys.a, sys.b, Q, gam_current, S);
+            
+            NLQR_prob = condensedMPCprob_OA(sys, N_traj, Q, Qp, gam_current, S);
 
             CON = CondenCon([], [], NLQR_prob.N_mpc);
             CON.add_input_con('box', du_max);
@@ -53,12 +57,10 @@ classdef MaxSpJudgeCLQR
             
             % Build the function handle:
             ref_max_judge = @(ref_f, idx, ts_other, Y)self.max_sp_judge_dynamic(ref_f, idx, ...
-                                                                                           ts_other, ...
-                                                                                           Y, NLQR_prob, ... 
-                                                                                           Nx, sys);
+                             ts_other, Y, NLQR_prob, Nx, sys);
         end
-        function ref_max_recommended_found = max_sp_judge_dynamic(self, ref_f, idx, ts_other, Y, ...
-                                                                                   NLQR_prob, Nx, sys)
+        function ref_max_recommended_found = max_sp_judge_dynamic(self,...
+            ref_f, idx, ts_other, Y, NLQR_prob, Nx, sys)
             % Assume zero initial condition.
             x0_err = 0*Nx - ref_f*Nx;
             [U, Xerr] = NLQR_prob.solve(x0_err, 'getX', true); 
@@ -76,7 +78,8 @@ classdef MaxSpJudgeCLQR
             
         end
         
-        function ref_max_recommended_found = max_sp_judge_single_baseline(self, ref_f, idx, ts_other, Y)
+        function ref_max_recommended_found = max_sp_judge_single_baseline(self,...
+            ref_f, idx, ts_other, Y)
             % keyboard
             if self.ref_s(idx) ~= ref_f
                 error(['It seems something is amiss: ref_f must be ' ...
@@ -91,8 +94,6 @@ classdef MaxSpJudgeCLQR
             else
                 ref_max_recommended_found = false;
             end
-            
-            
         end
     end  % methods
 
