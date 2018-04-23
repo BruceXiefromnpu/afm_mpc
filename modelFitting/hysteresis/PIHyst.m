@@ -111,8 +111,7 @@ classdef PIHyst
       T1 = (0:n1)'*Ts;
       T2 = (n1+1:n_final)'*Ts;
       T = [T1; T2];
-
-      umax = 3;
+      
       if (umax - k1*t1 < 0)
         delta = 0.1; % arbitrary;
         k1 = (umax - delta)/t1;

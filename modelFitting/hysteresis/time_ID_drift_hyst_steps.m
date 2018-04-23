@@ -1,18 +1,17 @@
 clear
 clc
 
-modelFit_file = 'C:\Users\arnold\Documents\labview\sysID\data\x-axis_sines_info_intsamps_amp_1p0_out_4-2-2018offs_0-01.mat';
+modelFit_file = fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat');
 load(modelFit_file)
 
 Ts = modelFit.frf.Ts;
-G_uz2pow_rescaled = modelFit.models.G_uz2pow_rescaled;
+G_uz2stage = modelFit.models.G_uz2stage;
 
 
 ms = 1e3;
 
 %% Case 1:
-% The signal is not too aggressive. We expect nearly perfect match between
-% power amp model and output. 
+
 clc
 To_half = 28*Ts;
 To = 2*To_half;
@@ -38,8 +37,7 @@ else
     t_vec = rast.Time;
 end
 
-%
-clc
+
 
 F4 = figure(4); clf
 subplot(3,1,1)
