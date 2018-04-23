@@ -264,6 +264,31 @@ because $\xdss$ is in the nullspace of $(I - \Ad)$.
 
 We use the method outlined in \cite{doyle_robustness_1979}.
 
+\subsection{Control Weight Selection}
+To design the weighting matrices $Q$, $R$ and $S$, we design fictitious output matrices $\hat C$ and $\hat D$ such that zeros of $\{A, B, \hat C, \hat D\}$ are at the desired pole locations. Then, the fictitious output is $\hat y = \hat C x + \hat D u$. If we write the cost function of REF as
+\begin{align}
+  J &= \sum_{i=0}^{N-1} \hat{y_i}^T\hat{y_i} + u_i^T\gamma u_i\\
+    &= \sum_{i=0}^{N-1} \hat{x_i}^TQ\hat{x_i} + 2x_i^TSu_i + u_i^TRu_i\\
+\end{align}
+where $Q = \hat{C}^T\hat{C}$, $S =\hat{C}^T \hat{D}$, and $R = \gamma + \hat{D}^T\hat{D}$. As $\gamma$ becomes small, the closed loop poles of the unconstrained LQR will move to the zeros of $\{A, B, \hat C, \hat D\}$. This is illustrated in Fig.~\ref{fig:lqr_locus}. One can usually take $\gamma$ to be small enough that the difference between the desired pole location and its actual location is negligible. The direct feedthrough term $\hat D$ results in the cross-weighting term $S$ and is necessary if we wish to endow the fictitious system with $n_s$ zeros in order to place all $n_s$ poles.
+
+Through elementary block row and column operations, it is straightforward to show that the zeros of
+$\{A, B, \hat C, \hat D\}$ are the same as the generalized eigenvalues of
+\begin{equation}
+  \begin{bmatrix}
+    zI -(A - B\hat{D}^{-1}\hat{C}) & 0\\
+    0 & \hat{D}
+  \end{bmatrix}
+\end{equation}
+Thus, we choose $\hat D = 1$ and find $\hat C$ via standard pole placement techniques.
+
+
+\begin{figure}
+  \includesvg[width=.5\textwidth]{figures/lqr_locus.svg}
+  \caption{Root locus for $R_o + \gamma$. Note that for clarity, the plant zeros are not shown. The black 'x's indicate the poles of the open-loop plant. The blue circles indicate the fictitious zeros, which are at the location of the desired poles. }
+  \label{fig:lqr_locus}
+\end{figure}
+
 \section{The Optimal Control formulations}
 We want to look at a few different ways of driving the stage from point to point as rapidly as possible, yet still be practical. Inspired by our past work, we will compare several methods through both simulation and experimental studies. These methods are
 \begin{itemize}
@@ -273,7 +298,7 @@ We want to look at a few different ways of driving the stage from point to point
 \item\emph{Constrained, Finite horizon LQR (CLQR)} The optimization is the same as the MPC optimization, just over a much longer horizon. Similarly to the DTMT idea, this would be implemented in a feedforward/tracking configuration. However, the broader goal of considering this scheme is that it shows how much optimality we have sacrificed with a relatively short horizon in MPC.
 \end{itemize}
 
-The last three control schemes can be described the optimization
+The last three control schemes can be described by the optimization
 \begin{align}
 V(z,v) &= \min_{v} z_{N}Q_{p}z_{N} + \sum_{i=0}^{N-1}z_{i}^{T}Qz_{i} + v^{T}_{i}Rv_{i}\\
  \text{s.t.}&\\
