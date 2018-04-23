@@ -32,7 +32,7 @@ sys = ss(modelFit.models.G_uz2stage);
 % sys = ltiFit(modFitPath, 'SS02').sys;
 
 
-sys.Inputdelay = 0;
+sys.Inputdelay = 8;
 Nd =  sys.InputDelay;
 sys_nodelay = sys;
 sys_nodelay.InputDelay = 0;
@@ -63,48 +63,31 @@ du_max   = StageParams.du_max;
 % Pull out open-loop pole-zero information.
 [wp_real_x, wz_real_x] = w_zp_real(sys);
 rho_1 = wz_real_x(1)/wp_real_x(1);
-% 
-% zeta_x = [.75, .7,  0.4, .4 .4];
-% gams_x = [1., 1, 1, 1., 1.];
-% rhos_x = [rho_1, 1, 1];
 rhos_x = [rho_1, 1., 1];
 pint_x = .8;
 
 zeta_x = [.8, .7, .4, .4 .4];
 gams_x = [1., 1., 1., 1., 1];
-% rhos_x = [rho_1*1.0, 1, 1];
+
+rad = 0.25;
 
 
-method = 1;
-if method == 1
-  [Gvib, gdrift] = eject_gdrift(sys_nodelay);
-  Gvib = ss(Gvib);
-  sys_recyc=SSTools.deltaUkSys(Gvib);  
-  
-  P_x    = getCharDes(sys_recyc, gams_x, pint_x, zeta_x, rhos_x, pint_x);
-  [Chat, Dhat] = place_zeros(sys_recyc, P_x);
-  gam = 1;
-  Q1 = Chat'*Chat;
-  S1 = Chat'*Dhat;
-  R1 = Dhat'*Dhat + gam; % Plus gamma.
-  
-  K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R1, S1);
-  sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
-  
-elseif method == 2
-%   sys_nodelay = ss(G);
-  P_x    = getCharDes(sys_nodelay, gams_x, pint_x, zeta_x, rhos_x);
-  K_temp = place(sys_nodelay.a, sys_nodelay.b, P_x);
-  [Q0, R1, K_lqr] = inverseLQR(sys_nodelay, K_temp);
-%   sys_cl = SSTools.close_loop(sys_nodelay, K_temp);
-  sys_cl0 = SSTools.close_loop(sys_nodelay, K_lqr);
-  
-  sys_recyc = SSTools.deltaUkSys(sys_nodelay);
-  Q = blkdiag(Q0, 0);
-  K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q, R*10);
-  sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
-  
-end
+[Gvib, gdrift] = eject_gdrift(sys_nodelay);
+Gvib = ss(Gvib);
+sys_recyc=SSTools.deltaUkSys(Gvib);  
+sys_recyc.InputDelay = Nd;
+sys_recyc = absorbDelay(sys_recyc);
+
+P_x    = getCharDes(sys_recyc, gams_x, pint_x, zeta_x, rhos_x, rad);
+[Chat, Dhat] = place_zeros(sys_recyc, P_x);
+gam = 1;
+Q1 = Chat'*Chat;
+S1 = Chat'*Dhat;
+R1 = Dhat'*Dhat + gam; % Plus gamma.
+
+K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R1, S1);
+sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
+
 
 figure(2); clf
 [y,t,x] = step(sys_cl, 800*Ts);
@@ -116,8 +99,27 @@ subplot(2,1,2)
 plot(t, (x*K_lqr'))
 grid on
 
-figure(3)
-pzplotCL(sys_recyc, K_lqr, [], [])
+f3 = figure(3); clf
+
+plot(real(P_x), imag(P_x), 'ob')
+hold on
+[ax, C_hand] = lqr_locus(sys_recyc, Q1, 1, S1, .001, 1000);
+%%
+xlim([-0.3, 1])
+ylim([-0.35, 0.35])
+C_hand.Label.String = '$R_o + \gamma$';
+C_hand.Label.Interpreter = 'latex';
+C_hand.Label.FontSize = 14;
+
+xlabel('Re')
+ylabel('Im')
+
+
+if 1
+  saveas(f3, fullfile(PATHS.jfig, 'lqr_locus.svg'))
+end
+
+
 % ------------------ Linear + delU Saturation Case ---------------------- %
 % Iterate over a bunch of gammas and try to find the maximum setpoint for
 % each one. This code is pretty niave. We start at a very low setpoint and
