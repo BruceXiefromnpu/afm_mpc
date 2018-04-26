@@ -5,7 +5,7 @@
 %
 % Inputs: 
 %   data: from labview. We expect the following format:
-%       dataBoth = [y,  X1.....Xns,  u,  Xd]
+%       dataBoth = [y,I,  X1.....Xns, u]
 %   Ns:   Number of states (excluding delay)
 %
 % Outputs:
@@ -29,7 +29,6 @@ function [y_exp, u_exp, I_exp, xhat_exp] = unpackExpData_nod(data,  Ts)
     ty = (0:Ts:(length(y_exp.Data)-1)*Ts)';
     y_exp.Time = ty;
     
-%     keyboard
     u_exp.Data = data(:, end);
     tu = (0:Ts:(length(u_exp.Data) - 1)*Ts)';
     u_exp.Time = tu;
@@ -40,9 +39,5 @@ function [y_exp, u_exp, I_exp, xhat_exp] = unpackExpData_nod(data,  Ts)
     % Pull out observer state data.    
     xhat_exp.Data   = data(:,3:end-1);
     xhat_exp.Time   = (0:Ts:(length(xhat_exp.Data(:,1))-1)*Ts)';
-    
 
-%     xdelay_exp.Data = data(:,Ns+3:end);
-%     xdelay_exp.Time = (0:Ts:(length(xdelay_exp.Data(:,1))-1)*Ts)';
-    
 end
