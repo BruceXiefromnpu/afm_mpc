@@ -141,11 +141,19 @@ end
 % Qw1 = sys_nodelay.b*sys_nodelay.b'*800;
 % Qw = blkdiag(Qw1, eye(Nd+1)*100);
 
-% seems to work
+if 0
+% *****seems to work******
 [sys_obsDist, IDENT_obs, eNs_12] = distEstObserver(sys_obs);
 Qw = sys_obs.b*sys_obs.b'*550;
 L_dist = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
 L_dist(end+1) = .3;
+else
+% Try doing state disturbance and placing obs and dist poles independantly.
+p_int_d = 0.3;
+Qw = sys_obs.b*sys_obs.b'*250;
+Lx = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
+[L_dist, sys_obsDist, IDENT_obs, eNs_12] = DistEst.state_dist_est(sys_obs, Lx, p_int_d);
+end
 
 
 % seems to work
@@ -165,7 +173,7 @@ if 1
 %     xlim([0.5664    0.9976])
 %     ylim([-0.42, 0.42])
 end
-%%
+%
 % 2). Design FeedForward gains.
 [Nx, Nu] = SSTools.getNxNu(sys_recyc);
 Nbar = K_lqr*Nx + Nu;
@@ -196,7 +204,7 @@ H1 = plot(sim_exp, F1);
 % figure(100)
 % plot(u_reset)
 % grid on
-if 1
+if 0
   reset_piezo();
 end
 
@@ -206,7 +214,7 @@ end
 clear vi; clear e;
 % delay before we start tracking, to let any transients out. Somewhere of a
 % debugging setting. 
-SettleTicks = 20000;  
+SettleTicks = 20000;
 Iters = 1500;
 Iters = min(Iters, length(yref)-1);
 
