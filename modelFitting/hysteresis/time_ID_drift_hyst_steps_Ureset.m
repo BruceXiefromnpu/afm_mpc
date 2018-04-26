@@ -19,7 +19,7 @@ wo = 2*pi/To;
 
 % Build the u-reset.
 t1 = 18;
-tf = 100;
+t_final = 100;
 umax = 5;
 k1 = 0.15;
 u_reset = PIHyst.gen_reset_u(t1, tf, Ts, k1, umax);
