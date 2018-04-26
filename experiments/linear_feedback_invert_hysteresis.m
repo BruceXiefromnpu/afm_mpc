@@ -24,15 +24,16 @@ dataOut_path    = fullfile(PATHS.step_exp, outputDataName);
 % labview reads desired trajectory here
 refTrajPath     = fullfile(PATHS.step_exp, refTrajName); 
 % location of the vi which runs the experiment.
-vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFMss_integral_trajTrack_nod.vi';
-
 
 % ---------- Load Parametric Models  -----------
 
 % modFitPath = 'x-axis_sines_info_out_2-8-2018-01.mat'
 % load(fullfile(PATHS.sysid, modFitPath), 'modelFit')
-load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
 
+% FRF_data_current_stage2.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis/steps_hyst_model.mat'));
+% r = r;
+w = theta_hyst;
 
 TOL = .01;
 umax = 5;
@@ -42,19 +43,14 @@ umax = 5;
 do_integrator = 1;
     
 
-SYS = ss(modelFit.models.G_uz2stage);
-%     SYS = modelFit.models.G_uz2stage_logfit12;
-%    load('cl_fit_1p0.mat')
-%    SYS = sys_fit;
+SYS = ss(Gvib);
+
 Nd = 9;
 SYS.iodelay = 0;
 SYS.InputDelay = 0;
-PLANT = SYS;
+PLANT = ss(Gvib*gdrift);
 PLANT.InputDelay = Nd;
 PLANT = absorbDelay(PLANT);
-
-% [SYS, gdrift_o] = eject_gdrift(SYS);   
-%    modelFit.models.G_uz2stage_logfit12_withphase_mp;
 
 %    Nd = SYS.InputDelay;
 sys_nodelay = SYS;
@@ -63,13 +59,13 @@ SYS = absorbDelay(SYS);
 
 %    PLANT = absorbDelay(SYS);
 Ts  = SYS.Ts;
-ws = modelFit.frf.w_s;
-Gfrf = modelFit.frf.G_uz2stage;
+% ws = modelFit.frf.w_s;
+% Gfrf = modelFit.frf.G_uz2stage;
 %    Gfrf = squeeze(modelFit.frf.G_frf);
-F1 = figure(100); clf
-frfBode(Gfrf, ws/2/pi, F1, 'r', 'hz');
-frfBode(SYS,  ws/2/pi, F1, '--k', 'hz');
-plotPZ_freqs(SYS,F1);
+% F1 = figure(100); clf
+% frfBode(Gfrf, ws/2/pi, F1, 'r', 'hz');
+% frfBode(SYS,  ws/2/pi, F1, '--k', 'hz');
+% plotPZ_freqs(SYS,F1);
 
 %--------------------------------------------------------------------------
 % Build models 
@@ -106,12 +102,12 @@ Ns  = length(sys_obs.b);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % We will track one setpoints. Number of samples for each setpoint is 800.
-N1    = 1600;
-ref_f_1 = 1.0; % 1.5 to hit slew rate, 1.4 doesn't  
-if 0
+N1    = 800;
+ref_f_1 = .5; % 1.5 to hit slew rate, 1.4 doesn't  
+if 1
     N2 = 800;
     trun = Ts*(N1 + N2);
-    ref_f_2 = -1; % 1.5 to hit slew rate, 1.4 doesn't  
+    ref_f_2 = 1.5; % 1.5 to hit slew rate, 1.4 doesn't  
     ref_0 = 0;
     t1 = [0:1:N1]'*Ts;
     t2 = [N1+1:1:N1+N2]'*Ts;
@@ -200,8 +196,8 @@ else
    Ki = 0;
    x0_int = 0;
 end
-
-sim(fullfile(PATHS.sim_models, 'AFM_SS_linearFDBK_obs.slx'));
+gdrift_inv = 1/gdrift;
+sim(fullfile(PATHS.sim_models, 'AFM_SS_linearFDBK_inv_hyst_drift.slx'));
 y_linear = yplant; 
 u_linear = u_full;
 
@@ -227,13 +223,51 @@ H1 = plot(sim_exp, F1);
 
 %%
 %----------------------------------------------------
+% Build the u-reset.
+addpath('C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis')
+t1 = 10;
+t_final = 20;
+umax = 5;
+k1 = 0.45;
+u_reset = PIHyst.gen_reset_u(t1, t_final, Ts, k1, umax);
+figure(100)
+plot(u_reset)
+grid on
+%
+slewfname_in = 'hyst_reset_datain.csv';
+slewfpath_in = fullfile(pwd, slewfname_in);
+slewfname_out = 'hyst_reset_data_out.csv';
+slewfpath_out = fullfile(pwd, slewfname_out);
+
+csvwrite(slewfpath_in, u_reset);
+clear vi;
+vipath_reset = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_nPoint_id_slew_OL_FIFO.vi'
+
+[e, vi] = setupVI(vipath_reset, 'Abort', 0,...
+        'umax', 9, 'data_out_path', slewfpath_out,...
+        'traj_in_path', slewfpath_in, 'TsTicks', 1600);
+vi.Run
+%%
+dat = csvread(slewfpath_out);
+
+u_exp = dat(:,1);
+yx_exp = dat(:,2); % - dat(1,2);
+t_exp = (0:length(u_exp)-1)'*Ts;
+
+figure(101);
+plot(t_exp, u_exp*.68)
+hold on
+plot(t_exp, yx_exp)
+grid on
+
+%%    
 % Save the controller to .csv file for implementation
 clear vi; clear e;
 % delay before we start tracking, to let any transients out. Somewhere of a
 % debugging setting. 
 SettleTicks = 20000;  
-Iters = 800
-
+Iters = 1599;
+Iters = min(Iters, length(yref)-1);
 
 
 % creat and pack data. Then save it. 
@@ -242,25 +276,32 @@ yy = yref;
 uKx  = yy*Nbar;
 
 [y_ref, uKx, y_uKx] = pack_uKx_y(uKx, yy, tt);
-
+[num, den] = tfdata(gdrift_inv);
+num = num{1};
+den = den{1};
 
 AllMatrix = packMatrix(sys_obs, L, K);
 saveControlData(AllMatrix, Ki, Nbar, Ns, Nd, ref_f_1, y_uKx, controlDataPath, refTrajPath);
-%
+
+clear e;
+clear vi;
 % -----------------------RUN THE Experiment--------------------------------
+vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFMss_integral_trajTrack_nod.vi';
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
+    'num', num, 'den', den, 'TF Order', length(den)-1,...
+    'r_s', rp, 'w-s', wp, 'N_hyst', 7,...
             'Tab Control', 1, 'umax', umax, 'outputData BOTH', dataOut_path,...
             'reference traj path', refTrajPath, 'control_data_path', controlDataPath);
 vi.Run
 % -------------------------------------------------------------------------
-
+        
 %
 % Now, read in data, and save to structure, and plot.
 AFMdata = csvread(dataOut_path);
 [y_exp, u_exp, I_exp, xhat_exp] = unpackExpData_nod(AFMdata, Ts);
 yy = xhat_exp.Data*sys_obs.c';
 
-expOpts = stepExpOpts(linOpts, 'pstyle', 'g', 'name',  'AFM Stage');
+expOpts = stepExpOpts(linOpts, 'pstyle', 'm', 'name',  'AFM Stage');
 
 afm_exp = stepExp(y_exp, u_exp, expOpts);
 H2 = plot(afm_exp, F1);
@@ -273,39 +314,4 @@ grid on
 title('Current')
 %%
 
-[g1, gdrift_o] = eject_gdrift(sys_nodelay)
-g1.InputDelay = Nd;
-[z, p, k] = zpkdata(gdrift_o);
-theta_o = [z{1}, p{1}, k];
-fun = @(theta)fit_gdrift_cldata(theta, g1, y_exp.Data, u_exp.Data, y_exp.Time);
-theta = lsqnonlin(fun, theta_o);
 
-
-gdrift_fit = zpk(theta(1), theta(2), theta(3), g1.Ts);
-
-yfit = lsim(g1*gdrift_fit, u_exp.Data, u_exp.Time);
-
-figure(59)
-subplot(2,1,1)
-plot(u_exp.Time, yfit, '.-b')
-
-%%
-sys_fit = g1*gdrift_fit;
-save('cl_fit_1p0.mat', 'sys_fit')
-
-
-%%
-clc
-yy = y_exp.Data(350:end);
-[Py, freqs] = power_spectrum(yy, Ts);
-figure
-semilogx(freqs, Py)
-
-
-%%
-systems.sys_obs = sys_obs;
-systems.PLANT   = PLANT;
-systems.sys_designK_aug = sys_designK_aug;
-systems.Kfdbk = Kfdbk;
-save(fullfile(PATHS.step_exp, '09_12_2016_linfdbk_slewproblem_trk2.mat'), 'afm_exp', 'sim_exp',...
-      'systems')
