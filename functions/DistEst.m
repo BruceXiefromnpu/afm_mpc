@@ -52,12 +52,11 @@ classdef DistEst
     
       ns    = size(sys.b, 1);
       ndist = size(sys.c, 1);
-      
+      Cd = zeros(ndist, ndist);
       if ~exist('Ad', 'var') || ~exist('Bd', 'var')
         Ad = eye(ndist);
         Bd = zeros(ns, ndist);
         Bd(end) = 1;
-        Cd = zeros(ndist, ndist);
       else
         ndist = size(Ad, 1);
       end      
@@ -71,7 +70,7 @@ classdef DistEst
       % (ie, with Kx = 0)I need to investigate this. So just make one for now. 
       Kx = dlqr(sys.a, sys.b, I_ns, 1);
       
-      H_bar = I_nd + sys.c*((I_ns - sys.a + sys.b*Kx)\Lx)
+      H_bar = I_nd + sys.c*((I_ns - sys.a + sys.b*Kx)\Lx);
       
       T = [I_ns, -(I_ns - sys.A + Lx*sys.c)\Bd;
         zeros(1, ns),  1];
@@ -80,7 +79,7 @@ classdef DistEst
       %At_bar = T*(A_bar/T);  % T*A*T^-1
       %Ct_bar = H_bar*[sys.c, sys.c*( (I_ns-sys.a + Lx*sys.c)\Bd)];
       
-      c_ = H_bar*sys.c*( (I_ns - sys.A +Lx*sys.C)\Bd)
+      c_ = H_bar*sys.c*( (I_ns - sys.A +Lx*sys.C)\Bd);
       
       Ld_bar = place(I_nd', c_', p_int);
       
