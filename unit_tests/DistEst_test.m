@@ -98,4 +98,55 @@ testCase.verifyEqual(p1, p2, 'AbsTol', TOL);
 
 end
 
+function testDistEst_output_deltaUk(testCase)
+  % Check things work with a pole at z=1.
+load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'));
+
+sys = ss(modelFit.models.G_uz2stage);
+% SSTools.deltaUkSys(ss(modelFit.models.G_uz2stage));
+Q1 = sys.b*sys.b'*200;
+
+Lx = dlqr(sys.a', sys.c', Q1, 1)';
+
+sys_cl = ss(sys.a - Lx*sys.c, sys.b, sys.c, 0, sys.Ts);
+
+
+p_int = 0.8;
+[L, sys_dist_obs] = DistEst.output_dist_est(sys, Lx, p_int);
+
+sys_cl_2 = ss(sys_dist_obs.a - L*sys_dist_obs.c, sys_dist_obs.b, sys_dist_obs.c, 0, sys.Ts);
+
+p_exp = sort([pole(sys_cl); p_int]);
+p_act = sort(pole(sys_cl_2));
+
+TOL = 1e-10;
+testCase.verifyEqual(p_act, p_exp, 'AbsTol', TOL);
+
+end
+
+function testDistEst_steady_state_gains(tc)
+  load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'));
+
+  sys = ss(modelFit.models.G_uz2stage);
+  Bd = sys.b;
+  [Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys, Bd);
+  
+  ns = size(sys.b,1);
+  M = [eye(ns) - sys.a, -sys.b;
+     sys.c,      0];
+  dss = 1;
+  rss = 2;
+  
+  xss = Nx_d*dss + Nx_r*rss;
+  uss = Nu_d*dss + Nu_r*rss;
+  
+  lhs = M*[xss; uss];
+  rhs = [Bd; 0]*dss + [Bd*0; 1]*rss;
+  
+  tc.verifyEqual(lhs, rhs, 'AbsTol', 1e-12);
+end
+
+
+
+
 

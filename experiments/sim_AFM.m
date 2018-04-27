@@ -25,10 +25,19 @@ function [Y, U, dU] = sim_AFM(sim_struct, ref_traj)
 % simulink. There must be a better way...
   VSS_LINEAR_CONTROL=Simulink.Variant('VSS_CONTROL_MODE==1');
   VSS_MPC_CONTROL=Simulink.Variant('VSS_CONTROL_MODE == 2');
+  
   VSS_STATE_DIRECT=Simulink.Variant('VSS_STATE_MODE==1');
   VSS_STATE_OBS=Simulink.Variant('VSS_STATE_MODE==2');
   VSS_STATE_DIST_OBS=Simulink.Variant('VSS_STATE_MODE==3');
   
+  VSS_NO_HYST_NO_DRIFT=Simulink.Variant('VSS_EXT_DIST_MODE==1'); 
+  VSS_HYST_AND_DRIFT=Simulink.Variant('VSS_EXT_DIST_MODE==2');
+  VSS_HYST_ONLY=Simulink.Variant('VSS_EXT_DIST_MODE==3');
+  
+  VSS_EXT_DIST_MODE = 1;
+  
+  VSS_OBS_HAS_DELUK=Simulink.Variant('VSS_OBS_DELUK_MODE==1');
+  VSS_OBS_HAS_NO_DELUK=Simulink.Variant('VSS_OBS_DELUK_MODE==0');  
   
   options = simset('SrcWorkspace','current');
   % Expose the sim struct to simulink.
@@ -66,6 +75,37 @@ function [Y, U, dU] = sim_AFM(sim_struct, ref_traj)
     thenoise = sim_struct.thenoise;
   else
     thenoise = timeseries(ref_traj.Time*0, ref_traj.Time);
+  end
+  
+  
+  if ~isfield(sim_struct, 'Nu')
+    sim_struct.Nu = zeros(size(sim_struct.sys_obs.c, 1), 1);
+  end
+  if ~isfield(sim_struct, 'Nu_d')
+    sim_struct.Nu_d = zeros(size(sim_struct.sys_obs.c, 1), 1);
+  end
+  if ~isfield(sim_struct, 'Nx_d')
+    sim_struct.Nx_d = sim_struct.Nx*0;
+  end
+  if ~isfield(sim_struct, 'step_amp')
+    sim_struct.step_amp = 0;
+  end
+
+  if isfield(sim_struct, 'hyst_mode') && sim_struct.hyst_mode
+    VSS_EXT_DIST_MODE = sim_struct.hyst_mode;
+    r= sim_struct.r;
+    w = sim_struct.w;
+    
+  end
+     
+  if ~isfield(sim_struct, 'obs_has_deltaUk')
+    VSS_OBS_DELUK_MODE = false;
+  else
+    VSS_OBS_DELUK_MODE = sim_struct.obs_has_deltaUk
+  end
+  
+  if ~isfield(sim_struct, 'gdrift')
+    sim_struct.gdrift = tf(1,1, PLANT.Ts);
   end
   sim('AFMss_fp', [], options)
     
