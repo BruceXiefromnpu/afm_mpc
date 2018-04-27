@@ -36,8 +36,8 @@ function [Y, U, dU] = sim_AFM(sim_struct, ref_traj)
   
   VSS_EXT_DIST_MODE = 1;
   
-  VSS_OBS_HAS_DELUK=Simulink.Variant('VSS_OBS_DELUK_MODE==1');
-  VSS_OBS_HAS_NO_DELUK=Simulink.Variant('VSS_OBS_DELUK_MODE==0');  
+%   VSS_OBS_HAS_DELUK=Simulink.Variant('VSS_OBS_DELUK_MODE==1');
+%   VSS_OBS_HAS_NO_DELUK=Simulink.Variant('VSS_OBS_DELUK_MODE==0');  
   
   options = simset('SrcWorkspace','current');
   % Expose the sim struct to simulink.
@@ -91,23 +91,29 @@ function [Y, U, dU] = sim_AFM(sim_struct, ref_traj)
     sim_struct.step_amp = 0;
   end
 
-  if isfield(sim_struct, 'hyst_mode') && sim_struct.hyst_mode
+  if isfield(sim_struct, 'hyst_mode') && sim_struct.hyst_mode == 2
     VSS_EXT_DIST_MODE = sim_struct.hyst_mode;
     r= sim_struct.r;
     w = sim_struct.w;
-    
+    gdrift = sim_struct.gdrift;
+  elseif isfield(sim_struct, 'hyst_mode') && sim_struct.hyst_mode == 3
+    VSS_EXT_DIST_MODE = sim_struct.hyst_mode;
+    r= sim_struct.r;
+    w = sim_struct.w;
   end
      
-  if ~isfield(sim_struct, 'obs_has_deltaUk')
-    VSS_OBS_DELUK_MODE = false;
-  else
-    VSS_OBS_DELUK_MODE = sim_struct.obs_has_deltaUk
+  if ~isfield(sim_struct, 'gdrift_inv')
+    sim_struct.gdrift_inv = tf(1,1, PLANT.Ts);
   end
+  sim_struct.gdrift_inv
   
-  if ~isfield(sim_struct, 'gdrift')
-    sim_struct.gdrift = tf(1,1, PLANT.Ts);
+  if ~isfield(sim_struct, 'obs_has_deltaUk')
+    % VSS_OBS_DELUK_MODE = false;
+    sim('AFMss_fp_obshasDelta_uk', [], options)
+  else
+    % VSS_OBS_DELUK_MODE = sim_struct.obs_has_deltaUk
+    sim('AFMss_fp_obshas_uk', [], options)
   end
-  sim('AFMss_fp', [], options)
     
   % provides Y, U, dU
 end

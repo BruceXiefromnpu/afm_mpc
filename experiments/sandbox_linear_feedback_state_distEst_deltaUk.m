@@ -145,14 +145,30 @@ clc
 clf
 sys_obs = absorbDelay(SYS);
 p_int_d = .8;
+if 1
   % *****seems to work******
-  % state disturbance does not work unless we put the deltaUk state in the
-  % observer too. It probably could be made to, but I havnt worked that out.
-Qw = sys_obs.b*sys_obs.b'*50;
-Lx = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
-[L_dist, sys_obsDist, IDENT_obs, eNs_12] = DistEst.output_dist_est(sys_obs,...
-                                             Lx, p_int_d);
-[Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys_obs, sys_obs.b*0, 1);                                             
+  Qw = sys_obs.b*sys_obs.b'*50;
+  Lx = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
+%   [L_dist, sys_obsDist, IDENT_obs, eNs_12] = DistEst.output_dist_est(sys_obs,...
+%                                                Lx, p_int_d);
+%   [Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys_obs, sys_obs.b*0, 1);                                             
+  [L_dist, sys_obsDist, IDENT_obs, eNs_12] = DistEst.state_dist_est(sys_obs,...
+                                               Lx, p_int_d, sys_obs.b, 1);                                             
+  [Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys_obs, sys_obs.b, 1);
+Nu_d = -Nu_r;
+else
+  sys_obs = sys_recyc;
+  % Try doing state disturbance and placing obs and dist poles independantly.
+  Qw = sys_obs.b*sys_obs.b'*250;
+  Lx = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
+  Bd = sys_obs.b;
+  Ad = 1;
+  [L_dist, sys_obsDist, IDENT_obs, eNs_12] = DistEst.state_dist_est(sys_obs, Lx, p_int_d, Bd, Ad);
+  ns_obs  = size(sys_obs.b,1);
+  
+  [Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys_obs, Bd);
+end
+
 
 % seems to work
 % % % [sys_obsDist, IDENT_obs, eNs_12]= distEstObserver(sys_obs);
@@ -180,8 +196,8 @@ sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max*100, 'PLANT', PLANT,...
              'mpc_on', 0, 'Nx', Nx_r, 'Nu', Nu_r, 'Nx_d', Nx_d, 'Nu_d', Nu_d,...
              'thenoise', thenoise, 'obs_has_deltaUk', true,...
              'sys_obs', sys_obsDist, 'L', L_dist, 'state_mode', 3,...
-             'step_amp', 0.25, 'r', r, 'w', w, 'hyst_mode', 2,...
-             'gdrift_inv', gdrift_inv, 'gdrift', gdrift);
+             'step_amp', 0.25, 'r', r, 'w', w, 'hyst_mode', 3)%; %,...
+%              'gdrift_inv', gdrift_inv 'gdrift', gdrift);
            
 
 [y_linear, u_linear, dU] = sim_AFM(sim_struct, ref_traj);
