@@ -27,7 +27,7 @@ refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 
 % ---------- Load Parametric Models  -----------
 load(fullfile(PATHS.sysid, 'hysteresis/steps_hyst_model.mat'));
-% load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
+load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
 % r = r;
 w = theta_hyst;
 
@@ -37,12 +37,14 @@ TOL = .01;
 
 %%
 SYS = ss(Gvib);
+PLANT = ss(Gvib);
+% PLANT = ss(modelFit.models.G_uz2stage);
 % SYS = ss(modelFit.models.G_uz2stage);
 
 Nd = 9;
 SYS.iodelay = 0;
 SYS.InputDelay = 0;
-PLANT = ss(Gvib);
+
 % PLANT = ss(modelFit.models.G_uz2stage);
 PLANT.InputDelay = Nd;
 PLANT = absorbDelay(PLANT);
@@ -71,8 +73,9 @@ Ns  = length(sys_obs.b);
 
 % We will track one setpoints. Number of samples for each setpoint is 800.
 N1    = 800;
-ref_f_1 = .5; % 1.5 to hit slew rate, 1.4 doesn't  
-if 1
+ref_f_1 = .5; % 1.5 to hit slew rate, 1.4 doesn't
+trajstyle = 3;
+if trajstyle == 1
     N2 = 800;
     trun = Ts*(N1 + N2);
     ref_f_2 = 1.5; % 1.5 to hit slew rate, 1.4 doesn't
@@ -83,18 +86,24 @@ if 1
     t = [t1; t2];
     yref = [0*t1 + ref_f_1;
             0*t2 + ref_f_2];
-else
+    ref_traj = timeseries(yref, t);
+elseif trajstyle == 2
     t1 = [0:1:N1]'*Ts;
     trun = Ts*(N1);
     t = t1;
     yref = [0*t1 + ref_f_1];
     ref_0 = 0;
+    ref_traj = timeseries(yref, t);
+elseif trajstyle == 3
+  load('many_steps.mat')
+  ref_traj = ref_traj_params.ref_traj;
+  ref_traj.Data = ref_traj.Data;
+  t = ref_traj.Time;
+  yref = ref_traj.Data;
 end
-ref_traj = timeseries(yref, t);
-
 rw = 8.508757290909093e-07;
 rng(1);
-thenoise = timeseries(mvnrnd(0, rw, length(t)), t);
+thenoise = timeseries(mvnrnd(0, rw, length(t))*0, t);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
@@ -113,7 +122,7 @@ du_max   = StageParams.du_max;
 rho_1 = wz_real_x(1)/wp_real_x(1);
 rhos_x = [rho_1, 1., 1];
 
-zeta_x = [.8, .7, .4, .4 .4];
+zeta_x = [.85, .7, .4, .4 .4];
 gams_x = [1., 1., 1., 1., 1];
 
 rad = 0.25;
@@ -137,30 +146,16 @@ end
 
 % -------------------------------------------------------------------------
 % ------------------------- Observer Gain ---------------------------------
-% Qw = sys_obs.b*sys_obs.b'*1000;
-% Qw1 = sys_nodelay.b*sys_nodelay.b'*800;
-% Qw = blkdiag(Qw1, eye(Nd+1)*100);
-
-if 0
-% *****seems to work******
-[sys_obsDist, IDENT_obs, eNs_12] = distEstObserver(sys_obs);
-Qw = sys_obs.b*sys_obs.b'*550;
-L_dist = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
-L_dist(end+1) = .3;
-else
-% Try doing state disturbance and placing obs and dist poles independantly.
-p_int_d = 0.3;
-Qw = sys_obs.b*sys_obs.b'*250;
+%%
+sys_obs = absorbDelay(SYS);
+p_int_d = .8;
+  % state disturbance does not work unless we put the deltaUk state in the
+  % observer too. It probably could be made to, but I havnt worked that out.
+Qw = sys_obs.b*sys_obs.b'*100;
 Lx = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
-[L_dist, sys_obsDist, IDENT_obs, eNs_12] = DistEst.state_dist_est(sys_obs, Lx, p_int_d);
-end
-
-
-% seems to work
-% % % [sys_obsDist, IDENT_obs, eNs_12]= distEstObserver(sys_obs);
-% % % Qw = sys_obsDist.b*sys_obsDist.b'*150;
-% % % L_dist = dlqr(sys_obsDist.a', sys_obsDist.c', Qw, 1)';
-% % % L_dist(end) = .4;
+[L_dist, sys_obsDist, IDENT_obs, eNs_12] = DistEst.output_dist_est(sys_obs,...
+                                             Lx, p_int_d);
+[Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys_obs, sys_obs.b*0, 1);                                             
 
 if 1
     figure(20); clf
@@ -168,31 +163,38 @@ if 1
     title('observer')
     hold on
     opts.pcolor = 'r';
-%     opts.p
     pzplotCL(sys_obsDist, [], L_dist, gcf, opts); 
-%     xlim([0.5664    0.9976])
-%     ylim([-0.42, 0.42])
 end
-%
+
 % 2). Design FeedForward gains.
 [Nx, Nu] = SSTools.getNxNu(sys_recyc);
 Nbar = K_lqr*Nx + Nu;
 gdrift_inv = 1/gdrift;
 sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max, 'PLANT', PLANT,...
-             'mpc_on', 0, 'Nx', Nx, 'thenoise', thenoise,...
-             'sys_obs', sys_obsDist, 'L', L_dist, 'state_mode', 3);
+             'Nx_recyc', Nx, 'sys_obs', sys_obsDist, 'L', L_dist,...
+             'r', r, 'w', w, 'rp', rp, 'wp', wp,...
+             'gdrift_inv', gdrift_inv, 'gdrift', gdrift);
 
-[y_linear, u_linear, dU] = sim_AFM(sim_struct, ref_traj);
+[y_linear, U_full, U_nom, dU] = sim_AFM(sim_struct, ref_traj);
 
-linOpts = stepExpOpts('pstyle', '--r', 'TOL', TOL, 'y_ref', ref_f_1,...
+linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', ref_f_1,...
                       'controller', K_lqr, 'name',  'Simulation');
 
-sim_exp = stepExp(y_linear, u_linear, linOpts);
+sim_exp = stepExp(y_linear, U_full, linOpts);
 
 F1 = figure(59); clf
 H1 = plot(sim_exp, F1);
+subplot(2,1,1)
+plot(ref_traj.time, ref_traj.Data, '--k', 'LineWidth', -.05);
+xlm = xlim();
 
 
+F2 = figure(60); clf
+plot(dU)
+hold on
+plot(U_full.Time(1:end-1), diff(U_full.Data), '--r')
+% plot(xlm, [ref_f_2, ref_f_2], ':')
+%%
 %----------------------------------------------------
 % Build the u-reset.
 % addpath('C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis')
@@ -204,18 +206,17 @@ H1 = plot(sim_exp, F1);
 % figure(100)
 % plot(u_reset)
 % grid on
-if 0
+if 1
   reset_piezo();
 end
-
-
-%%    
+%%
 % Save the controller to .csv file for implementation
 clear vi; clear e;
 % delay before we start tracking, to let any transients out. Somewhere of a
 % debugging setting. 
 SettleTicks = 20000;
-Iters = 1500;
+Iters = length(yref)-1;
+
 Iters = min(Iters, length(yref)-1);
 
 
@@ -231,7 +232,7 @@ den = den{1};
 
 AllMatrix = packMatrixDistEst(sys_obsDist, L_dist, K_lqr, Nx);
 saveControlData(AllMatrix, 0, 0, Ns, Nd, ref_f_1, y_uKx, controlDataPath, refTrajPath);
-
+%
 clear e;
 clear vi;
 % -----------------------RUN THE Experiment--------------------------------
@@ -239,17 +240,17 @@ vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFMss_fp_
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
    'num', num, 'den', den, 'TF Order', (length(den)-1),...
     'r_s', rp, 'w-s', wp,'N_hyst', 7, 'du_max', du_max,...
-            'umax', umax, 'outputData BOTH', dataOut_path,...
+            'umax', 7, 'ymax', 5, 'outputData BOTH', dataOut_path,...
             'reference traj path', refTrajPath, 'control_data_path', controlDataPath);
 vi.Run
 % -------------------------------------------------------------------------
-
+%
 % Now, read in data, and save to structure, and plot.
 AFMdata = csvread(dataOut_path);
 [y_exp, u_exp, I_exp, xhat_exp] = unpackExpData_nod(AFMdata, Ts);
 yy = xhat_exp.Data*sys_obsDist.c';
 
-expOpts = stepExpOpts(linOpts, 'pstyle', 'g', 'name',  'AFM Stage');
+expOpts = stepExpOpts(linOpts, 'pstyle', '--g', 'name',  'AFM Stage');
 
 afm_exp = stepExp(y_exp, u_exp, expOpts);
 H2 = plot(afm_exp, F1);
