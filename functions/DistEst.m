@@ -143,8 +143,7 @@ classdef DistEst
       Cd = zeros(ndist, ndist);
       if ~exist('Ad', 'var') || ~exist('Bd', 'var')
         Ad = eye(ndist);
-        Bd = zeros(ns, ndist);
-        Bd(end) = 1;
+        Bd = sys.b;
       else
         ndist = size(Ad, 1);
       end      
