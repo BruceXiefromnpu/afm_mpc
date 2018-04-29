@@ -23,10 +23,11 @@ P = path();
   % k1 = 0.45;
   
   u_reset = PIHyst.gen_reset_u(t1, t_final, Ts, k1, umax);
-  figure(100)
-  plot(u_reset)
-  grid on
-  
+  if verbose
+    figure(100)
+    plot(u_reset)
+    grid on
+  end
   slewfname_in = 'hyst_reset_datain.csv';
   slewfpath_in = fullfile(pwd, slewfname_in);
   slewfname_out = 'hyst_reset_data_out.csv';
