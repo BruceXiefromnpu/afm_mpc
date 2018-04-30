@@ -1,5 +1,5 @@
 % Implement augmented state space integral control with shift register to
-% 'estimate' the delay states. 
+% 'estimate' the delay states.
 
 clc
 clear all
@@ -8,7 +8,7 @@ clear all
 % Options
 figbase  = 50;
 verbose = 0;
-controlParamName = 'exp01Controls.csv'; 
+controlParamName = 'exp01Controls.csv';
 refTrajName      = 'ref_traj_track.csv';
 outputDataName = 'exp01outputBOTH.csv';
 % Build data paths
@@ -18,11 +18,11 @@ addpath('../functions')
 
 % ---- Paths for shuffling data to labview and back. ------
 %labview reads data here
-controlDataPath = fullfile(PATHS.step_exp, controlParamName); 
+controlDataPath = fullfile(PATHS.step_exp, controlParamName);
 % labview saves experimental results/data here
-dataOut_path    = fullfile(PATHS.step_exp, outputDataName); 
+dataOut_path    = fullfile(PATHS.step_exp, outputDataName);
 % labview reads desired trajectory here
-refTrajPath     = fullfile(PATHS.step_exp, refTrajName); 
+refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 % location of the vi which runs the experiment.
 
 % ---------- Load Parametric Models  -----------
@@ -58,7 +58,7 @@ SYS = absorbDelay(SYS);
 Ts  = SYS.Ts;
 
 %--------------------------------------------------------------------------
-% Build models 
+% Build models
 sys_designK = SYS;
 
 % 3). Reduced order system for simulation.
@@ -112,7 +112,7 @@ thenoise = timeseries(mvnrnd(0, rw, length(t))*0, t);
 %                                                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% 3). LQR generation gain.        
+% 3). LQR generation gain.
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
 du_max   = StageParams.du_max;
@@ -127,7 +127,7 @@ gams_x = [1., 1., 1., 1., 1];
 
 rad = 0.25;
 pint = 0.8;
-sys_recyc=SSTools.deltaUkSys(SYS);  
+sys_recyc=SSTools.deltaUkSys(SYS);
 
 P_x  = getCharDes(sys_recyc, gams_x, pint, zeta_x, rhos_x, rad);
 [Chat, Dhat] = place_zeros(sys_recyc, P_x);
@@ -155,7 +155,7 @@ Qw = sys_obs.b*sys_obs.b'*100;
 Lx = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
 [L_dist, sys_obsDist, IDENT_obs, eNs_12] = DistEst.output_dist_est(sys_obs,...
                                              Lx, p_int_d);
-[Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys_obs, sys_obs.b*0, 1);                                             
+[Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys_obs, sys_obs.b*0, 1);
 
 if 1
     figure(20); clf
@@ -163,7 +163,7 @@ if 1
     title('observer')
     hold on
     opts.pcolor = 'r';
-    pzplotCL(sys_obsDist, [], L_dist, gcf, opts); 
+    pzplotCL(sys_obsDist, [], L_dist, gcf, opts);
 end
 
 % 2). Design FeedForward gains.
@@ -213,14 +213,14 @@ end
 % Save the controller to .csv file for implementation
 clear vi; clear e;
 % delay before we start tracking, to let any transients out. Somewhere of a
-% debugging setting. 
+% debugging setting.
 SettleTicks = 20000;
 Iters = length(yref)-1;
 
 Iters = min(Iters, length(yref)-1);
 
 
-% creat and pack data. Then save it. 
+% creat and pack data. Then save it.
 tt = t;
 yy = yref;
 uKx  = yy*Nbar;
@@ -263,5 +263,3 @@ ylabel('current [mA]')
 grid on
 title('Current')
 %%
-
-
