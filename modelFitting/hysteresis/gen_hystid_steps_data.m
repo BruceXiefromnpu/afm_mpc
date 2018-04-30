@@ -2,7 +2,7 @@
 clear
 Ts = 40e-6;
 u_max = 7;
-n_space = 800;
+n_space = 2000;
 n_up = 5;
 step_sz = u_max/n_up;
 
@@ -35,3 +35,5 @@ figure(1); clf
 plot(t_vec, u_vec);
 grid on
 %%
+save('hystid_steps_input.m', 'u_vec', 'imps', 'u_max', 'n_space', 'step_sz',...
+  'n_up', 'Ts');

@@ -14,6 +14,7 @@ outputDataName = 'exp01outputBOTH.csv';
 % Build data paths
 
 addpath('../functions')
+addpath(PATHS.sim_models)
 % PATH_sim_model       = pwd;  % for simulink simulations
 
 % ---- Paths for shuffling data to labview and back. ------
@@ -146,7 +147,8 @@ end
 
 % -------------------------------------------------------------------------
 % ------------------------- Observer Gain ---------------------------------
-%%
+wpp = wp;
+wpp(1) = 1.2;
 sys_obs = absorbDelay(SYS);
 p_int_d = .8;
   % state disturbance does not work unless we put the deltaUk state in the
@@ -170,10 +172,10 @@ end
 [Nx, Nu] = SSTools.getNxNu(sys_recyc);
 Nbar = K_lqr*Nx + Nu;
 gdrift_inv = 1/gdrift;
-sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max, 'PLANT', PLANT,...
+sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max/wp(1), 'PLANT', PLANT,...
              'Nx_recyc', Nx, 'sys_obs', sys_obsDist, 'L', L_dist,...
              'r', r, 'w', w, 'rp', rp, 'wp', wp,...
-             'gdrift_inv', gdrift_inv, 'gdrift', gdrift);
+              'gdrift', gdrift);
 
 [y_linear, U_full, U_nom, dU] = sim_AFM(sim_struct, ref_traj);
 
@@ -181,19 +183,27 @@ linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', ref_f_1,...
                       'controller', K_lqr, 'name',  'Simulation');
 
 sim_exp = stepExp(y_linear, U_full, linOpts);
-
+%
+clc
 F1 = figure(59); clf
 H1 = plot(sim_exp, F1);
 subplot(2,1,1)
-plot(ref_traj.time, ref_traj.Data, '--k', 'LineWidth', -.05);
+plot(ref_traj.Time, ref_traj.Data, '--k', 'LineWidth', .05);
 xlm = xlim();
 
 
-F2 = figure(60); clf
-plot(dU)
-hold on
-plot(U_full.Time(1:end-1), diff(U_full.Data), '--r')
+F2 = figure(60); %clf
+hold on, grid on;
+plot(diff(U_full.Data), '--r')
+xlm = xlim;
+plot(xlm, [du_max, du_max], '--k')
+plot(xlm, -[du_max, du_max], '--k')
+
+
+% hold on
+% plot(U_full.Time(1:end-1), diff(U_full.Data), '--r')
 % plot(xlm, [ref_f_2, ref_f_2], ':')
+grid on
 %%
 %----------------------------------------------------
 % Build the u-reset.

@@ -10,7 +10,7 @@ addpath('functions')
 addpath('models')
 %%
 
-
+clc
 fname_lin = fullfile(PATHS.sim_data(), 'max_sp_data_lin_dumax_p198.mat');
 fname_mpc = fullfile(PATHS.sim_data(),'max_sp_data_mpc_dumax_p198.mat');
 fname_clqr = fullfile(PATHS.sim_data(),'clqr_ref_data__dumax_p198.mat');
@@ -80,14 +80,29 @@ sys_recyc = absorbDelay(sys_recyc);
 
 P_x    = getCharDes(sys_recyc, gams_x, pint_x, zeta_x, rhos_x, rad);
 [Chat, Dhat] = place_zeros(sys_recyc, P_x);
-gam = 1;
+gam = .00000000011;
 Q1 = Chat'*Chat;
 S1 = Chat'*Dhat;
 R1 = Dhat'*Dhat + gam; % Plus gamma.
-
 K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R1, S1);
+
 sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
 
+% % % % Inverse LQR actually seems to work if we use mosek instead of sedumi.
+% % % px = getCharDes(sys_nodelay, gams_x, pint_x, zeta_x, rhos_x, rad);
+% % % K_temp = place(sys_nodelay.a, sys_nodelay.b, px);
+% % % [Q0, R0, K_lqr2] = inverseLQR(sys_nodelay, K_temp, 'mosek'); 
+% % % % Q0 = blkdiag(Q0, zeros(Nd, Nd));
+% % % 
+% % % K_lqr2 = dlqr(sys_nodelay.a, sys_nodelay.b, Q0, R0);
+% % % sys_cl2 = SSTools.close_loop(sys_nodelay, K_lqr2);
+% % % 
+% % % figure(200); clf
+% % % pzplot(sys_cl, sys_cl2)
+% % % hold on
+% % % plot(real(px), imag(px), 's')
+
+%%
 
 figure(2); clf
 [y,t,x] = step(sys_cl, 800*Ts);
@@ -98,13 +113,13 @@ grid on
 subplot(2,1,2)
 plot(t, (x*K_lqr'))
 grid on
-
+%%
 f3 = figure(3); clf
 
 plot(real(P_x), imag(P_x), 'ob')
 hold on
 [ax, C_hand] = lqr_locus(sys_recyc, Q1, 1, S1, .001, 1000);
-%%
+
 xlim([-0.3, 1])
 ylim([-0.35, 0.35])
 C_hand.Label.String = '$R_o + \gamma$';
