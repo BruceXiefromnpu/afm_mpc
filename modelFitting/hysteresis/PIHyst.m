@@ -114,8 +114,9 @@ classdef PIHyst
       
       if (umax - k1*t1 < 0)
         delta = 0.1; % arbitrary;
+        k1_orig = k1;
         k1 = (umax - delta)/t1;
-        warning('umax -k1*t1 <0. Reseting k1 from %f to %f\n')
+        warning('umax -k1*t1 <0. Reseting k1 from %f to %f\n', k1_orig, k1)
       end
       
       k2 = k1/(umax - k1*t1);
