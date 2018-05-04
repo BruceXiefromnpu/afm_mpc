@@ -1,4 +1,4 @@
-function [Y, U, U_nominal, dU] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
+function [Y, U, U_nominal, dU, Xhat] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
 % [Y, U, dU] = sim_MPC_fp(sim_struct, ref_f)
 % 
 % Inputs
@@ -67,6 +67,7 @@ function [Y, U, U_nominal, dU] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
     w = sim_struct.w;
   else 
     r = 0;
+    w=0
   end
   
   if isfield(sim_struct, 'rp') && isfield(sim_struct, 'wp')
@@ -74,6 +75,7 @@ function [Y, U, U_nominal, dU] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
     wp = sim_struct.wp;
   else 
     rp = 0;
+    wp = 0;
   end
      
   if ~isfield(sim_struct, 'gdrift_inv')
@@ -86,6 +88,5 @@ function [Y, U, U_nominal, dU] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
   % ------------------------  RUN THE SIM ---------------------------- %
   options = simset('SrcWorkspace','current');
   sim('AFMss_fp_obshas_uk', [], options)
-
-  % provides Y, U, dU
+  % provides Y, U, dU, Xhat, U_nominal
 end

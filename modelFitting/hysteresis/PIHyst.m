@@ -74,6 +74,44 @@ classdef PIHyst
       
       
     end
+    
+       function [y, x_vec_k ] = hyst_play_sat_op(u, r, w, d,ws, y0)
+       % [y, y_vec_k ] = hyst_play_op(u, r, w, y0)
+       %
+       % Given a control vector u, PI parameters r and w and a hysteresis
+       % initial condition y0, computes the output vector y. Also computed are is
+       % the internal state sequence, x_vec_k.
+
+         n = length(r);
+         ws = ws(:);
+         w = w(:);
+         d = d(:);
+         
+         x_vec_k = zeros(length(u), length(r));
+         y = 0*u;
+         
+         x_vec_k(1, :) = y0(:)';
+         
+         for k=2:length(u)
+           uk = u(k);
+           for j = 1:length(r)
+             x_vec_k(k, j) = max(uk - r(j), min(uk+r(j), x_vec_k(k-1, j)));
+           end
+           z_k = w'*x_vec_k(k,:)';
+           Sd_vec = 0*d;
+          for i=1:length(d)
+            if d(i) == 0
+              Sd_vec(i) = z_k;
+            else
+              Sd_vec(i) = max(z_k - d(i), 0);
+            end
+          end
+%           keyboard
+          y(k) = ws'*Sd_vec;
+         end
+
+       end
+    
     function u = gen_reset_u(t1, t_final, Ts, k1, umax, omega)
     % u = gen_reset_u(t1, t_final, Ts, k1, umax, omega)
     % Generates a control u(k) that is a decaying sinusoid modulated from 0 to

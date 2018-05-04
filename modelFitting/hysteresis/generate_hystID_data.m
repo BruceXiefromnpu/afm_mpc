@@ -43,10 +43,11 @@ grid on
 reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
             'verbose', true, 'dry_run', dry_run)
 if ~dry_run
+  umax = 10;
   clear vi;
   vipath_reset = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\reset_piezo.vi';
       [e, vi] = setupVI(vipath_reset, 'Abort', 0,...
-    'umax', 10, 'TsTicks', 1600, 'u_in', u_vec);
+    'umax', umax, 'TsTicks', 1600, 'u_in', u_vec);
   vi.Run;
   stage_dat = vi.GetControlValue('stage_data_out');
 
@@ -63,6 +64,7 @@ if ~dry_run
     hystData.t_exp = t_exp;
     hystData.u_exp = u_exp;
     hystData.y_exp = yx_exp;
+    hystData.umax = umax;
     % hystData.u_reset = u_reset;
     save('hystID_data_4-30-2018_01.mat', 'hystData')
   end

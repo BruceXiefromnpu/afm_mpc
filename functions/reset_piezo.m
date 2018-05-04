@@ -1,5 +1,10 @@
 % Build the u-reset.
-function reset_piezo(varargin)
+%
+% Options
+% ----------
+%
+% t1, t_final, umax, k1, verbose, dry_run
+function [stage_data, u_reset] = reset_piezo(varargin)
 P = path();
   addpath('C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis')
 
@@ -9,6 +14,7 @@ P = path();
   p.addParameter('umax', 5);
   p.addParameter('k1', 0.45);
   p.addParameter('verbose', true);
+  p.addParameter('dry_run', false);
   
   p.parse(varargin{:});
   t1 = p.Results.t1;
@@ -16,6 +22,7 @@ P = path();
   umax = p.Results.umax;
   k1 = p.Results.k1;
   verbose = p.Results.verbose;
+  dry_run = p.Results.dry_run;
   Ts = 40e-6;
   % t1 = 10;
   % t_final = 20;
@@ -33,27 +40,26 @@ P = path();
   slewfname_out = 'hyst_reset_data_out.csv';
   slewfpath_out = fullfile(pwd, slewfname_out);
   
-  csvwrite(slewfpath_in, u_reset);
-  clear vi;
-  vipath_reset = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_nPoint_id_slew_OL_FIFO.vi'
   
-  [e, vi] = setupVI(vipath_reset, 'Abort', 0,...
-    'umax', umax+0.25, 'data_out_path', slewfpath_out,...
-    'traj_in_path', slewfpath_in, 'TsTicks', 1600);
-  vi.Run
-  if verbose
-    dat = csvread(slewfpath_out);
-    
-    u_exp = dat(:,1);
-    yx_exp = dat(:,2); % - dat(1,2);
-    t_exp = (0:length(u_exp)-1)'*Ts;
-    
-    figure(101);
-    plot(t_exp, u_exp*.68)
-    hold on
-    plot(t_exp, yx_exp)
-    grid on
-  end
+  if ~dry_run
+    clear vi;
+    vipath_reset = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\reset_piezo.vi';
+        [e, vi] = setupVI(vipath_reset, 'Abort', 0,...
+      'umax', umax+0.25, 'TsTicks', 1600, 'u_in', u_reset);
+    vi.Run;
+    stage_dat = vi.GetControlValue('stage_data_out');
 
+    if verbose
+      u_exp = stage_dat(:,1);
+      yx_exp = stage_dat(:,2); % - dat(1,2);
+      t_exp = (0:length(u_exp)-1)'*Ts;
+
+      figure(101); clf
+      plot(t_exp, u_exp)
+      hold on
+      plot(t_exp, yx_exp)
+      grid on
+    end
+  end
   path(P)
 end
