@@ -24,7 +24,23 @@ classdef PIHyst
     end
   end
   methods (Static)
-
+    function [rp, wp, dp, wsp] = invert_hyst_sat_PI(r, w, d, ws)
+      [rp, wp] = PIHyst.invert_hyst_PI(r, w);
+      d = d(:);
+      ws = ws(:);
+      wsp = ws*0;
+      dp = d*0;
+      wsp(1) = 1/ws(1);
+      
+      for i=2:length(ws)
+        s1 = sum(ws(1:i));
+        s2 = sum(ws(1:i-1));
+        wsp(i) = -ws(i)/(s1*s2);
+      end
+      for i=1:length(d)
+        dp(i) = sum( ws(1:i).*(d(i)-d(1:i)));
+      end
+    end
     function [rp, wp] = invert_hyst_PI(r, w)
     % [rp, wp] = invert_hyst_PI(r, w)
     %
@@ -57,7 +73,7 @@ classdef PIHyst
     % the internal state sequence, x_vec_k.
       
       n = length(r);
-      
+      w = w(:);
       x_vec_k = zeros(length(u), length(r));
       y = 0*u;
       
@@ -70,47 +86,61 @@ classdef PIHyst
         end
         y(k) = w'*x_vec_k(k,:)';
       end
+    end
+
+    function [y, x_vec_k ] = inverse_hyst_play_sat_op(u, rp, wp, dp,wsp, y0)
+      % [y, y_vec_k ] = hyst_play_sat_op(u, r, w, d, ws, y0)
+      %
+      % Given a control vector u, PI parameters r and w and a hysteresis
+      % initial condition y0, computes the output vector y. Also computed are is
+      % the internal state sequence, x_vec_k.
       
+      n = length(rp);
+      wsp = wsp(:);
+      wp = wp(:);
+      dp = dp(:);
       
+      x_vec_k = zeros(length(u), length(rp));
       
+      z = PIHyst.sat_op(u, dp, wsp);
+      y = PIHyst.hyst_play_op(z, rp, wp, y0);
     end
     
-       function [y, x_vec_k ] = hyst_play_sat_op(u, r, w, d,ws, y0)
-       % [y, y_vec_k ] = hyst_play_op(u, r, w, y0)
-       %
-       % Given a control vector u, PI parameters r and w and a hysteresis
-       % initial condition y0, computes the output vector y. Also computed are is
-       % the internal state sequence, x_vec_k.
-
-         n = length(r);
-         ws = ws(:);
-         w = w(:);
-         d = d(:);
-         
-         x_vec_k = zeros(length(u), length(r));
-         y = 0*u;
-         
-         x_vec_k(1, :) = y0(:)';
-         
-         for k=2:length(u)
-           uk = u(k);
-           for j = 1:length(r)
-             x_vec_k(k, j) = max(uk - r(j), min(uk+r(j), x_vec_k(k-1, j)));
-           end
-           z_k = w'*x_vec_k(k,:)';
-           Sd_vec = 0*d;
-          for i=1:length(d)
-            if d(i) == 0
-              Sd_vec(i) = z_k;
-            else
-              Sd_vec(i) = max(z_k - d(i), 0);
-            end
+    function y = sat_op(u_vec, d, ws)
+      y = u_vec*0;
+      ws = ws(:);
+      for k=1:length(u_vec)
+        u_k = u_vec(k);
+        Sd_vec = 0*d;
+        for i=1:length(d)
+          if d(i) == 0
+            Sd_vec(i) = u_k;
+          else
+            Sd_vec(i) = max(u_k - d(i), 0);
           end
-%           keyboard
-          y(k) = ws'*Sd_vec;
-         end
-
-       end
+        end
+        y(k) = ws'*Sd_vec;
+      end
+      
+    end
+  
+    
+    function [y, x_vec_k ] = hyst_play_sat_op(u, r, w, d,ws, y0)
+      % [y, y_vec_k ] = hyst_play_sat_op(u, r, w, d, ws, y0)
+      %
+      % Given a control vector u, PI parameters r and w and a hysteresis
+      % initial condition y0, computes the output vector y. Also computed are is
+      % the internal state sequence, x_vec_k.
+      
+      n = length(r);
+      ws = ws(:);
+      w = w(:);
+      d = d(:);
+      
+      x_vec_k = zeros(length(u), length(r));
+      z_k_vec = PIHyst.hyst_play_op(u, r, w, y0);
+      y = PIHyst.sat_op(z_k_vec, d, ws);
+    end
     
     function u = gen_reset_u(t1, t_final, Ts, k1, umax, omega)
     % u = gen_reset_u(t1, t_final, Ts, k1, umax, omega)

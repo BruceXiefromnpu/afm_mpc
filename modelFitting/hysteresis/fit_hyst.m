@@ -3,7 +3,8 @@
 
 clear
 
-load('hystID_data_4-30-2018_01.mat')
+% load('hystID_data_4-30-2018_01.mat')
+load('hystID_data_5-4-2018_01.mat')
 
 % To remove the vibrational and drift aspects, we need those models. Load them:
 modelFit_file = fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat');
@@ -56,16 +57,15 @@ plot(ux)
 % 
 % y_est_all = lsim(G, u_est_steps_all, tvec);
 %%
+clc
 umax = max(abs(ux));
 nw = 7;
-% r = linspace(0, umax, n);
-r = ([0:nw-1]'./(nw) )*umax
-d = [0; 4.5; 9];
+r = linspace(0,  umax, nw);
+% r = ([0:nw-1]'./(nw) )
 w = ones(nw, 1);
-% ws = 0.5*ones(2,1);
-ws = [1; 0.0001; 0.0001];
+
 G = Gvib*gdrift;
-u_hyst_fun = @(theta) PIHyst.hyst_play_sat_op(ux, r, theta(1:nw), d, theta(nw+1:end), w*0);
+u_hyst_fun = @(theta) PIHyst.hyst_play_op(ux, r, theta(1:nw), w*0);
 
 cost_hyst_only = @(theta) downsample(lsim(G, u_hyst_fun(theta),... 
                 tvec) - yx, 50); 
@@ -74,22 +74,22 @@ cost_hyst_only = @(theta) downsample(lsim(G, u_hyst_fun(theta),...
 opts = optimoptions(@lsqnonlin);
 opts.MaxFunctionEvaluations = 10000;
 opts.Display = 'iter';
-theta_0 = [w; ws];
-% theta_0 = w;
+% theta_0 = theta(1:nw);
+theta_0 = w;
 % lb = [0*w; 0*ws];
 lb = [];
 ub = [];
 theta = lsqnonlin(cost_hyst_only, theta_0, lb, ub, opts);
 
 % theta = theta_0;
-u_est_steps_all = PIHyst.hyst_play_sat_op(ux, r, theta(1:nw), d, theta(nw+1:end), w*0);
+u_est_steps_all = PIHyst.hyst_play_op(ux, r, theta(1:nw), w*0);
 
 y_est_all = lsim(G, u_est_steps_all, tvec);
 
 
 %
 %%
-figure(18); clf;
+figure(19); clf;
 h1 = plot(downsample(tvec, 50), downsample(yx, 50));
 hold on
 h2 = plot(downsample(tvec, 50), downsample(y_est_all, 50), 'r');
@@ -102,13 +102,13 @@ h2.DisplayName = 'Fit';
 legend([h1, h2])
 grid on
 
-
+title('hysteresis only (no sat operator)')
 
 
 %%
 [rp, wp] = PIHyst.invert_hyst_PI(r, theta);
-
-save('steps_hyst_model.mat', 'rp', 'wp', 'r', 'theta_hyst', 'umax', 'Gvib', 'gdrift')
+w = theta(1:nw);
+save('steps_hyst_model_nosat.mat', 'rp', 'wp', 'r', 'w', 'umax', 'Gvib', 'gdrift')
 
 
 

@@ -1,9 +1,10 @@
 clear, clc
 
-dry_run = true;
+dry_run = false;
 saveon = false;
 
 Ts = 40e-6;
+if 0
 u_max = 9;
 n_space = 8000;
 n_up = 5;
@@ -38,7 +39,19 @@ figure(1); clf
 plot(t_vec, u_vec);
 grid on
 
+save('hyst_input_data_5-4-2018.mat', 't_vec', 'u_vec')
+else
+  load('hyst_input_data_5-4-2018.mat')
+end
+whos
+figure;
+plot(t_vec, u_vec)
+hold on, grid on
+plot(U_full)
+t_vec = U_full.Time;
+u_vec = U_full.Data;
 
+%%
 
 reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
             'verbose', true, 'dry_run', dry_run)
@@ -66,7 +79,7 @@ if ~dry_run
     hystData.y_exp = yx_exp;
     hystData.umax = umax;
     % hystData.u_reset = u_reset;
-    save('hystID_data_4-30-2018_01.mat', 'hystData')
+    save('hystID_data_5-4-2018_01.mat', 'hystData')
   end
 end
 
