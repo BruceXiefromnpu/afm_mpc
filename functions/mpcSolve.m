@@ -51,7 +51,7 @@ function CheckPrms(block)
   mpcProb = block.DialogPrm(1).Data;
   ok_objs = {'sparseMPCprob', 'sparseMPCprob_OA',...
              'condensedMPCprob', 'condensedMPCprob_OA',...
-             'condensedMPCprob_QP'};
+             'condensedMPCprob_QP', 'FGMprob_fxp_1', 'FGMprob_1'};
   if ~ismember(class(mpcProb), ok_objs)
     str = sprintf(repmat('%s, ', 1, length(ok_objs)), ok_objs{:});
     error('Need one on %s data type.', str);

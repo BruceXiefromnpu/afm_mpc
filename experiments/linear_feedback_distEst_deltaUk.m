@@ -1,8 +1,8 @@
 % Implement augmented state space integral control with shift register to
 % 'estimate' the delay states.
 
-clc
-clear all
+% clc
+clear
 %  close all
 
 % Options
@@ -26,11 +26,14 @@ refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 % location of the vi which runs the experiment.
 
 % ---------- Load Parametric Models  -----------
-load(fullfile(PATHS.sysid, 'hysteresis/steps_hyst_model.mat'));
-load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
-% r = r;
-w = theta_hyst;
 
+% load(fullfile(PATHS.sysid, 'hysteresis/steps_hyst_model.mat'));
+% r = r;
+% w = theta_hyst;
+load('C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis\steps_hyst_model_withsat.mat')
+
+load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
+whos
 umax = 5;
 
 TOL = .01;
@@ -45,11 +48,9 @@ Nd = 9;
 SYS.iodelay = 0;
 SYS.InputDelay = 0;
 
-% PLANT = ss(modelFit.models.G_uz2stage);
 PLANT.InputDelay = Nd;
 PLANT = absorbDelay(PLANT);
 
-%    Nd = SYS.InputDelay;
 sys_nodelay = SYS;
 
 SYS.InputDelay = Nd;
@@ -74,30 +75,38 @@ Ns  = length(sys_obs.b);
 % We will track one setpoints. Number of samples for each setpoint is 800.
 N1    = 800;
 ref_f_1 = .5; % 1.5 to hit slew rate, 1.4 doesn't
-trajstyle = 2;
+trajstyle =3;
 if trajstyle == 1
-    N2 = 800;
-    trun = Ts*(N1 + N2);
-    ref_f_2 = 1.5; % 1.5 to hit slew rate, 1.4 doesn't
-    ref_0 = 0;
-    t1 = [0:1:N1]'*Ts;
-    t2 = [N1+1:1:N1+N2]'*Ts;
-
-    t = [t1; t2];
-    yref = [0*t1 + ref_f_1;
-            0*t2 + ref_f_2];
-    ref_traj = timeseries(yref, t);
+  N2 = 800;
+  trun = Ts*(N1 + N2);
+  ref_f_2 = 1.5; % 1.5 to hit slew rate, 1.4 doesn't
+  ref_0 = 0;
+  t1 = [0:1:N1]'*Ts;
+  t2 = [N1+1:1:N1+N2]'*Ts;
+  
+  t = [t1; t2];
+  yref = [0*t1 + ref_f_1;
+    0*t2 + ref_f_2];
+  ref_traj = timeseries(yref, t);
 elseif trajstyle == 2
-    t1 = [0:1:N1]'*Ts;
-    trun = Ts*(N1);
-    t = t1;
-    yref = [0*t1 + ref_f_1];
-    ref_0 = 0;
-    ref_traj = timeseries(yref, t);
+  t1 = [0:1:N1]'*Ts;
+  trun = Ts*(N1);
+  t = t1;
+  yref = [0*t1 + ref_f_1];
+  ref_0 = 0;
+  ref_traj = timeseries(yref, t);
 elseif trajstyle == 3
   load('many_steps.mat')
   ref_traj = ref_traj_params.ref_traj;
   ref_traj.Data = ref_traj.Data;
+  t = ref_traj.Time;
+  yref = ref_traj.Data;
+elseif trajstyle == 4
+  fname_traj = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis\hyst_input_data_5-4-2018.mat';
+  traj_dat = load(fname_traj);
+  t_vec = traj_dat.t_vec;
+  u_vec = traj_dat.u_vec;
+  ref_traj = timeseries(u_vec*dcgain(PLANT), t_vec);
   t = ref_traj.Time;
   yref = ref_traj.Data;
 end
@@ -170,19 +179,26 @@ end
 [Nx, Nu] = SSTools.getNxNu(sys_recyc);
 Nbar = K_lqr*Nx + Nu;
 gdrift_inv = 1/gdrift;
-sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max, 'PLANT', PLANT,...
+if 0
+  sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max, 'PLANT', PLANT,...
              'Nx_recyc', Nx, 'sys_obs', sys_obsDist, 'L', L_dist,...
              'r', r, 'w', w, 'rp', rp, 'wp', wp,...
              'gdrift_inv', gdrift_inv, 'gdrift', gdrift);
-
+else
+  sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max, 'PLANT', PLANT,...
+             'Nx_recyc', Nx, 'sys_obs', sys_obsDist, 'L', L_dist );
+end
 [y_linear, U_full, U_nom, dU] = sim_AFM(sim_struct, ref_traj);
 
 linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', ref_f_1,...
                       'controller', K_lqr, 'name',  'Simulation');
 
 sim_exp = stepExp(y_linear, U_full, linOpts);
+%
+% save(fname_traj, 't_vec', 'u_vec', 'U_full', 'y_linear', 'U_nom');
 
-F1 = figure(59); clf
+
+F1 = figure(56); clf
 H1 = plot(sim_exp, F1);
 subplot(2,1,1)
 plot(ref_traj.time, ref_traj.Data, '--k', 'LineWidth', .05);
@@ -198,17 +214,11 @@ plot(U_full.Time(1:end-1), diff(U_full.Data), '--r')
 %%
 %----------------------------------------------------
 % Build the u-reset.
-% addpath('C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis')
-% t1 = 10;
-% t_final = 20;
-% umax = 5;
-% k1 = 0.45;
-% u_reset = PIHyst.gen_reset_u(t1, t_final, Ts, k1, umax);
-% figure(100)
-% plot(u_reset)
-% grid on
 if 1
-  reset_piezo();
+  dry_run = false;
+  reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
+            'verbose', true, 'dry_run', dry_run)
+%   reset_piezo();
 end
 %%
 % Save the controller to .csv file for implementation
@@ -219,7 +229,7 @@ SettleTicks = 20000;
 Iters = length(yref)-1;
 
 Iters = min(Iters, length(yref)-1);
-
+% Iters = 3000;
 
 % creat and pack data. Then save it.
 tt = t;
@@ -239,8 +249,9 @@ clear vi;
 % -----------------------RUN THE Experiment--------------------------------
 vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFMss_fp_distEst_deltaUk.vi';
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
-   'num', num, 'den', den, 'TF Order', (length(den)-1),...
-    'r_s', rp, 'w-s', wp,'N_hyst', 7, 'du_max', du_max,...
+   'num', num, 'den', den, 'TF Order', 0*(length(den)-1),...
+    'r_s', rp, 'w-s', wp,'N_hyst', 7*0,...
+    'N_sat', length(dp)*0, 'd_s', dp, 'wsat_s', wsp, 'du_max', du_max,...
             'umax', 7, 'ymax', 5, 'outputData BOTH', dataOut_path,...
             'reference traj path', refTrajPath, 'control_data_path', controlDataPath);
 vi.Run
@@ -264,3 +275,22 @@ ylabel('current [mA]')
 grid on
 title('Current')
 %%
+save('many_steps_data/many_steps_noinvert.mat', 'y_exp', 'u_exp', 'I_exp', 'wp', 'rp')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

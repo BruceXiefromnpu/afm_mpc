@@ -1,4 +1,4 @@
-function [Y, U, U_nominal, dU, Xhat] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
+function [Y, U, U_nominal, dU, Xhat, Xerr] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
 % [Y, U, dU] = sim_MPC_fp(sim_struct, ref_f)
 % 
 % Inputs
@@ -27,21 +27,26 @@ function [Y, U, U_nominal, dU, Xhat] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
 %#ok<*NASGU>
   VSS_LINEAR_CONTROL=Simulink.Variant('VSS_CONTROL_MODE==1');
   VSS_MPC_CONTROL=Simulink.Variant('VSS_CONTROL_MODE == 2');
-    
+  fprintf('-----------------------\n');  
   % Expose the sim struct to simulink.
-  if isfield(sim_struct, 'mpcProb1')
-    mpcProb1 = sim_struct.mpcProb1;
-    VSS_CONTROL_MODE='mpc';
+  if isfield(sim_struct, 'mpcProb')
+    mpcProb1 = sim_struct.mpcProb;
+    VSS_CONTROL_MODE=2;
+    % keyboard
+    mpcProb1.reset_warm_start_data();
+    fprintf('simulating as MPC\n')
   else
-    VSS_CONTROL_MODE='linear';
-  end  
+    VSS_CONTROL_MODE=1;
+    fprintf('simulating as LINEAR\n');
+  end
   PLANT = sim_struct.PLANT;
   trun = ref_traj.Time(end);
-  
+  Ts = PLANT.Ts;
+  %trun = 5*Ts;
   x0 = SSTools.getNxNu(PLANT)*0;
   uss_0 = 0;
   
-  Ts = PLANT.Ts;
+  
   
   sim_struct.x0_obs = sim_struct.sys_obs.b*0;
   [ ndist, Ns_obs] = size(sim_struct.sys_obs.c);
@@ -67,7 +72,7 @@ function [Y, U, U_nominal, dU, Xhat] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
     w = sim_struct.w;
   else 
     r = 0;
-    w=0
+    w = 0;
   end
   
   if isfield(sim_struct, 'rp') && isfield(sim_struct, 'wp')
@@ -87,6 +92,17 @@ function [Y, U, U_nominal, dU, Xhat] = sim_AFM(sim_struct, ref_traj) %#ok<STOUT>
   
   % ------------------------  RUN THE SIM ---------------------------- %
   options = simset('SrcWorkspace','current');
-  sim('AFMss_fp_obshas_uk', [], options)
+  if ~sim_struct.isfxp
+    fprintf('simulating as floating-point\n');
+    sim('AFMss_fp_obshas_uk', [], options)
+  else
+    % Turn off warning about fxp states not getting logged.
+    fprintf('simulating as FIXED-point\n');
+    nw = sim_struct.nw;
+    nf = sim_struct.nf;
+    id = 'Simulink:Engine:BlkIgnoringUsedAsDStateFlag';
+    warning('off', id);
+    sim('FXP_AFMss_obshas_uk', [], options)
+  end
   % provides Y, U, dU, Xhat, U_nominal
 end

@@ -25,7 +25,12 @@ classdef PATHS
 
             PATH = fullfile(getMatPath, 'afm_mpc_journal');
         end
-        
+        function [ PATH ] = labview()
+            % PATH constant to where all experimental data is stored for the 
+            % MPC journal paper.
+
+            PATH = fullfile(PATHS.MPCJ_root, 'labview');
+        end
         function [ PATH ] = sim_models()
             % PATH constant to where all experimental data is stored for the
             % MPC journal paper.
