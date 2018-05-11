@@ -9,6 +9,7 @@ classdef SimAFM
     du_max;
     x0_obs;
     x0;
+    sys_obs_fp;
     
     thenoise;
     step_amp; % disturbance
@@ -28,6 +29,11 @@ classdef SimAFM
   methods
     
     function self = SimAFM(PLANT, controller, Nx, sys_obs, L, du_max, isfxp, varargin)
+    % SimAFM(PLANT, controller, Nx, sys_obs, L, du_max, isfxp, varargin)  
+    % varargin is name-value pairs of 
+    % 'thenoise', 'step_amp', 'r', 'w', 'rp', 'wp', 'gdrift',
+    % 'gdrift_inv', 'nw', 'nf'.
+      
       self.PLANT = PLANT;
       self.controller = controller;
       self.Nx = Nx;
@@ -140,8 +146,6 @@ classdef SimAFM
 
       r = sim_obj.r;
       w = sim_obj.w;
-      r = 0;
-      w = 0;
       
       rp = sim_obj.rp;
       wp = sim_obj.wp;
@@ -177,14 +181,20 @@ classdef SimAFM
     end
    
     function write_control_data(self, data_path, ref, varargin)
+    % write_control_data(self, data_path, ref, varargin)
+      
       if ~isnumeric(ref)
         ref_traj_path = varargin{1};
         ref_f_1 = 0;
+        fid = fopen(ref_traj_path, 'w+');
+        fprintf(fid, '%.12f, ', ref.Data(:)'); % as a row.
+        fprintf(fid, '\n');
+        fclose(fid);
       else
         ref_f_1 = ref(1);
       end
 
-      Ns = size(self.sys_obs.b,1) - size(self.sys_obs.c,2);
+      Ns = size(self.sys_obs.b,1) - size(self.sys_obs.c,1);
       Ns_mpc = Ns + size(self.sys_obs.b,2);
       umax = 0;
       
@@ -193,30 +203,40 @@ classdef SimAFM
       
       
       if isnumeric(self.controller)
-        MPC_MAT = [];
+        MPC_mat = [];
         fprintf(fid, '0, 0, 0, 0\n');
       else
         % Should I make the FGMProb class do this??
         Nmpc = self.controller.N_mpc;
         I_HL = self.controller.I_HL;
         ML = self.controller.ML;
-        MPC_MAT = [double(I_HL), zeros(Nmpc,2), double(ML), zeros(Nmpc, 2)];
+        MPC_mat = [double(I_HL), zeros(Nmpc,2), double(ML), zeros(Nmpc, 2)];
         K = zeros(size(ML,2),1);
         
-        fprintf(fid, '%.12f, %d, %d, %d\n', double(self.controller.beta),...
+        fprintf(fid, '%.12f, %f, %f, %f\n', double(self.controller.beta),...
                 self.controller.maxIter, self.controller.N_mpc, Ns_mpc);
       end
       
+      if isempty(self.sys_obs_fp)
+        error(['to write the controller data, set property ' ...
+               'sys_obs_fp'])
+      end
+      
+      AllMatrix = packMatrixDistEst(self.sys_obs_fp,...
+                                    double(self.L), double(K), double(self.Nx));
+      % keyboard
       % These get written all as one column
       for k=1:size(AllMatrix,1)
         fprintf(fid, '%.12f, ', AllMatrix(k,:));
       end
-
-      for k=1:size(MPCMatrix, 1)
-        fprintf(fid, '%.12f, ', MPCMatrix(k,:));  
+      fprintf('\n');
+      for k=1:size(MPC_mat, 1)
+        fprintf(fid, '%.12f, ', MPC_mat(k,:));  
       end
       fprintf(fid, '\n');
       fclose(fid);
+      
+      
       
       
     end % write control data

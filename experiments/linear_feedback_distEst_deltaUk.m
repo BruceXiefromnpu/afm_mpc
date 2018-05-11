@@ -179,28 +179,28 @@ end
 [Nx, Nu] = SSTools.getNxNu(sys_recyc);
 Nbar = K_lqr*Nx + Nu;
 gdrift_inv = 1/gdrift;
-if 0
-  sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max, 'PLANT', PLANT,...
-             'Nx_recyc', Nx, 'sys_obs', sys_obsDist, 'L', L_dist,...
-             'r', r, 'w', w, 'rp', rp, 'wp', wp,...
-             'gdrift_inv', gdrift_inv, 'gdrift', gdrift);
-else
-  sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max, 'PLANT', PLANT,...
-             'Nx_recyc', Nx, 'sys_obs', sys_obsDist, 'L', L_dist );
+sims_fp = SimAFM(PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false);
+if 1
+  sims_fp.r = r;
+  sims_fp.w = w;
+  sims_fp.rp = rp;
+  sims_fp.wp = wp;
+  sims_fp.gdrift_inv = gdrift_inv;
+  sims_fp.gdrift = gdrift;
 end
-[y_linear, U_full, U_nom, dU] = sim_AFM(sim_struct, ref_traj);
+[y_linear, U_full, U_nom, dU] = sims_fp.sim(ref_traj);
 
 linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', ref_f_1,...
                       'controller', K_lqr, 'name',  'Simulation');
 
-sim_exp = stepExp(y_linear, U_full, linOpts);
-%
+sim_exp = stepExpDu(y_linear, U_full, dU, linOpts);
+
 % save(fname_traj, 't_vec', 'u_vec', 'U_full', 'y_linear', 'U_nom');
 
 
 F1 = figure(56); clf
-H1 = plot(sim_exp, F1);
-subplot(2,1,1)
+H1 = plot(sim_exp, F1, 'umode', 'both');
+subplot(3,1,1)
 plot(ref_traj.time, ref_traj.Data, '--k', 'LineWidth', .05);
 xlm = xlim();
 
@@ -229,7 +229,7 @@ SettleTicks = 20000;
 Iters = length(yref)-1;
 
 Iters = min(Iters, length(yref)-1);
-% Iters = 3000;
+Iters = 900;
 
 % creat and pack data. Then save it.
 tt = t;
