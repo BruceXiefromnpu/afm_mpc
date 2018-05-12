@@ -27,6 +27,7 @@ refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 
 % ---------- Load Parametric Models  -----------
 load(fullfile(PATHS.sysid, 'hysteresis/steps_hyst_model.mat'));
+% load('C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis\steps_hyst_model_withsat.mat')
 load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
 % r = r;
 w = theta_hyst;
@@ -45,8 +46,9 @@ elseif md == 2
   PLANT = ss(Gvib);
   SYS = ss(Gvib);
 elseif md == 3
-  [Gvib, gdrift] = eject_gdrift(modelFit.models.G_uz2stage);
-  PLANT = ss(modelFit.models.G_uz2stage);
+%   [Gvib, ] = eject_gdrift(modelFit.models.G_uz2stage);
+%   PLANT = ss(modelFit.models.G_uz2stage);
+  PLANT = ss(Gvib);
   SYS = ss(Gvib);
 else
   error('choose mode')
@@ -90,7 +92,7 @@ Ns  = length(sys_obs.b);
 
 % We will track one setpoints. Number of samples for each setpoint is 800.
 N1    = 800;
-ref_f_1 = 6; % 1.5 to hit slew rate, 1.4 doesn't
+ref_f_1 = 1; % 1.5 to hit slew rate, 1.4 doesn't
 trajstyle = 2;
 if trajstyle == 1
     N2 = 800;
@@ -200,15 +202,21 @@ end
 
 % 2). Design FeedForward gains.
 [Nx, Nu] = SSTools.getNxNu(sys_recyc);
-% Nbar = K_lqr*Nx + Nu;
 gdrift_inv = 1/gdrift;
-sims_lin_fp = SimAFM(PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false);
-% sim_struct = struct('K_lqr', K_lqr, 'du_max', du_max, 'PLANT', PLANT,...
-%              'Nx_recyc', Nx, 'sys_obs', sys_obsDist, 'L', L_dist, 'isfxp', false);
+sims_fpl = SimAFM(PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false);
+if 1
+  sims_fpl.r = r;
+  sims_fpl.w = w;
+%   sims_fpl.rp = rp*0;
+%   sims_fpl.wp = wp*0;
+  sims_fpl.gdrift_inv = gdrift_inv;
+  sims_fpl.gdrift = gdrift;
+end
+
              
-%%
-clc
-[y_linear, U_full, ~, dU, Xhat_fp] = sims_lin_fp.sim(ref_traj);
+
+
+[y_linear, U_full, ~, dU, Xhat_fp] = sims_fpl.sim(ref_traj);
 % sim_AFM(sim_struct, ref_traj);
 ts_lfp = settle_time(y_linear.Time(1:800), y_linear.Data(1:800), ref_f_1, TOL*ref_f_1);
 fprintf('linear fp settle-time = %.3f [ms]\n', ts_lfp*1000);
@@ -227,7 +235,7 @@ plot(ref_traj.time, ref_traj.Data, '--k', 'LineWidth', .05);
 
 F61 = figure(61); clf
 plotState(Xhat_fp, F61);
-
+%%
 
 A_obs_cl = sys_obsDist.a - L_dist*sys_obsDist.c;
 fprintf('A_cl needs n_int = %d\n', ceil(log2(max(max(abs(A_obs_cl))))) + 1)
@@ -250,6 +258,15 @@ sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
 
 sims_fxpl = SimAFM(PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
   true, 'nw', nw, 'nf', nf);
+if 1
+  sims_fxpl.r = r;
+  sims_fxpl.w = w;
+  sims_fxpl.rp = rp;
+  sims_fxpl.wp = wp;
+%   sims_fxpl.gdrift_inv = gdrift_inv;
+sims_fxpl.gdrift_inv = g2;
+  sims_fxpl.gdrift = gdrift;
+end
 
 
 [y_fxpl, ~, U_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(ref_traj);
@@ -263,7 +280,7 @@ plotState(Xhat_fxpl, F61, [], [], '--');
 fprintf('max of Xhat = %.2f\n', max(abs(Xhat_fxpl.Data(:))));
 fprintf('max of M*Xhat = %.2f\n', max(max(abs(ML_x0*Xhat_fxpl.Data'))));
 
-
+%%
 nw_fgm = 32;
 nf_fgm = 28;
 fgm_fp = FGMprob_1(sys_recyc, N_mpc, Q1, Qp, R1, S1, du_max, maxIter);
@@ -286,45 +303,83 @@ plot(sim_exp_fxpm, F1, 'umode', 'both');
 ts_mfxp = settle_time(y_fxpm.Time(1:800), y_fxpm.Data(1:800), ref_f_1, TOL*ref_f_1);
 fprintf('mpc fp settle-time = %.3f [ms]\n', ts_mfxp*1000);
 %%
+clc
+sims_fxpm.sys_obs_fp = sys_obsDist;
+sims_fxpm.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 
-MPCMatrix = [I_H_mpc, zeros(12,2), ML_x0, zeros(12, 2)];
-AllMatrix = packMatrixDistEstMPC_singleAxis(sim_struct_fxpl.sys_obs, L_dist, Nx);
-
-fl = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\data\MPCControls01.csv';
-fid = fopen(fl, 'w+');
-Ns_mpc = Ns+1;
-
-fprintf(fid, '%d, %.5f, 0, %f, %.12f\n', Ns, ref_f_1, umax, du_max);
-fprintf(fid, '%.12f, %d, %d, %d\n', beta, maxIter, N_mpc, Ns_mpc);
-
-for k=1:size(AllMatrix,1)
-  fprintf(fid, '%.12f, ', AllMatrix(k,:));
-end
-
-for k=1:size(MPCMatrix, 1)
-  fprintf(fid, '%.12f, ', MPCMatrix(k,:));  
-end
-fprintf(fid, '\n');
-fclose(fid);
-
+mpc_dat_path = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\data\MPCControls01.csv';
+traj_path = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\data\traj_data.csv';
+sims_fxpm.write_control_data(mpc_dat_path, ref_traj, traj_path)
 
 
 %%
 %----------------------------------------------------
 % Build the u-reset.
 % addpath('C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis')
-% t1 = 10;
-% t_final = 20;
-% umax = 5;
-% k1 = 0.45;
-% u_reset = PIHyst.gen_reset_u(t1, t_final, Ts, k1, umax);
-% figure(100)
-% plot(u_reset)
-% grid on
 if 1
   reset_piezo();
 end
 %%
+% Save the controller to .csv file for implementation
+% delay before we start tracking, to let any transients out. Somewhere of a
+% debugging setting.
+SettleTicks = 20000;
+Iters = 600;
+Iters = min(Iters, length(yref)-1);
+
+% create and pack data. Then save it.
+
+[num, den] = tfdata(g2);
+num = num{1};
+den = den{1};
+
+umax = 3;
+
+clear e;
+clear vi;
+% -----------------------RUN THE Experiment--------------------------------
+vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\fixed-point-host\play_FXP_AFMss_MPC_distEst_singleAxis.vi';
+% [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
+%    'num', num, 'den', den, 'TF Order', (length(den)-1),...
+%     'r_s', rp, 'w-s', wp,'N_hyst', 7, 'du_max', du_max,...
+%             'umax', 7, 'ymax', 5, 'outputData BOTH', dataOut_path,...
+%             'reference traj path', refTrajPath, 'control_data_path', controlDataPath);
+[e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
+          'num', num, 'den', den, 'TF Order', 0*(length(den)-1),...
+          'r_s', rp, 'w-s', wp,'N_hyst', 7, 'dry_run', 0,...
+            'umax', umax, 'ymax', 2, 'outputDataPath', dataOut_path,...
+            'traj_path', traj_path, 'control_data_path', mpc_dat_path);
+vi.Run
+
+% Now, read in data, and save to structure, and plot.
+AFMdata = csvread(dataOut_path);
+% [y_exp, u_exp, I_exp, xhat_exp] = unpackExpData_nod(AFMdata, Ts);
+  
+t_exp = (0:size(AFMdata,1)-1)'*Ts;
+y_exp      = timeseries(AFMdata(:,1), t_exp);
+
+u_exp      = timeseries(AFMdata(:, 2), t_exp);
+du_exp      = timeseries(AFMdata(:,3), t_exp);
+
+% Pull out observer state data.    
+xhat_exp = timeseries(AFMdata(:,4:end), t_exp)
+
+yy = xhat_exp.Data*sys_obsDist.c';
+expOpts = stepExpOpts(linOpts, 'pstyle', '--m', 'name',  'AFM Stage (MPC)');
+
+afm_exp = stepExpDu(y_exp, u_exp, du_exp, expOpts);
+H2 = plot(afm_exp, F1, 'umode', 'both');
+subplot(3,1,1)
+plot(y_exp.Time, yy, ':k')
+
+figure(1000); clf
+plot(du_exp.Time, (du_exp.Data/15)*1000)
+ylabel('current [mA]')
+grid on
+title('Current')
+
+%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Save the controller to .csv file for implementation
 clear vi; clear e;
 % delay before we start tracking, to let any transients out. Somewhere of a
@@ -332,7 +387,7 @@ clear vi; clear e;
 SettleTicks = 20000;
 Iters = length(yref)-1;
 
-Iters = 600;
+Iters = 60;
 Iters = min(Iters, length(yref)-1);
 
 
@@ -367,7 +422,7 @@ vi.Run
 %
 % Now, read in data, and save to structure, and plot.
 AFMdata = csvread(dataOut_path);
-[y_exp, u_exp, I_exp, xhat_exp] = unpackExpData_nod(AFMdata, Ts);
+[y_exp, u_exp, du_exp, xhat_exp] = unpackExpData_nod(AFMdata, Ts);
 yy = xhat_exp.Data*sys_obsDist.c';
 
 expOpts = stepExpOpts(linOpts, 'pstyle', '--g', 'name',  'AFM Stage');
@@ -381,7 +436,7 @@ subplot(2,1,1)
 plot(y_exp.Time, yy, 'k:')
 
 figure(1000); clf
-plot(I_exp.Time, (I_exp.Data/15)*1000)
+plot(du_exp.Time, (du_exp.Data/15)*1000)
 ylabel('current [mA]')
 grid on
 title('Current')
