@@ -1,6 +1,6 @@
 %%
 
-n_space = 800;
+n_space = 1600;
 N_repeat = 3;
 imps = [ 1, 2.5,-2,1.25, -2, 1, -3, -.5]';
 imps = [imps; -sum(imps)];
@@ -25,4 +25,6 @@ clc
 ref_traj_params.ref_traj = timeseries(u_vec(:), t_vec(:));
 ref_traj_params.impulse_idx = impulse_idx;
 ref_traj_params.ref_s = ref_s;
-save('many_steps.mat', 'ref_traj_params' )
+save('many_steps_longts.mat', 'ref_traj_params' )
+
+

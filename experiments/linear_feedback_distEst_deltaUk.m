@@ -27,10 +27,10 @@ refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 
 % ---------- Load Parametric Models  -----------
 
-% load(fullfile(PATHS.sysid, 'hysteresis/steps_hyst_model.mat'));
-% r = r;
-% w = theta_hyst;
-load('C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis\steps_hyst_model_withsat.mat')
+load(fullfile(PATHS.sysid, 'hysteresis/steps_hyst_model.mat'));
+r = r;
+w = theta_hyst;
+% load('C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis\steps_hyst_model_withsat.mat')
 
 load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
 whos
@@ -39,10 +39,10 @@ umax = 5;
 TOL = .01;
 
 %%
-% SYS = ss(Gvib);
-% PLANT = ss(Gvib);
-PLANT = ss(modelFit.models.G_uz2stage);
-SYS = ss(modelFit.models.G_uz2stage);
+SYS = ss(Gvib);
+PLANT = ss(Gvib);
+% PLANT = ss(modelFit.models.G_uz2stage);
+% SYS = ss(modelFit.models.G_uz2stage);
 
 Nd = 9;
 SYS.iodelay = 0;
@@ -140,11 +140,11 @@ sys_recyc=SSTools.deltaUkSys(SYS);
 
 P_x  = getCharDes(sys_recyc, gams_x, pint, zeta_x, rhos_x, rad);
 [Chat, Dhat] = place_zeros(sys_recyc, P_x);
-gam = 1;
+% gam = 1;
 Q1 = Chat'*Chat;
 S1 = Chat'*Dhat;
-R1 = Dhat'*Dhat + gam; % Plus gamma.
-
+% R1 = Dhat'*Dhat + gam; % Plus gamma.
+R1 = 4; % From max_sp experiments, for rmax=10...
 K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R1, S1);
 sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
 
@@ -197,7 +197,7 @@ sim_exp = stepExpDu(y_linear, U_full, dU, linOpts);
 
 % save(fname_traj, 't_vec', 'u_vec', 'U_full', 'y_linear', 'U_nom');
 
-
+%
 F1 = figure(56); clf
 H1 = plot(sim_exp, F1, 'umode', 'both');
 subplot(3,1,1)
@@ -229,7 +229,7 @@ SettleTicks = 20000;
 Iters = length(yref)-1;
 
 Iters = min(Iters, length(yref)-1);
-Iters = 900;
+Iters = length(yref)-1;
 
 % creat and pack data. Then save it.
 tt = t;
@@ -248,12 +248,22 @@ clear e;
 clear vi;
 % -----------------------RUN THE Experiment--------------------------------
 vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFMss_fp_distEst_deltaUk.vi';
+md = 2;
+if md == 1
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
-   'num', num, 'den', den, 'TF Order', 0*(length(den)-1),...
-    'r_s', rp, 'w-s', wp,'N_hyst', 7*0,...
-    'N_sat', length(dp)*0, 'd_s', dp, 'wsat_s', wsp, 'du_max', du_max,...
+   'num', num, 'den', den, 'TF Order', (length(den)-1),...
+    'r_s', rp, 'w-s', wp,'N_hyst', 7,...
+    'N_sat', length(dp), 'd_s', dp, 'wsat_s', wsp, 'du_max', du_max,...
             'umax', 7, 'ymax', 5, 'outputData BOTH', dataOut_path,...
             'reference traj path', refTrajPath, 'control_data_path', controlDataPath);
+elseif md == 2
+[e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
+   'num', num, 'den', den, 'TF Order', (length(den)-1),...
+    'r_s', rp, 'w-s', wp,'N_hyst', 7,...
+    'N_sat', 0, 'du_max', du_max,...
+            'umax', 7, 'ymax', 5, 'outputData BOTH', dataOut_path,...
+            'reference traj path', refTrajPath, 'control_data_path', controlDataPath);
+end          
 vi.Run
 % -------------------------------------------------------------------------
 %
@@ -261,12 +271,13 @@ vi.Run
 AFMdata = csvread(dataOut_path);
 [y_exp, u_exp, I_exp, xhat_exp] = unpackExpData_nod(AFMdata, Ts);
 yy = xhat_exp.Data*sys_obsDist.c';
+du = u_exp; du.Data = du.Data*0;
 
 expOpts = stepExpOpts(linOpts, 'pstyle', '--g', 'name',  'AFM Stage');
 
-afm_exp = stepExp(y_exp, u_exp, expOpts);
-H2 = plot(afm_exp, F1);
-subplot(2,1,1)
+afm_exp = stepExpDu(y_exp, u_exp, du, expOpts);
+H2 = plot(afm_exp, F1, 'umode', 'both');
+subplot(3,1,1)
 plot(y_exp.Time, yy, 'k:')
 
 figure(1000); clf
@@ -275,8 +286,9 @@ ylabel('current [mA]')
 grid on
 title('Current')
 %%
-save('many_steps_data/many_steps_noinvert.mat', 'y_exp', 'u_exp', 'I_exp', 'wp', 'rp')
-
+if md == 2
+save('many_steps_data/many_steps_hyst_nosat_R4.mat', 'y_exp', 'u_exp', 'I_exp', 'wp', 'rp')
+end
 
 
 

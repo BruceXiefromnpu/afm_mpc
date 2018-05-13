@@ -106,10 +106,11 @@ classdef stepExpDu
       p.addParameter('yunits_scaled', obj.yunits);
       p.addParameter('lineWidth', 1);
       p.addParameter('umode', 'both');
-      if length(varargin)>= 1
-        if isgraphics(varargin{1},'figure')
-          F1 = varargin{1};
-          varargin(1) = [];
+      if length(varargin)>= 1 && isa(varargin{1}, 'matlab.ui.Figure')
+        tmp = varargin{1};
+        varargin(1) = [];
+        if  isvalid(tmp)
+          F1 = tmp;
         else
           F1 = figure;
         end
