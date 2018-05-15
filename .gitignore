@@ -6,4 +6,48 @@ notes.tex
 FPGA\ Bitfiles/
 sandbox/
 manystepsdata.tex
+.directory/
+
+
+
+# figure or data folders
+fig-figs/
+experiments/figures/
+figures/
+data/
+
+# *.mat
+*.pdf
+*.eps
+*.svg
+*.fig
+
+
+# Latex ignores
+*.blg
+*.aux
+*.out
+*.prv
+*.toc
+*.synctex.gz
+auto/
+*.log
+*.bbl
+*#
+
+# simulink backups
+*.r2016b
+
+
+# Gtags ignores
+GPATH
+GTAGS
+GRTAGS
+
+# emacs ignores
+ltximg/
+*~
+
+#vim ignores
+*.swp
 
