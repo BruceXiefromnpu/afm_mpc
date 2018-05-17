@@ -59,6 +59,7 @@ classdef StepData
             if isfield(tmp_self_params, 'Q')
                 if ~isfield(params_other, 'Q')
                     status = 0;
+                    self.logger('Matrix Q does not exist!')
                     return
                 end
                 Qstatus = isMatrixAlmostEqual(self.params.Q, params_other.Q);
@@ -92,6 +93,10 @@ function status = isMatrixAlmostEqual(A, B, varargin)
         tol = varargin{1}
     else
         tol =0.001;
+    end
+    if (size(A,1) ~= size(B,1) ) || ( size(A,2) ~= size(B,2) )
+      status = 0;
+      return
     end
     q = A-B;
     maxq = max(max(abs(q)));
