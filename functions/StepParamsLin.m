@@ -30,6 +30,7 @@ classdef StepParamsLin
       end % end contstructor
       
       function [Y, U, dU] =  sim(self, ref, gam, figs)
+        %[Y, U, dU] =  sim(self, ref, gam, figs)
         %           Qp = dare(self.sys.a, self.sys.b, self.Q, gam);
         %           mpcProb1 = condensedMPCprob(self.sys, 2, self.Q, Qp, 100);
         K = dlqr(self.sys.a, self.sys.b, self.Q, gam, self.S);
@@ -43,15 +44,19 @@ classdef StepParamsLin
           else
             figure()
           end
-          plot(Y)
-          ylabel('y(k')
+          plot(Y.Time, Y.Data)
+          grid on
+          ylabel('y(k)')
+          xlabel('time [s]')
           if isvalid(figs(2))
             change_current_figure(figs(2));
           else
             figure()
           end
-          plot(dU)
+          plot(dU.Time, dU.Data)
           ylabel('$\Delta u(k)$')
+          grid on
+          xlabel('time [s]')
         end
       end
         
