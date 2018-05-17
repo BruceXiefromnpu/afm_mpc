@@ -2,9 +2,11 @@
 % Gvib and drift model fit in fit_drift.m
 
 clear
-
+clc
 % load('hystID_data_4-30-2018_01.mat')
-load('hystID_data_5-4-2018_01.mat')
+hyst_file = 'hystID_data_5-4-2018_01.mat';
+hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
+load(hyst_path)
 
 % To remove the vibrational and drift aspects, we need those models. Load them:
 modelFit_file = fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat');
@@ -20,9 +22,18 @@ yx = hystData.y_exp - mean(hystData.y_exp(1:500));
 tvec = hystData.t_exp;
 
 % ux = downsample(ux, 50);
-figure
-plot(ux)
-
+f1 = figure(1); clf
+h1 = plot(tvec, ux*dcgain(Gvib*gdrift), ':k');
+h1.DisplayName = 'u(k)*$G_d(0) G_{vib}(0)$';
+hold on
+h2 = plot(tvec, yx, 'k');
+h2.DisplayName = 'Stage Response';
+grid on
+xlim([tvec(1), tvec(end)])
+leg1 = legend([h1, h2]);
+leg1.Location = 'NorthEast';
+xlabel('time [s]')
+saveas(f1, fullfile(PATHS.jfig, 'hyst_response_ol.svg'))
 % %%
 % 
 % umax = max(abs(ux));
