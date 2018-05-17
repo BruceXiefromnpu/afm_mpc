@@ -22,24 +22,23 @@ expName           = 'FRF_data_current_stage2';
 modFitName    = [expName, '.mat'];
 modFitPath    = fullfile(dataroot, modFitName);
 load(modFitPath, 'modelFit')
+
 sys = ss(modelFit.models.G_uz2stage);
-
-% dataroot          = fullfile(matpath, 'AFM_SS', 'System_Identification', 'data','data_xaxis');
-% expName           = '22-Jun-2016_exp01';
-% modFitName    = [expName, '.mat'];
-% modFitPath    = fullfile(dataroot, modFitName);
-% load(modFitPath, 'modelFit')
-% sys = ltiFit(modFitPath, 'SS02').sys;
-
-
-sys.Inputdelay = 8;
-Nd =  sys.InputDelay;
-sys_nodelay = sys;
-sys_nodelay.InputDelay = 0;
-
-sys = absorbDelay(sys);
 Ts = sys.Ts;
-PLANT = sys;
+
+Nd = 8;
+sys.InputDelay = 0;
+[Gvib_nodelay, gdrift] = eject_gdrift(sys);
+
+Gvib = Gvib_nodelay;
+Gvib.InputDelay = Nd;
+Gvib = absorbDelay(Gvib);
+
+PLANT = Gvib;
+
+sys_recyc=SSTools.deltaUkSys(Gvib);
+sys_recyc_nodelay = SSTools.deltaUkSys(Gvib_nodelay);
+
 
 
 volts2mu = 1;
@@ -66,17 +65,13 @@ rho_1 = wz_real_x(1)/wp_real_x(1);
 rhos_x = [rho_1, 1., 1];
 pint_x = .8;
 
-zeta_x = [.8, .7, .4, .4 .4];
+zeta_x = [.8, .7, .4, .4 .4 ];
 gams_x = [1., 1., 1., 1., 1];
 
 rad = 0.25;
 
 
-[Gvib, gdrift] = eject_gdrift(sys_nodelay);
-Gvib = ss(Gvib);
-sys_recyc=SSTools.deltaUkSys(Gvib);
-sys_recyc.InputDelay = Nd;
-sys_recyc = absorbDelay(sys_recyc);
+
 
 P_x    = getCharDes(sys_recyc, gams_x, pint_x, zeta_x, rhos_x, rad);
 [Chat, Dhat] = place_zeros(sys_recyc, P_x);
@@ -102,7 +97,7 @@ sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
 % % % hold on
 % % % plot(real(px), imag(px), 's')
 
-%%
+%
 
 figure(2); clf
 [y,t,x] = step(sys_cl, 800*Ts);
@@ -113,34 +108,34 @@ grid on
 subplot(2,1,2)
 plot(t, (x*K_lqr'))
 grid on
+if 0
+  f3 = figure(3); clf
 
-f3 = figure(3); clf
+  plot(real(P_x), imag(P_x), 'ob')
+  hold on
+  [ax, C_hand] = lqr_locus(sys_recyc, Q1, 1, S1, .001, 1000);
+  C_hand.Label.Interpreter = 'latex';
+  C_hand.Label.FontSize = 14;
+  C_hand.Location = 'eastoutside';
+  C_hand.Position = [0.8406    0.1121    0.0473    0.8715];
+  ax.Position =  [0.0862 0.1123 0.7369 0.8713];
+  C_hand.Label.String = '$\gamma$';
+  C_hand.Label.Units = 'normalized';
+  C_hand.Label.Rotation = 0;
+  C_hand.Label.Position = [2.5214    0.5549         0];
 
-plot(real(P_x), imag(P_x), 'ob')
-hold on
-[ax, C_hand] = lqr_locus(sys_recyc, Q1, 1, S1, .001, 1000);
-C_hand.Label.Interpreter = 'latex';
-C_hand.Label.FontSize = 14;
-C_hand.Location = 'eastoutside';
-C_hand.Position = [0.8406    0.1121    0.0473    0.8715];
-ax.Position =  [0.0862 0.1123 0.7369 0.8713];
-C_hand.Label.String = '$\gamma$';
-C_hand.Label.Units = 'normalized';
-C_hand.Label.Rotation = 0;
-C_hand.Label.Position = [2.5214    0.5549         0];
+  xlim([-0.3, 1])
+  ylim([-0.35, 0.35])
+  % C_hand.Label.String = '$R_o + \gamma$';
 
-xlim([-0.3, 1])
-ylim([-0.35, 0.35])
-% C_hand.Label.String = '$R_o + \gamma$';
-
-xlabel('Re')
-ylabel('Im')
+  xlabel('Re')
+  ylabel('Im')
 
 
-if 1
-  saveas(f3, fullfile(PATHS.jfig, 'lqr_locus.svg'))
+  if 1
+    saveas(f3, fullfile(PATHS.jfig, 'lqr_locus.svg'))
+  end
 end
-
 
 % ------------------ Linear + delU Saturation Case ---------------------- %
 % Iterate over a bunch of gammas and try to find the maximum setpoint for
@@ -153,14 +148,16 @@ end
 % ref_s = linspace(0.01, 15, 200);
 
 
-%%
+%
 clc
 % *Optimal, open-loop* trajectory generation over all setpoints. This
 % provides the basiline for comparison of the other methods.
 % ref_s = [1.5];
 
-gamma = 2;
-gam_s = linspace(gamma, 100, 50);
+gamma = 1.00001;
+% gam_s = linspace(gamma, 5, 10)
+gam_s = logspace(log10(gamma), log10(5), 10)
+
 % gam_s = [1, 100, 1000, 2500, 5000, 10000];
 ref_s = 0.1:0.5:11.5;
 
@@ -180,12 +177,18 @@ ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', 
 %
 % warning('ON', 'MATLAB:mir_warning_maybe_uninitialized_temporary');
 
-step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, Gvib, trun, 'S', S1);
+step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, trun, 'S', S1);
+
+figs(1) = figure(10);
+figs(2) = figure(11);
+step_params_lin.sim(10, gams(2), figs)
+
+
 step_data_lin = StepDataLin(step_params_lin, 'savedata', true,...
     'file', fname_lin', 'logger', logger,...
     'Progbar', ProgBar);
 
-step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, Gvib,...
+step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT,...
                     trun, N_mpc_s,'condensed', 'S', S1);
 step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', true,...
     'file', fname_mpc', 'logger', logger,...
@@ -194,17 +197,15 @@ step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', true,...
 
 % step_params_timeopt = StepParamsTimeOpt(sys, ref_s, du_max, sys_nodelay, 10);
 step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, gamma,...
-  Gvib, N_traj, 'condensed', 'S', S1);
+  PLANT, N_traj, 'condensed', 'S', S1);
 step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
     'file', fname_clqr);
 
-step_params_timeopt = StepParamsTimeOpt(sys_recyc, ref_s, du_max, sys_nodelay, Nd);
+step_params_timeopt = StepParamsTimeOpt(sys_recyc, ref_s, du_max, sys_recyc_nodelay, Nd);
 step_data_timeopt = StepDataTimeOpt(step_params_timeopt, 'savedata', true,...
     'file', fname_timeopt);
 
-figs(1) = figure(10);
-figs(2) = figure(11);
-step_params_lin.sim(08, 1.01, figs)
+
 
 % ======================================================================= %
 %                                                                         %
@@ -212,9 +213,10 @@ step_params_lin.sim(08, 1.01, figs)
 %                                                                         %
 % ======================================================================= %
 %%
+close all
 % ------------- Generate/Load CLQR max Trajectories --------------------- %
 step_data_timeopt = step_data_timeopt.build_timeopt_trajs('force', 0,...
-                    'verbose', 3, 'max_iter', 50, 'TOL', 1e-4);
+                    'verbose', 3, 'max_iter', 50, 'TOL', 1e-4, 'do_eject', false);
 %
 
 % ------------- Generate/Load CLQR max Trajectories --------------------- %
@@ -223,11 +225,12 @@ try
     step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 0, 'verbose', 3);
     logger('Finished building clqr_data. Total time = %.2f\n', toc);
 catch ME
-    errMsg = getReport(ME, 'extended', 'hyperlinks', 'off');
-    logger('Failed to build clqr_data: \n%s', errMsg);
+    errMsg_logger = getReport(ME, 'extended', 'hyperlinks', 'off');
+    errMsg = getReport(ME, 'extended', 'hyperlinks', 'on');
+    logger('Failed to build clqr_data: \n%s', errMsg_logger);
     fprintf('Failed to build clqr_data: \n%s', errMsg);
 end
-%
+
 % ------------- Generate LIN max setpoints ------------------------------ %
 threshold = 125; % percent
 Judge = MaxSpJudgeCLQR(step_data_clqr, threshold);
@@ -259,8 +262,7 @@ end
 
 %%
 % expose variables for plotting.
-
-
+rmpath(genpath('~/matlab/solvers/cvx'));
 ref_s = step_data_clqr.params.ref_s;
 gam_s = step_data_clqr.params.gam_s;
 ref_s_to = step_data_timeopt.params.ref_s;
@@ -287,7 +289,7 @@ hands_mxsp = []
 hands_mxsp(1) = plot(step_data_lin.params.gam_s, step_data_lin.results{1}.max_setpoints,...
                      '-', 'Color', colrs(1, :),...
             'LineWidth', 2);
-set(hands_mxsp(1), 'DisplayName', 'LQR Lin + Sat');
+set(hands_mxsp(1), 'DisplayName', 'LQR Lin + Sat');        
 for k = 1:length(step_data_mpc.params.N_mpc_s)
 
     hands_mxsp(k+1) = plot(step_data_mpc.params.gam_s, step_data_mpc.results{k}.max_setpoints,...
@@ -296,13 +298,14 @@ for k = 1:length(step_data_mpc.params.N_mpc_s)
     stit = sprintf('MPC, N=%.0f', step_data_mpc.params.N_mpc_s(k));
     set(hands_mxsp(k+1), 'DisplayName', stit);
 end
-legend(hands_mxsp)
+leg1 = legend(hands_mxsp);
+set(leg1, 'Position', [0.6775 0.4829 0.2181 0.2213]);
 
 xlabel('$\gamma$', 'interpreter', 'latex', 'FontSize', 14);
 ylabel('Max Ref', 'interpreter', 'latex', 'FontSize', 14);
 grid on
 if saveon
-    saveas(F10, 'latex/figures/maxref_vs_gamma_dumaxp6.svg')
+    saveas(F10, 'latex/figures/maxref_vs_gamma_dumax_Ipow_lowgain.svg')
 end
 
 %%
@@ -320,14 +323,14 @@ for jj = 1:length(N_mpc_s)
     colrs =  get(gca, 'colororder');
     ax = gca;
 
-
+    
     hto = step_data_timeopt.plot_ref_vs_settle(ax, 'LineWidth', 2,...
                             'Color', colrs(1, :));
     hcl = step_data_clqr.plot_ref_vs_settle(ax,[], 'LineWidth', 2,...
                          'Color', colrs(2, :));
     hands = [hcl; hto];
 
-
+    
     for kk = 1:length(rmax_s)
         step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s(kk), jj);
         figure(F);
@@ -360,84 +363,83 @@ legend(hands);
 title('Linear')
 
 
-%
-% ======================================================================= %
-%                                                                         %
-%               Settle Time Percent Increase over time-Optimal            %
-%                       by-Maximum-Acheivable-Reference                   %
-%                                                                         %
-% ======================================================================= %
 
+% % % ======================================================================= %
+% % %                                                                         %
+% % %               Settle Time Percent Increase over time-Optimal            %
+% % %                       by-Maximum-Acheivable-Reference                   %
+% % %                                                                         %
+% % % ======================================================================= %
+% % clear StepDataCLQR
+% % ts_timeopt = step_data_timeopt.results.settle_times_opt_cell{1};
+% % 
+% % % -----------------------CLQR vs Time-Optimal---------------------------- %
+% % F = figure(399);
+% % ax = gca();
+% % step_data_clqr.plot_ts_perc_increase_by_rmax(1, ts_timeopt, ax);
+% % title('CLQR')
+% % 
+% % 
+% % %%% plot(ref_s(kref), (ts_mpc/ts_clqr)*100, 'xk')
+% % % ------------------------- For LINEAR ---------------------------------- %
+% % clc
+% % clear StepDataQuad
+% % F=figure(400);clf; hold on;
+% % ax = gca();
+% % 
+% % hands = [];
+% % for kk = 1:length(rmax_s)
+% %     figure(F)
+% %     step_data_lin = step_data_lin.ts_by_ref_max(rmax_s(kk), 1);
+% %     [~, h] = step_data_lin.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
+% %                    1, ts_timeopt, ax, 'LineWidth', 1.25, 'Color', colrs(kk, :));
+% %     hands = [hands; h];
+% % 
+% % end
+% % title('Linear (Percent Increase)')
+% % legend(hands)
+% % 
+% % for jj = 1:length(N_mpc_s)
+% %     N_mpc = N_mpc_s(jj);
+% %     F=figure(400 + jj);clf; hold on;
+% %     colrs =  get(gca, 'colororder');
+% %     ax = gca;
+% % 
+% %     hands = [];
+% %     
+% %     for kk = 1:length(rmax_s)
+% %         step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s(kk), jj);
+% %         figure(F);
+% %         [~, h] = step_data_mpc.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
+% %                        jj, ts_timeopt, ax, 'LineWidth', 1.25, 'Color', colrs(kk + 2,:));
+% %         hands = [hands; h];
+% %     end
+% %     title(sprintf('N = %.0f (Percent Increase)', N_mpc))
+% %     legend(hands);
+% %     grid on; zoom on;
+% % end
+
+%%
 ts_timeopt = step_data_timeopt.results.settle_times_opt_cell{1};
-
-% -----------------------CLQR vs Time-Optimal---------------------------- %
-F = figure(399);
-ax = gca();
-step_data_clqr.plot_ts_perc_increase_by_rmax(1, ts_timeopt, ax);
-title('CLQR')
-
-
-%%% plot(ref_s(kref), (ts_mpc/ts_clqr)*100, 'xk')
-% ------------------------- For LINEAR ---------------------------------- %
-
-
-% F=figure(400);clf; hold on;
-% ax = gca();
-%
-% hands = [];
-% for kk = 1:length(rmax_s)
-%     figure(F)
-%     step_data_lin = step_data_lin.ts_by_ref_max(rmax_s(kk), 1);
-%     [~, h] = step_data_lin.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
-%                    1, ts_timeopt, ax, 'LineWidth', 1.25, 'Color', colrs(kk, :));
-%     hands = [hands; h];
-%
-% end
-% title('Linear (Percent Increase)')
-% legend(hands)
-
-% for jj = 1:length(N_mpc_s)
-%     N_mpc = N_mpc_s(jj);
-%     F=figure(400 + jj);clf; hold on;
-%     colrs =  get(gca, 'colororder');
-%     ax = gca;
-%
-%     hands = [];
-%
-%     for kk = 1:length(rmax_s)
-%         step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s(kk), jj);
-%         figure(F);
-%         [~, h] = step_data_mpc.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
-%                        jj, ts_timeopt, ax, 'LineWidth', 1.25, 'Color', colrs(kk + 2,:));
-%         hands = [hands; h];
-%     end
-%     title(sprintf('N = %.0f (Percent Increase)', N_mpc))
-%     legend(hands);
-%     grid on; zoom on;
-% end
-% %
-clc
-clear StepDataCLQR
-clear StepDataQuad
 for kk = 1:length(rmax_s)
-
+    
    F = figure(500 + kk); clf; hold on;
    ax = gca();
    hands = [];
-
+   
    % CLQR: this guy doesn't change, no need to regenerate.
    [~, h] = step_data_clqr.plot_ts_perc_increase_by_rmax(1, ts_timeopt, ax, 'Color', colrs(1, :));
    h.DisplayName = 'CLQR';
    hands = [hands;h];
-
-
+   
+   
    % -- Linear
    step_data_lin = step_data_lin.ts_by_ref_max(rmax_s(kk), 1);
    [~, h] = step_data_lin.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
                    1, ts_timeopt, ax, 'LineWidth', 1.5, 'Color', colrs(2, :));
    h.DisplayName = sprintf('Linear ($\\gamma = %.0f$)', step_data_lin.ts_by_rmax_results{1}.gamma);
    hands = [hands;h];
-
+   
    step_data_mpc.ts_by_rmax_results = {};
    for jj = 1:length(N_mpc_s)
         step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s(kk), jj);
@@ -446,61 +448,100 @@ for kk = 1:length(rmax_s)
                        jj, ts_timeopt, ax, 'LineWidth', 1.5, 'Color', colrs(jj + 2,:));
         h.DisplayName = sprintf('MPC ($N=%.0f$ $\\gamma = %.0f$', N_mpc_s(jj),...
                         step_data_mpc.ts_by_rmax_results{jj}.gamma);
-        grid on
         hands = [hands; h];
     end
-
+   grid on
    legend(hands)
    title(sprintf('r-max = %.2f', rmax_s(kk)));
-
+    
 end
+% % gam = R1;
+% % N = 20;
+% % Qp = dare(sys_recyc.a, sys_recyc.b, Q1, gam, S1);
+% % MPP1 = condensedMPCprob_OA(sys_recyc, N, Q1, Qp, gam, S1);
+% % fprintf('kappa_fast = %.2f\n', MPP1.kappa)
 %%
 tilefigs(1)
-%%
 
-group0 =  [figure(300), figure(301), figure(302), figure(303), figure(304),...
-          figure(305)];
-tilefigs([1], group0);
-%%
-group1 = [figure(400), figure(401), figure(402), figure(403), figure(404),...
-          figure(405)];
-tilefigs(2, group1)
-
-%%
-group2 = [figure(501), figure(502),figure(503),figure(504)];
-tilefigs(3, group2);
+figure(10)
+xlm = xlim;
+h1 = plot(xlm, [rmax_s', rmax_s'], ':k', 'LineWidth', 2)
+if saveon
+    saveas(F10, 'latex/figures/maxref_vs_gamma_dumax_Ipow_lowgain.svg')
+end
 
 
 %%
-figure(400);
-subplot(2,1,1)
-ax1 = gca();
-grid on;, hold on
-subplot(2,1,2)
-ax2 = gca();
-grid on, hold on
 
-ref_idx = 19;
-gam_idx = 1;
-step_data_lin.plot_single_traj(ref_idx, gam_idx, ax1, ax2, 'LineStyle', '-')
+figure(504)
+grid on
+% xlim([0, 10])
+saveas(gcf, 'latex/figures/perc_increase_Ipow_lowgain_rmax10.svg')
+
+
+figure(503)
+grid on
+% xlim([0, 5])
+saveas(gcf, 'latex/figures/perc_increase_Ipow_lowgain_rmax5.svg')
+
+figure(502)
+grid on
+% xlim([0, 2.5])
+saveas(gcf, 'latex/figures/perc_increase_Ipow_lowgain_rmax2p5.svg')
+
+
+
+
+
+
+
+
+
+
+
+
+
 %%
-step_data_lin.plot_single_traj(ref_idx, gam_idx, ax1, ax2, 'LineStyle', '--')
-step_data_mpc.plot_single_traj(3, ref_idx, 1, ax1, ax2, 'LineStyle', '-.')
-
-ref = ref_s(ref_idx);
-
-
-subplot(2,1,1)
-grid on;, hold on
-xlm = xlim();
-plot(xlm, [ref, ref]+0.01*ref, ':k')
-plot(xlm, [ref, ref]-0.01*ref, ':k')
-subplot(2,1,2)
-grid on, hold on
+% 
+% group0 =  [figure(300), figure(301), figure(302), figure(303), figure(304),...
+%           figure(305)];
+% tilefigs([1], group0);
+% %%
+% group1 = [figure(400), figure(401), figure(402), figure(403), figure(404),...
+%           figure(405)];
+% tilefigs(2, group1)
+% 
+% %%
+% group2 = [figure(501), figure(502),figure(503),figure(504)];
+% tilefigs(3, group2);
+% 
+% 
+% %%
+% figure(400);
+% subplot(2,1,1)
+% ax1 = gca();
+% grid on;, hold on
+% subplot(2,1,2)
+% ax2 = gca();
+% grid on, hold on
+% 
+% ref_idx = 19;
+% gam_idx = 1;
+% step_data_lin.plot_single_traj(ref_idx, gam_idx, ax1, ax2, 'LineStyle', '-')
+% %%
+% step_data_lin.plot_single_traj(ref_idx, gam_idx, ax1, ax2, 'LineStyle', '--')
+% step_data_mpc.plot_single_traj(3, ref_idx, 1, ax1, ax2, 'LineStyle', '-.')
+% 
+% ref = ref_s(ref_idx);
+% 
+% 
+% subplot(2,1,1)
+% grid on;, hold on
+% xlm = xlim();
+% plot(xlm, [ref, ref]+0.01*ref, ':k')
+% plot(xlm, [ref, ref]-0.01*ref, ':k')
+% subplot(2,1,2)
+% grid on, hold on
 
 %%
-gam = R1;
-N = 20;
-Qp = dare(sys_recyc.a, sys_recyc.b, Q1, gam, S1);
-MPP1 = condensedMPCprob_OA(sys_recyc, N, Q1, Qp, gam, S1);
-fprintf('kappa_fast = %.2f\n', MPP1.kappa)
+
