@@ -2,6 +2,8 @@
 % Intended LaTeX compiler: pdflatex
 \documentclass[journal,twocolumn,twoside]{IEEEtran/IEEEtran}
 % \documentclass[journal,12pt,onecolumn,draftclsnofoot,,twoside]{IEEEtran/IEEEtran}
+\pdfminorversion 4 % This is so manuscript central can use it.
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
@@ -47,18 +49,26 @@
 \newcommand{\ub}{\ensuremath{\bar{u} }\xspace}
 \newcommand{\ubp}{\ensuremath{\bar{u}^+ }\xspace}
 \newcommand{\ubm}{\ensuremath{\bar{u}^- }\xspace}
-\author{arnold}
-\date{\today}
-\title{}
-\hypersetup{
- pdfauthor={arnold},
- pdftitle={},
- pdfkeywords={},
- pdfsubject={},
- pdfcreator={Emacs 24.4.1 (Org mode 9.1.4)}, 
- pdflang={English}}
+% \hypersetup{
+%  pdfauthor={arnold},
+%  pdftitle={},
+%  pdfkeywords={},
+%  pdfsubject={},
+%  pdfcreator={Emacs 24.4.1 (Org mode 9.1.4)}, 
+%  pdflang={English}}
 \begin{document}
+\title{Control strategies for step tracking a piezo stage}
+\author{Roger A. Braker and Lucy Y. Pao
+  \thanks{The authors are with the Dept. of Electrical, Computer, and Energy Engineering at the University of Colorado, 425 UCB, Boulder, CO 80309, United States. Phone: +1 (303) 492-2360. Fax: +1 (303) 492-2758.
+    R. A.  Braker (corresponding author roger.braker@colorado.edu) is a graduate student and
+    L.Y. Pao (pao@colorado.edu) is the Richard \& Joy Dorf Professor.}
+  \thanks{This work was supported in part by the US National Science Foundation (NSF Grant CMMI-1234980), Agilent Technologies, Inc., and the Hanse Wissenschaftskolleg in Delmenhorst, Germany.}
+}
 
+\maketitle
+\begin{abstract}
+  This paper considers near time-optimal setpoint tracking of a second-order oscillator. First, the time-optimal setpoint tracking feedback law is derived by recasting the problem as a regulator problem in the error coordinates with shifted control limits. This result is used to construct a de-rated approximation of the optimal control. Initially, the control law is derived as a regulator controller. This result is then extended to include setpoint tracking. Global stability is proven for the setpoint tracking controller in the zero-damping case. A scaling method is developed which allows an efficient implementation of the control laws using a single look-up table. Both the damped and un-damped controllers are validated experimentally.
+\end{abstract}
 
 
 \section{Introduction}
@@ -195,13 +205,51 @@ The model structure \eqref{eqn:mode_struc} includes a fractional delay $z^{-p}$.
 
 In this work, we do not model the modes above 1100~Hz. Thus, the optimization \eqref{eqn:logfit} is only done over frequency up to 1100~Hz. 
 
+\begin{table}
+  \centering
+  \caption{Zero and pole locations of $G_{vib}$. }
+  \begin{tabular}{cc}
+    pole & zero\\
+    0.848155$\pm$0.187900 & 0.964821 $\pm$ 0.250813\\ 
+    0.962030$\pm$0.259730 & 0.992956 $\pm$ 0.093824\\ 
+    0.972209$\pm$0.213448 & 0.975116 $\pm$ 0.209867\\ 
+    0.978579$\pm$0.163808 & --\\ 
+    0.993712$\pm$0.091498 & --\\ 
+    0.917539 & 0.505483 \\ 
+    (9) 0.0 & 0.822878 \\ 
+  \end{tabular}
+\end{table}
+
+
 \subsection{Drift Modeling}
+Drift is modeled as the strictly proper transfer function
+\begin{equation}
+G_d = \theta_5\frac{(z-\theta_1)(z-\theta_2)}{(z-\theta_3)(z-\theta_4)}.\label{eqn:fit_drift_cost}
+\end{equation}
+We give the stage a step input with relatively small amplitude (to minimize the effects of hysteresis). The stage response is shown as the solid-blue curve in Fig.~\ref{fig:drift_fit} while the simulated response of the vibrational model is shown as the dotted-black curve. To the extent that $G_{vib}$ accurately models the vibtrational dynamics, the inclusion of $G_{vib}$ in \eqref{eqn:fit_drift_cost} effectively nullifies the vibrational aspects in the optimization.
+The red curve in Fig.~\ref{fig:drift_fit} shows the simulated step response of $G_dG_{vib}$. 
+
 \begin{figure}
   \includesvg[width=1\linewidth]{figures/drift_fit.svg}
   \caption{Drift model}
   \label{fig:drift_fit}
 \end{figure}
+The goal then is to solve the non-linear least squares problem
+\begin{equation}
+  \min_{\theta}|| \mathcal{Z}^{-1}\left\{ \frac{a}{z-1}G_d(z|\theta)G_{vib}(z)\right\} - Y_{exp}||
+\end{equation}
+where $Y_{exp}$ is the experimental response of the stage, $\mathcal{Z}$ is the z-transform operator and $\theta$ is the vector of parameters.
+
 \subsection{Hysteresis Modeling}
+There are many models for hysteresis. Here, we opt for simplicity (and by proxy, fast computation) and use the Prandtl-Ishlinksi Hysteresis model CITE. In typical raster scanning applications, hysteresis manifests as a bowing of the otherwise linear ramps. To motivate the need for hysteresis compensation in a step tracking application, consider Fig. REF, which shows an input signal of various steps applied open loop to the stage. The dotted-black curve is the input (scaled by the dc-gain $G_dG_{vib}$ while the solid black curve is the stage response. Observe that for the same steady state value of control, the steady state value of the stage is different. Effectively, the dc-gain of the system depends on the control history.
+
+
+\begin{figure}
+  \includesvg[width=1\linewidth]{figures/hyst_response_ol.svg}
+  \caption{Evidence of hysteresis.}
+  \label{fig:hyst_resp_dem}
+\end{figure}
+
 
 \subsection{Power Amplifier Characterization and Limitations}\label{sec:powcharct}
 \begin{figure}[htbp]
@@ -213,7 +261,7 @@ In this work, we do not model the modes above 1100~Hz. Thus, the optimization \e
 
 The high voltage output of the C300 is current limited to 100 mA. If the electrical impedance of the piezo is modeled as a pure capacitance (a common assumption  ~\cite{fleming_megahertz_2009, Bazghaleh_digital_2013}), this translates to a rate of change limitation on the voltage control signal through the relation $\dot v_{h} = \frac{1}{C} i_c(t)$. 
 
-It is tempting to think that we ought to constrain the rate of change of the power amplifier voltage output $V_X$, since this is the voltage actually running through the piezo. There are two difficulties with this approach. First, as seen in Fig~\ref{fig:org8f9b1d0}, \(G_{V_{x},u_{x}}\) rolls off at about 250~Hz, which means that such a constraint will lead to a constraint on the states of \(G_{V_{x},u_{x}}\). Second, the transfer function \(G_{I_{x}, V_{X}}\) has a break frequency at about 700~Hz, where it begins increasing at 40~dB per decade. Thus, a rate of change limitation based on a pure capacitance would \emph{under}-estimate the actual current draw.
+It is tempting to think that we ought to constrain the rate of change of the power amplifier voltage output $V_X$, since this is the voltage actually running through the piezo. There are two difficulties with this approach. First, as seen in Fig~\ref{fig:orgc576458}, \(G_{V_{x},u_{x}}\) rolls off at about 250~Hz, which means that such a constraint will lead to a constraint on the states of \(G_{V_{x},u_{x}}\). Second, the transfer function \(G_{I_{x}, V_{X}}\) has a break frequency at about 700~Hz, where it begins increasing at 40~dB per decade. Thus, a rate of change limitation based on a pure capacitance would \emph{under}-estimate the actual current draw.
 
 However, if we consider \(G_{I_{x},u_{x}}\) we see that a pure derivative \emph{over}-estimates the actual current draw. 
 In other words, 
@@ -235,7 +283,9 @@ We note that this condition is more conservative than is strictly necessary, sin
 
 \section{Control Setup}
 \subsection{The Incremental Form}
-The constraint \eqref{eqn:du_limit} can be remodeled as a pure saturating constraint if we work with an incremental form of \(G_{X,u_x}\) which has as its input \({\Delta u(k)\coloneqq u(k)-u(k-1)}\), rather than \(u\). To this end, we augment \(G_{X,u_X}\) with a state \(\x_{\text{u}}(k)\) such that
+The constraint \eqref{eqn:du_limit} can be remodeled as a pure saturating constraint if we work with an incremental form of \(G_{X,u_x}\) which has as its input \({\Delta u(k)\coloneqq u(k)-u(k-1)}\), rather than \(u\). This is attractive because it not only allows us to directly penalize the rate of change in the optimal control problem but also renders the constraint a box constraint on $\Delta u$, enabling the use of the computationally attractive Fast Gradient Method. Putting a hard limit on $\Delta u$ in the linear feedback case is also somewhat simplified.
+
+To this end, we augment \(G_{X,u_X}\) with a state \(\x_{\text{u}}(k)\) such that
 \begin{equation*}
   \x_u(k) = u(k-1).
 \end{equation*}
@@ -275,8 +325,52 @@ The error state, \({\xde(k)=\xd(k) - \xdss}\) has dynamics
 because $\xdss$ is in the nullspace of $(I - \Ad)$.
 
 \subsection{Observer Design}
+To achieve zero-offset tracking (to constant disturbances), we employ the disturbance estimator outlined in \cite{maeder_offset-free_2007}. The disturbance dynamics are modeled as a pure integrator and the system matrices are augmented as
+\begin{equation}
+  A_m = \begin{bmatrix}
+    A & B_d \\ 0 & I
+  \end{bmatrix}\quad
+  B_m =
+  \begin{bmatrix}
+    B \\ 0
+  \end{bmatrix}
+  C_m = 
+    \begin{bmatrix}
+    C \\ C_d
+  \end{bmatrix}
+\end{equation}
+The observer gain is given by $\begin{bmatrix}L & L_d\end{bmatrix}$. It is shown in \cite{maeder_offset-free_2007} that the gains $L$ and $L_d$ may be designed separately and then transformed such that the closed loop poles $A_m - L_mC_m$ are the same as those of $A-LC\cup A_d-L_dC_d$.
 
-We use the method outlined in \cite{doyle_robustness_1979}.
+To design $L$, we use the method outlined in \cite{doyle_robustness_1979}, which sets $L$ is the steady state solution of the discrete LQR problem applied to the dual of $G$, where $Q = Q_w + BB^T$ and $R$ is a turning parameter. We design $L_m$ such that the disturbance pole is placed at $z=0.8$.
+
+To achieve zero offset tracking, disturbance estimators re-compute the steady state target at each time-step. For a an output disturbance ($B_d=0$ model with $C_d=I$, this simply means that the reference is adjusted by subtracting $\hat d_k$. In other words, at each time step, we need to compute
+\begin{equation}
+  x_{e} = \hat{x}(k) - N_x(r_k - \hat{d}_k).
+\end{equation}
+This is slightly simpler than the case for an input disturbance model ($C_d=0$), which involves an additional vector-scalar multiplication and an additional vector-vector addition (see (21) in \cite{maeder_offset-free_2007}). It is shown in \cite{maeder_offset-free_2007} that output disturbance and input disturbance models are equivalent provided 1 is not an eigenvalue of $A$, which is the case here, because we do not estimate the state $x_u$. Thus, due to the computational savings, we use the output disturbance formulation. 
+\begin{figure}
+  \includesvg[width=1\linewidth]{figures/obs_cl.svg}
+  \caption{(black) Open loop plant pole (x) and zero(circle) locations. (red x) Closed loop observer pole locations.}
+  \label{fig:obs_cl}
+\end{figure}
+% \begin{equation}
+%   \begin{bmatrix}
+%     I-A & -B \\C & 0
+%   \end{bmatrix}
+%   \begin{bmatrix}
+%     x_{ss}\\u_{ss}
+%   \end{bmatrix}
+%   =
+%   \begin{bmatrix}
+%     B_d\\0
+%   \end{bmatrix}
+%   d_{ss}
+%   +
+%     \begin{bmatrix}
+%     0\\I
+%   \end{bmatrix}
+%   r_{ss}.
+% \end{equation}
 
 \subsection{Control Weight Selection}
 To design the weighting matrices $Q$, $R$ and $S$, we design fictitious output matrices $\hat C$ and $\hat D$ such that zeros of $\{A, B, \hat C, \hat D\}$ are at the desired pole locations. Then, the fictitious output is $\hat y = \hat C x + \hat D u$. If we write the cost function of REF as
@@ -304,13 +398,18 @@ Thus, we choose $\hat D = 1$ and find $\hat C$ via standard pole placement techn
 \end{figure}
 
 \section{The Optimal Control formulations}
-We want to look at a few different ways of driving the stage from point to point as rapidly as possible, yet still be practical. Inspired by our past work, we will compare several methods through both simulation and experimental studies. These methods are
+We want to look at a few different ways of driving the stage from point to point as rapidly as possible, yet still be practical. Inspired by our past work, we focus on the experimental comparison of two methods:
 \begin{itemize}
-\item\emph{Discrete time, minimum time optimal control (DTMT)}
 \item\emph{Saturated Linear state feedback (SLF)} The basic idea here to use standard linear state feedback which is saturated (on $\Delta u$) but to de-rate the design such that the closed-loop system is demonstrably stable up to a certain reference size. 
 \item\emph{Constrained Model Predictive Control (MPC)} The goal with MPC is that, instead of fully de-rating the design to account for the slew rate constraint, to directly account for the constraint as part of the control law itself. Do to limitations on the implementation, MPC must still be de-rated to some extent to be implementable, since the length of control horizon needed to achieve stabilty over the full range of the stage becomes large for an aggressive design.
+\end{itemize}
+Additionally, in simulation we consider two additional techniques:
+\begin{itemize}
+\item\emph{Discrete time, minimum time optimal control (DTMT)}
 \item\emph{Constrained, Finite horizon LQR (CLQR)} The optimization is the same as the MPC optimization, just over a much longer horizon. Similarly to the DTMT idea, this would be implemented in a feedforward/tracking configuration. However, the broader goal of considering this scheme is that it shows how much optimality we have sacrificed with a relatively short horizon in MPC.
 \end{itemize}
+These schemes are used as benchmarks against which to judge the performance of SLF and MPC. Certainly, one could apply the control trajectories either CLQR or DTMT in a feedforward manner and track the optimal state sequences, as we have considered before in past work \cite{braker_fast_2017}. However, such a technique has several disadvantages: (1) the entire sequence of setpoints must be known before hand, eliminating the possibility of adjusting them in real time. (2) Computing each optimal trajectory requires defining an initial condition, which becomes problematic when, for example, performing short $\mu$-path scans and (3) transferring the data defining each trajectory in real-time increases the burden on the I/O bus.
+
 
 The last three control schemes can be described by the optimization
 \begin{align}
@@ -320,16 +419,16 @@ z_{i+1} &= Az_{i} + Bv_{i}\\
 z_{0} &= x_{k}\\
 |v_i - v_{i-1}| &\coloneqq |\Delta v(i)| \leq (\Delta u)_{max}.\label{eqn:optconst}
 \end{align}
-In the case of MPC, the control at the current time step as taken $v_0$, the rest of the optimal controls are thrown away and the optimization is repeated at the next sampling instant. Here, we consider control horizons ranging from $N=4$ to $N=20$. In the case of CLQR, we consider a much longer control horizon of $N=400$. The idea then is to apply the optimal control to the system and track the optimal system output. For SLF, we set $N=1$ and eliminate the constraint \eqref{eqn:optconst}. Because we have taken $Q_p$ as the solution to the discrete algebraic Riccatti equation, this is equivalent to the standard infinite horizon LQR problem. In the case of CLF $\Delta u_k$ is saturated in software, which is more predictable than allowing it happen in hardware and ensures that the control applied to the plant matches the control seen by the state estimator.
+In the case of MPC, the control at the current time step is taken as $v_0$, the rest of the optimal controls are thrown away and the optimization is repeated at the next sampling instant. Here, we consider control horizons ranging from $N=4$ to $N=20$. In the case of CLQR, we consider a much longer control horizon of $N=400$. The idea then is to apply the optimal control to the system and track the optimal system output. For SLF, we set $N=1$ and eliminate the constraint \eqref{eqn:optconst}. Because we have taken $Q_p$ as the solution to the discrete algebraic Riccatti equation, this is equivalent to the standard infinite horizon LQR problem. In the case of SLF $\Delta u_k$ is saturated in software, which is more predictable than allowing it happen in hardware and ensures that the control applied to the plant matches the control seen by the state estimator.
 
-In CLQR, MPC and CLF,  the state weight $Q$ is selected via an inverse optimal control problem to yield good damping and to cancel the real pole-zero pair near 50~Hz. For MPC and CLF, we treat control weight $\gamma$ as the primary tuning parameter. In both cases, a larger $\gamma$ yields a larger maximum step size that can be tracked. Essentially, we can view each control 
+In CLQR, MPC and SLF,  the state weight $Q$ is selected via an inverse optimal control problem to yield good damping and to cancel the real pole-zero pair near 50~Hz. For MPC and SLF, we treat control weight $\gamma$ as the primary tuning parameter. In both cases, a larger $\gamma$ yields a larger maximum step size that can be tracked. Essentially, we can view each control 
 
 \subsection{The minimum-time control problem in discrete-time}\label{sec:mintime}
 \label{sec:org6d1d6b6}
 In discrete-time, the minimum-time control problem can be stated as \cite{chen_minimumtime_cca}
 \begin{align}
 \min_{u(0), u(1),\dots,u(N-1)} & N\\
-\text{s.t.}&\\
+\text{s.t.}\quad
 x_{k+1} & = Ax_{k} + Bu_{k}\\
 x_{N} & = x_{f}\\
 u_{k}&\in \mathds{K},~k=0,\dots,N-1\\
@@ -351,23 +450,6 @@ For a given \(N\), if \(||x_{f} - x_{N}|| < \text{TOL}\), the sub-problem return
 
 It is also worth pointing out that the solution to this problem, in contrast to continuous time systems is not in general bang-bang CITE.
 
-% When we consider comparing the settling time of our LQR inspired methods to the time-optimal solution, we need to be careful.
-% The reason is that the time optimal solution requires all the states to have reached steady at $x_f$. Consequently, the total move, if we compute the time-optimal trajectory for $G$, will be dominated by the slow pole at 220 Hz. This is illustrated in Fig.~\ref{fig:slowpz_to}.
-
-% \begin{figure}
-%   \centering
-%   \includesvg[scale=1]{figures/timeopt_slowpz_illustrate_y.svg}
-%   \includesvg[scale=1]{figures/timeopt_slowpz_illustrate_u.svg}
-%   \caption{The problem with computing the time-optimal trajectory when the model has the slow PZ-pair.}
-%   \label{fig:slowpz_to}
-% \end{figure}
-% In some sense, the slow pole-zero pair is a first order drift model, so we call it $G_{drift}$. Then, the total transfer function from the control to the piezo stage position can be factored as $G(z) = G_{drift}\hat{G}(z)$. The idea then, is to compute the time-optimal trajectory for $\hat{G}(z)$. This results in optimal trajectories for the control input, $u^*$ and plant output $y^*$ for $\hat{G}$. That optimal control sequence is will then be run through a feedforward filter which inverts the dynamics of $G_{drift}$. The scheme is illustrated in Fig.~\ref{fig:bd_ff_to}
-% \begin{figure}
-%   \centering
-%   \includegraphics[scale=0.4]{figures/bd_ff_timeopt.pdf}
-%   \caption{Time optimal trajectory with selected plant inversion.}
-%   \label{fig:bd_ff_to}
-% \end{figure}
 
 
 \section{Quantifying the time savings (if any) of MPC and d-rated linear feedback}
@@ -383,7 +465,7 @@ Ultimately, we have decided to do is to compare the trajectory resulting from MP
 
 
 \begin{enumerate}
-\item We start with a nominal \((Q,R)\) pair.
+\item We start with a set of nominal weights \((Q,R, S)\) pair which, when used in the discrete (unconstrained) LQR will put the closed loop eigenvalues of $(sI - A + BK_{lqr})$ at the nominal desired locations. 
 \item We determine how large we must make \(\gamma R\) to visit a certain size of setpoint. In general, the larger \(\gamma\) is, the larger the maximum setpoint we can visit is. This is what I mean by "de-rating" the feedback gain and is illustrated below in Figur.
 \end{enumerate}
 
@@ -400,41 +482,40 @@ So the questions I want to answer are:
 The way I think it makes sense to think about these questions is to compare the settling times to the optimal, constrained finite horizon (CLQR) open-loop settling time. At least for a given quadratic cost, that is typically the best settling time we can hope to achieve, and we won't run into the problems with MPC where need a larger control horizon to get stability. 
 
 \begin{figure}
-  \centering
-  \subfigure[The increase in maximum achievable setpoint as the control weight $\gamma$ increases for both saturated linear feedback different MPC control horizons.
-  \label{fig:maxsp_by_gam}]
-  {\includesvg[width=3in]{figures/maxref_vs_gamma_dumaxp6.svg}}
-\hfill
-\subfigure[Comparison of settling time the minimum-time solution and the CLQR solution.
-\label{fig:ts_clqr_to}]
-{\includesvg[width=3in]{figures/clqrTimeOpt_sp_vs_ts_CCTA_dumaxp6.svg}}
+  \includesvg[width=1\linewidth]{figures/maxref_vs_gamma_dumaxp6.svg}
+  \caption{The increase in maximum achievable setpoint as the control weight $\gamma$ increases for both saturated linear feedback different MPC control horizons.}
+  \label{fig:maxsp_by_gam}
+% \hfill
+% \subfigure[Comparison of settling time the minimum-time solution and the CLQR solution.
+% \label{fig:ts_clqr_to}]
+% {\includesvg[width=3in]{figures/clqrTimeOpt_sp_vs_ts_CCTA_dumaxp6.svg}}
 % \caption{both}
 \end{figure}
 
-The result of running a parameter sweep this way is shown in Fig.~\ref{fig:maxsp_by_gam}. What the figure shows is, for CLF, and several values of the MPC control horizon, the maximum setpoint that can be tracked for a given control weight $\gamma$. In the figure $\gamma$ ranges from 10 to 5000 in XX increments. For each value of $\gamma$, we performed successively larger step-input simulations between and 12 v. The $y$-axis value indicates that that value of reference resulted in a deteriorated or unstable trajectory, and is thus the largest track-able setpoint for the given gamma.
+The result of running a parameter sweep this way is shown in Fig.~\ref{fig:maxsp_by_gam}. What the figure shows is, for SLF, and several values of the MPC control horizon, the maximum setpoint that can be tracked for a given control weight $\gamma$. In the figure $\gamma$ ranges from 10 to 5000 in XX increments. For each value of $\gamma$, we performed successively larger step-input simulations between and 12 v. The $y$-axis value indicates that that value of reference resulted in a deteriorated or unstable trajectory, and is thus the largest track-able setpoint for the given gamma.
 
 \section{Time Savings Analysis}\label{sec:time_save_analysis}
-The goal of doing this is to essentially look at several cross sections Fig.~\ref{fig:maxsp_by_gam} and look at how the settling time changes between CLF and different MPC control horizons \emph{for a given desired maximum setpoint.}
+The goal of doing this is to essentially look at several cross sections Fig.~\ref{fig:maxsp_by_gam} and look at how the settling time changes between SLF and different MPC control horizons \emph{for a given desired maximum setpoint.}
 
 Here, we choose several desired $r_{max}$ values and consider how much time is saved over the time optimal solution for the different strategies. We choose $r_{max}$ as 2.5, 5.0 and 10. These values are illustrated in Fig.~\ref{fig:maxsp_by_gam} by the dotted black lines. Where those dotted black lines cross the various curves indicates the $\gamma$ that is required.
 
 \begin{figure*}
-  \begin{minipage}{0.32\textwidth}
-    \includesvg[width=1.2\textwidth]{figures/perc_increase_rmax2p5.svg}
+  \begin{minipage}{0.45\textwidth}
+    \includesvg[width=1.2\textwidth]{figures/perc_increase_Ipow_lowgain_rmax2p5.svg}
   \end{minipage}
-    \begin{minipage}{0.32\textwidth}
-    \includesvg[width=1.2\textwidth]{figures/perc_increase_rmax5.svg}
+  % \begin{minipage}{0.32\textwidth}
+  %   \includesvg[width=1.2\textwidth]{figures/perc_increase_Ipow_lowgain_rmax5.svg}
+  % \end{minipage}
+  \begin{minipage}{0.45\textwidth}
+    \includesvg[width=1.2\textwidth]{figures/perc_increase_Ipow_lowgain_rmax10.svg}
   \end{minipage}
-  \begin{minipage}{0.32\textwidth}
-    \includesvg[width=1.2\textwidth]{figures/perc_increase_rmax10.svg}
-  \end{minipage}
-  \caption{The percentage increase over the time-optimal solution for CLF (orange), the CLQR solution (blue) and the MPC strategy for control horizons ranging from $N=4$ to $N=20$. }
+  \caption{The percentage increase over the time-optimal solution for SLF (orange), the CLQR solution (blue) and the MPC strategy for control horizons ranging from $N=4$ to $N=20$. }
   \label{fig:perc_inc}
 \end{figure*}
 Our takeaway from this study is that there appears to very little benefit in terms of time saved for implemented the CLQR or MPC control strategies. The largest difference in the percent increase is only in the range of 10\%, and for the smaller $r_{max}=2.5$, this difference is even smaller. 
 
 \section{Experimental Comparison}\label{sec:exp_comp}
-Our simulation results indicate that we may as well use CLF or track the time-optimal trajectory, if we can get away with it. But what about the real world?
+Our simulation results indicate that we may as well use SLF or track the time-optimal trajectory, if we can get away with it. But what about the real world?
 
 
 Here is an interesting table

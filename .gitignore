@@ -37,7 +37,7 @@ auto/
 
 # simulink backups
 *.r2016b
-
+slprj/
 
 # Gtags ignores
 GPATH

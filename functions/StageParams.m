@@ -18,6 +18,7 @@ classdef StageParams
     Vdiv2Vhigh = 1/(29.7e6/(1.732e6 + 29.7e6));
     Imax = 0.100;
     Rsense = 0.1;
+    Ts = 40e-6;
   end
 
   methods
