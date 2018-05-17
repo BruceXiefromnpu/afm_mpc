@@ -1,8 +1,17 @@
 
-function TS_s = get_many_steps_ts(y, ref_s, step_idx, TOL, verbose, fid)
-  % TS_s = get_many_steps_ts(y, ref_s, step_idx, TOL, verbose, fid)
+function TS_s = get_many_steps_ts(y, ref_s, step_idx, TOL, verbose, ...
+                                     fid, TOL_mode)
+  % TS_s = get_many_steps_ts(y, ref_s, step_idx, TOL, verbose, fid,
+  % TOL_mode)
   if ~exist('fid', 'var')
     fid = 1;
+  end
+  if ~exist('TOL_mode', 'var')
+      TOL_mode = 'rel';
+  end
+  
+  if ~strcmp(TOL_mode, 'rel') & ~strcmp(TOL_mode, 'abs')
+      error('Expected TOL_mode = ("rel" | "abs")\n')
   end
 
   % could do this by reshaping, but in the future, I don't expect all the steps
@@ -24,12 +33,16 @@ function TS_s = get_many_steps_ts(y, ref_s, step_idx, TOL, verbose, fid)
     ref_prev = ref_s(k-1);
 
     delta_ref = ref_k - ref_prev;
-    TOL = 0.01*abs(delta_ref);
-
-    if verbose >1
-      ts_k = settle_time(Y_cell{k}.Time, Y_cell{k}.Data, ref_k, TOL, k);
+    if strcmp(TOL_mode, 'abs')
+        TOL_r = TOL;
     else
-      ts_k = settle_time(Y_cell{k}.Time, Y_cell{k}.Data, ref_k, TOL);
+        TOL_r = TOL*abs(delta_ref);
+    end
+    
+    if verbose >1
+      ts_k = settle_time(Y_cell{k}.Time, Y_cell{k}.Data, ref_k, TOL_r, k);
+    else
+      ts_k = settle_time(Y_cell{k}.Time, Y_cell{k}.Data, ref_k, TOL_r);
     end
     TS_s(k-1) = ts_k;
     if verbose > 0
