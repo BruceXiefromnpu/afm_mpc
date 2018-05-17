@@ -208,7 +208,7 @@ classdef StepDataTimeOpt < StepData
                 % Extend the trajectory with steady state u values
                 u = [U.Data; ones(2*k0,1)*ref_s(iter)*Nu_sim]; % zero for deltaUk
                 t = [0:1:length(u)-1]'*sys_sim.Ts;
-                sys_sim.InputDelay = self.params.sys.InputDelay;
+                sys_sim.InputDelay = Nd;
                 [y, t, x] = lsim(sys_sim, u, t, x0_sim);
                 sys_sim.InputDelay = 0;
                 
