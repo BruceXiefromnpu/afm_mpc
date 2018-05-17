@@ -15,6 +15,7 @@ fig-figs/
 experiments/figures/
 figures/
 data/
+*.mat
 
 # *.mat
 *.pdf
