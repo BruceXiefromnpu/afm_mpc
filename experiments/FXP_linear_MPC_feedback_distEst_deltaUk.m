@@ -45,6 +45,7 @@ elseif md == 2
   [Gvib, gdrift] = eject_gdrift(modelFit.models.G_uz2stage);
   PLANT = ss(Gvib);
   SYS = ss(Gvib);
+  gdrift_inv = 1/gdrift;
 elseif md == 3
 %   [Gvib, ] = eject_gdrift(modelFit.models.G_uz2stage);
 %   PLANT = ss(modelFit.models.G_uz2stage);
@@ -135,7 +136,11 @@ thenoise = timeseries(mvnrnd(0, rw, length(t))*0, t);
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
 du_max_orig   = StageParams.du_max;
-du_max = du_max_orig/norm(gdrift_inv);
+if md == 2
+  du_max = du_max_orig/norm(gdrift_inv);
+else
+  du_max = du_max_orig;
+end
 % Pull out open-loop pole-zero information.
 [wp_real_x, wz_real_x] = w_zp_real(sys_designK);
 rho_1 = wz_real_x(1)/wp_real_x(1);
@@ -163,7 +168,6 @@ Qp = dare(sys_recyc.a, sys_recyc.b, Q1, R1, S1);
 nu = 1;
 mpcProb = condensedMPCprob_OA(sys_recyc, N_mpc, Q1, Qp, R1, S1);
 
-% rcond(
 
 Hmpc = mpcProb.H; Mmpc = mpcProb.M;
 maxIter = 20;
@@ -192,12 +196,35 @@ Lx = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
 [Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys_obs, sys_obs.b*0, 1);
 
 if 1
-    figure(20); clf
-    pzplot(PLANT);
-    title('observer')
+  %%
+    F20 = figure(20); clf
+    p_plant = pole(PLANT);
+    z_plant = zero(PLANT);
+    hpobs = plot(real(p_plant), imag(p_plant), 'xk', 'MarkerSize', 8);
+    hpobs.DisplayName = 'System Pole';
+
+    hold on
+    hzobs = plot(real(z_plant), imag(z_plant), 'ok', 'MarkerSize', 8);
+    hzobs.DisplayName = 'System Zero';    
+    
+%     title('observer')
     hold on
     opts.pcolor = 'r';
-    pzplotCL(sys_obsDist, [], L_dist, gcf, opts);
+    %opts.
+    [~, hpcl] = pzplotCL(sys_obsDist, [], L_dist, gcf, opts, 'MarkerSize', 8);
+    hpcl.DisplayName = 'C.L Obs Pole';
+    
+    xlim([-0.05, 1.05])
+    ylim([-0.4, 0.4])
+    title('');
+    xlabel('Re')
+    ylabel('Im')
+    leg1 = legend([hpobs, hzobs, hpcl]);
+    set(leg1, 'location', 'SouthWest', 'box', 'off', 'FontSize', 14);
+    
+    saveas(F20, fullfile(PATHS.jfig, 'obs_cl.svg'))
+    
+    
 end
 
 % 2). Design FeedForward gains.
