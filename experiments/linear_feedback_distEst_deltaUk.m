@@ -25,6 +25,9 @@ dataOut_path    = fullfile(PATHS.step_exp, outputDataName);
 refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 % location of the vi which runs the experiment.
 
+% where the different experiments are stored.
+save_root = fullfile(PATHS.exp, 'experiments', 'many_steps_data')
+
 % ---------- Load Parametric Models  -----------
 
 load(fullfile(PATHS.sysid, 'hysteresis/steps_hyst_model.mat'));
@@ -37,6 +40,7 @@ whos
 umax = 5;
 
 TOL = .01;
+
 
 %%
 SYS = ss(Gvib);
@@ -51,134 +55,81 @@ SYS.InputDelay = 0;
 PLANT.InputDelay = Nd;
 PLANT = absorbDelay(PLANT);
 
-sys_nodelay = SYS;
-
 SYS.InputDelay = Nd;
 SYS = absorbDelay(SYS);
 
 Ts  = SYS.Ts;
 
+
+
+Ns  = length(SYS.b);
+
 %--------------------------------------------------------------------------
-% Build models
-sys_designK = SYS;
-
-% 3). Reduced order system for simulation.
-sys_obs = absorbDelay(SYS);
-Ns  = length(sys_obs.b);
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                                                                         %
 %                  Design reference "trajectory"                          %
-%                                                                         %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% We will track one setpoints. Number of samples for each setpoint is 800.
-N1    = 800;
-ref_f_1 = .5; % 1.5 to hit slew rate, 1.4 doesn't
+N    = 800;
+r1 = 2;
+r2 = -.5;
 trajstyle =3;
 if trajstyle == 1
-  N2 = 800;
-  trun = Ts*(N1 + N2);
-  ref_f_2 = 1.5; % 1.5 to hit slew rate, 1.4 doesn't
-  ref_0 = 0;
-  t1 = [0:1:N1]'*Ts;
-  t2 = [N1+1:1:N1+N2]'*Ts;
-  
-  t = [t1; t2];
-  yref = [0*t1 + ref_f_1;
-    0*t2 + ref_f_2];
-  ref_traj = timeseries(yref, t);
+  yref = CanonRefTraj.ref_traj_1(r1, N);
 elseif trajstyle == 2
-  t1 = [0:1:N1]'*Ts;
-  trun = Ts*(N1);
-  t = t1;
-  yref = [0*t1 + ref_f_1];
-  ref_0 = 0;
-  ref_traj = timeseries(yref, t);
+    yref = CanonRefTraj.ref_traj_2(r1, r2, N);
 elseif trajstyle == 3
-  load('many_steps.mat')
-  ref_traj = ref_traj_params.ref_traj;
-  ref_traj.Data = ref_traj.Data;
-  t = ref_traj.Time;
-  yref = ref_traj.Data;
+  yref = CanonRefTraj.ref_traj_load('many_steps.mat');
 elseif trajstyle == 4
-  fname_traj = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\modelFitting\hysteresis\hyst_input_data_5-4-2018.mat';
+  fname_traj = ['C:\Users\arnold\Documents\MATLAB\afm_mpc_journal',...
+                '\modelFitting\hysteresis\hyst_input_data_5-4-2018.mat'];
   traj_dat = load(fname_traj);
   t_vec = traj_dat.t_vec;
   u_vec = traj_dat.u_vec;
-  ref_traj = timeseries(u_vec*dcgain(PLANT), t_vec);
-  t = ref_traj.Time;
-  yref = ref_traj.Data;
+  yref = timeseries(u_vec*dcgain(PLANT), t_vec);
+  t = yref.Time;
+  yref = yref.Data;
 end
+
 rw = 8.508757290909093e-07;
 rng(1);
-thenoise = timeseries(mvnrnd(0, rw, length(t))*0, t);
+thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
-% Design control/estimator gains. This gains are what we actually         %
+% Design control/estimator gains. These gains are what we actually         %
 % use in both the simulation and experimentant system.                    %
 %                                                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% 3). LQR generation gain.
-% -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
 du_max   = StageParams.du_max;
 
-% Pull out open-loop pole-zero information.
-[wp_real_x, wz_real_x] = w_zp_real(sys_designK);
-rho_1 = wz_real_x(1)/wp_real_x(1);
-rhos_x = [rho_1, 1., 1];
 
-zeta_x = [.85, .7, .4, .4 .4];
-gams_x = [1., 1., 1., 1., 1];
+can_cntrl = CanonCntrlParams_01(SYS);
+[sys_recyc, Q1, R1, S1] = build_control(SYS, can_cntrl);
 
-rad = 0.25;
-pint = 0.8;
-sys_recyc=SSTools.deltaUkSys(SYS);
-
-P_x  = getCharDes(sys_recyc, gams_x, pint, zeta_x, rhos_x, rad);
-[Chat, Dhat] = place_zeros(sys_recyc, P_x);
-% gam = 1;
-Q1 = Chat'*Chat;
-S1 = Chat'*Dhat;
-% R1 = Dhat'*Dhat + gam; % Plus gamma.
-R1 = 4; % From max_sp experiments, for rmax=10...
 K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R1, S1);
 sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
 
-if 1
-    f10 = figure(10); clf
-    pzplotCL(sys_cl, K_lqr, [], f10);
-end
-
-% -------------------------------------------------------------------------
 % ------------------------- Observer Gain ---------------------------------
-%
-sys_obs = absorbDelay(SYS);
-p_int_d = .8;
-  % state disturbance does not work unless we put the deltaUk state in the
-  % observer too. It probably could be made to, but I havnt worked that out.
-Qw = sys_obs.b*sys_obs.b'*100;
-Lx = dlqr(sys_obs.a', sys_obs.c', Qw, 1)';
-[L_dist, sys_obsDist, IDENT_obs, eNs_12] = DistEst.output_dist_est(sys_obs,...
-                                             Lx, p_int_d);
-[Nx_r, Nx_d, Nu_r, Nu_d] = DistEst.steady_state_gains(sys_obs, sys_obs.b*0, 1);
+can_obs_params = CanonObsParams_01();
+[sys_obsDist, L_dist] = build_obs(SYS, can_obs_params);
 
+% ------------------------- Plot Closed loop pz----------------------------
 if 1
-    figure(20); clf
-    pzplot(PLANT);
-    title('observer')
-    hold on
-    opts.pcolor = 'r';
-    pzplotCL(sys_obsDist, [], L_dist, gcf, opts);
+  f10 = figure(10); clf
+  pzplotCL(sys_cl, K_lqr, [], f10);
+  figure(20); clf
+  pzplot(PLANT);
+  title('observer')
+  hold on
+  opts.pcolor = 'r';
+  pzplotCL(sys_obsDist, [], L_dist, gcf, opts);
 end
 
-% 2). Design FeedForward gains.
+% ------- FeedForward gains.
 [Nx, Nu] = SSTools.getNxNu(sys_recyc);
 Nbar = K_lqr*Nx + Nu;
 gdrift_inv = 1/gdrift;
+
 sims_fp = SimAFM(PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false);
 if 1
   sims_fp.r = r;
@@ -188,29 +139,35 @@ if 1
   sims_fp.gdrift_inv = gdrift_inv;
   sims_fp.gdrift = gdrift;
 end
-[y_linear, U_full, U_nom, dU] = sims_fp.sim(ref_traj);
 
-linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', ref_f_1,...
+
+[y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim] = sims_fp.sim(yref);
+
+linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', yref.Data(1),...
                       'controller', K_lqr, 'name',  'Simulation');
 
-sim_exp = stepExpDu(y_linear, U_full, dU, linOpts);
+sim_exp = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
 
-% save(fname_traj, 't_vec', 'u_vec', 'U_full', 'y_linear', 'U_nom');
-
-%
+if saveon
+  save(fullfile(save_root, 'many_steps_linfp_sim.mat'),...
+       'y_lin_fp_sim', 'U_full_fp_sim', 'U_nom_fp_sim', 'dU_fp_sim')
+end
 F1 = figure(56); clf
 H1 = plot(sim_exp, F1, 'umode', 'both');
 subplot(3,1,1)
-plot(ref_traj.time, ref_traj.Data, '--k', 'LineWidth', .05);
+plot(yref.time, yref.Data, '--k', 'LineWidth', .05);
 xlm = xlim();
 
 
 F2 = figure(60); clf
-plot(dU)
+plot(dU_fp_sim.Time, dU_fp_sim.Data)
 hold on
+plot(U_full_fp_sim.Time(1:end-1), diff(U_full_fp_sim.Data), '--r')
 
-plot(U_full.Time(1:end-1), diff(U_full.Data), '--r')
-% plot(xlm, [ref_f_2, ref_f_2], ':')
+
+
+return
+
 %%
 %----------------------------------------------------
 % Build the u-reset.
@@ -218,7 +175,6 @@ if 1
   dry_run = false;
   reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
             'verbose', true, 'dry_run', dry_run)
-%   reset_piezo();
 end
 %%
 % Save the controller to .csv file for implementation
@@ -233,7 +189,7 @@ Iters = length(yref)-1;
 
 % creat and pack data. Then save it.
 tt = t;
-yy = yref;
+yy = yref.Data;
 uKx  = yy*Nbar;
 
 [y_ref, uKx, y_uKx] = pack_uKx_y(uKx, yy, tt);
@@ -287,7 +243,7 @@ grid on
 title('Current')
 %%
 if md == 2
-save('many_steps_data/many_steps_hyst_nosat_R4.mat', 'y_exp', 'u_exp', 'I_exp', 'wp', 'rp')
+save(fullfile(save_root, 'many_steps_hyst_nosat_R4.mat'), 'y_exp', 'u_exp', 'I_exp', 'wp', 'rp')
 end
 
 

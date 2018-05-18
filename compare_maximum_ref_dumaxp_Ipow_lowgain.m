@@ -8,7 +8,7 @@ clc
 close all
 addpath('functions')
 addpath('models')
-%%
+%
 
 clc
 fname_lin = fullfile(PATHS.sim_data(), 'max_sp_data_lin_dumax_p198.mat');
@@ -18,86 +18,28 @@ fname_timeopt = fullfile(PATHS.sim_data(),'timeopt_ref_data_dumax_p198.mat');
 
 matpath           = getMatPath();
 dataroot          = fullfile(matpath, 'afm_mpc_journal', 'modelFitting', 'pow_amp');
-expName           = 'FRF_data_current_stage2';
-modFitName    = [expName, '.mat'];
-modFitPath    = fullfile(dataroot, modFitName);
-load(modFitPath, 'modelFit')
 
-sys = ss(modelFit.models.G_uz2stage);
-Ts = sys.Ts;
-
-Nd = 8;
-sys.InputDelay = 0;
-[Gvib_nodelay, gdrift] = eject_gdrift(sys);
-
-Gvib = Gvib_nodelay;
-Gvib.InputDelay = Nd;
-Gvib = absorbDelay(Gvib);
-
-PLANT = Gvib;
-
-sys_recyc=SSTools.deltaUkSys(Gvib);
-sys_recyc_nodelay = SSTools.deltaUkSys(Gvib_nodelay);
-
-
-
-volts2mu = 1;
+% volts2mu = 1;
 TOL = 0.01;
-trun = 800*Ts;
-ref_f = 2;
-ref_0 = 0;
 umax = 5;
-
-
-[uss_0, uss_f, ~, ~, xss]  = yss2uss(PLANT, ref_f, 0);
-dcgain_sys = 1/(PLANT.c*xss);
-x0 = xss*0;
-
 
 % 3). LQR generation gain.
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
 du_max   = StageParams.du_max;
+plants = CanonPlants.plants_with_drift_inv(false);
+sys_recyc = plants.sys_recyc;
+Ts = sys_recyc.Ts;
+sys_recyc_nodelay = plants.sys_recyc_nodelay;
 
-% Pull out open-loop pole-zero information.
-[wp_real_x, wz_real_x] = w_zp_real(sys);
-rho_1 = wz_real_x(1)/wp_real_x(1);
-rhos_x = [rho_1, 1., 1];
-pint_x = .8;
+can_cntrl = CanonCntrlParams_01(plants.SYS);
+[Q1, R0, S1] = build_control(sys_recyc, can_cntrl);
 
-zeta_x = [.8, .7, .4, .4 .4 ];
-gams_x = [1., 1., 1., 1., 1];
-
-rad = 0.25;
-
-
-
-
-P_x    = getCharDes(sys_recyc, gams_x, pint_x, zeta_x, rhos_x, rad);
-[Chat, Dhat] = place_zeros(sys_recyc, P_x);
-gam = .00000000011;
-Q1 = Chat'*Chat;
-S1 = Chat'*Dhat;
-R1 = Dhat'*Dhat + gam; % Plus gamma.
-K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R1, S1);
-
+gam_lin = 3;
+gam_mpc = 0.00001;
+R1 = R0 + gam_mpc;
+K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R0+gam_lin, S1);
 sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
-
-% % % % Inverse LQR actually seems to work if we use mosek instead of sedumi.
-% % % px = getCharDes(sys_nodelay, gams_x, pint_x, zeta_x, rhos_x, rad);
-% % % K_temp = place(sys_nodelay.a, sys_nodelay.b, px);
-% % % [Q0, R0, K_lqr2] = inverseLQR(sys_nodelay, K_temp, 'mosek');
-% % % % Q0 = blkdiag(Q0, zeros(Nd, Nd));
-% % %
-% % % K_lqr2 = dlqr(sys_nodelay.a, sys_nodelay.b, Q0, R0);
-% % % sys_cl2 = SSTools.close_loop(sys_nodelay, K_lqr2);
-% % %
-% % % figure(200); clf
-% % % pzplot(sys_cl, sys_cl2)
-% % % hold on
-% % % plot(real(px), imag(px), 's')
-
-%
 
 figure(2); clf
 [y,t,x] = step(sys_cl, 800*Ts);
@@ -108,34 +50,7 @@ grid on
 subplot(2,1,2)
 plot(t, (x*K_lqr'))
 grid on
-if 0
-  f3 = figure(3); clf
 
-  plot(real(P_x), imag(P_x), 'ob')
-  hold on
-  [ax, C_hand] = lqr_locus(sys_recyc, Q1, 1, S1, .001, 1000);
-  C_hand.Label.Interpreter = 'latex';
-  C_hand.Label.FontSize = 14;
-  C_hand.Location = 'eastoutside';
-  C_hand.Position = [0.8406    0.1121    0.0473    0.8715];
-  ax.Position =  [0.0862 0.1123 0.7369 0.8713];
-  C_hand.Label.String = '$\gamma$';
-  C_hand.Label.Units = 'normalized';
-  C_hand.Label.Rotation = 0;
-  C_hand.Label.Position = [2.5214    0.5549         0];
-
-  xlim([-0.3, 1])
-  ylim([-0.35, 0.35])
-  % C_hand.Label.String = '$R_o + \gamma$';
-
-  xlabel('Re')
-  ylabel('Im')
-
-
-  if 1
-    saveas(f3, fullfile(PATHS.jfig, 'lqr_locus.svg'))
-  end
-end
 
 % ------------------ Linear + delU Saturation Case ---------------------- %
 % Iterate over a bunch of gammas and try to find the maximum setpoint for
@@ -145,11 +60,8 @@ end
 % by the fact that instability seems to occur in the "middle": if the
 % setpoint is large enough, we dont have the stability problem, which is
 % weird.
-% ref_s = linspace(0.01, 15, 200);
 
 
-%
-clc
 % *Optimal, open-loop* trajectory generation over all setpoints. This
 % provides the basiline for comparison of the other methods.
 % ref_s = [1.5];
@@ -168,27 +80,27 @@ N_traj =800;
 trun = Ts*N_traj;
 
 clear StepDataMPC
-%
+
 logfile = sprintf('logs/log-lin-mpc-parfor_judge_dynamic_%s.log', date);
 LG = EchoFile(logfile);
 logger = @LG.echo_file;
 logger = @fprintf;
 ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', logger);
-%
+
 % warning('ON', 'MATLAB:mir_warning_maybe_uninitialized_temporary');
 
-step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT, trun, 'S', S1);
+step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, plants.PLANT, trun, 'S', S1);
 
 figs(1) = figure(10);
 figs(2) = figure(11);
-step_params_lin.sim(10, gams(2), figs)
+step_params_lin.sim(2, gam_s(2), figs);
 
 
 step_data_lin = StepDataLin(step_params_lin, 'savedata', true,...
     'file', fname_lin', 'logger', logger,...
     'Progbar', ProgBar);
 
-step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, PLANT,...
+step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, plants.PLANT,...
                     trun, N_mpc_s,'condensed', 'S', S1);
 step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', true,...
     'file', fname_mpc', 'logger', logger,...
@@ -197,11 +109,11 @@ step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', true,...
 
 % step_params_timeopt = StepParamsTimeOpt(sys, ref_s, du_max, sys_nodelay, 10);
 step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, gamma,...
-  PLANT, N_traj, 'condensed', 'S', S1);
+  plants.PLANT, N_traj, 'condensed', 'S', S1);
 step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
     'file', fname_clqr);
 
-step_params_timeopt = StepParamsTimeOpt(sys_recyc, ref_s, du_max, sys_recyc_nodelay, Nd);
+step_params_timeopt = StepParamsTimeOpt(sys_recyc, ref_s, du_max, sys_recyc_nodelay, plants.Nd);
 step_data_timeopt = StepDataTimeOpt(step_params_timeopt, 'savedata', true,...
     'file', fname_timeopt);
 
@@ -212,12 +124,11 @@ step_data_timeopt = StepDataTimeOpt(step_params_timeopt, 'savedata', true,...
 %                        BUILD TRAJECTORIES                               %
 %                                                                         %
 % ======================================================================= %
-%%
+
 close all
-% ------------- Generate/Load CLQR max Trajectories --------------------- %
+% ------------- Generate/Load Time-Opt max Trajectories ----------------- %
 step_data_timeopt = step_data_timeopt.build_timeopt_trajs('force', 0,...
                     'verbose', 3, 'max_iter', 50, 'TOL', 1e-4, 'do_eject', false);
-%
 
 % ------------- Generate/Load CLQR max Trajectories --------------------- %
 tic
@@ -476,18 +387,18 @@ end
 figure(504)
 grid on
 % xlim([0, 10])
-saveas(gcf, 'latex/figures/perc_increase_Ipow_lowgain_rmax10.svg')
+saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax10.svg'))
 
 
 figure(503)
 grid on
 % xlim([0, 5])
-saveas(gcf, 'latex/figures/perc_increase_Ipow_lowgain_rmax5.svg')
+saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax5.svg'))
 
 figure(502)
 grid on
 % xlim([0, 2.5])
-saveas(gcf, 'latex/figures/perc_increase_Ipow_lowgain_rmax2p5.svg')
+saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax2p5.svg'))
 
 
 

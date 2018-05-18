@@ -272,7 +272,7 @@ function plot_local(t_settle_s, gam_s, ref_s, max_recommended_sps_idx,...
     
     F2 = figure(2);  hold on;
     ylabel('settle time [ms]')
-    xlabel('ref_f')
+    xlabel('$ref_f$')
 
     change_current_figure(F2);
     % colrs = get(gca, 'colororder');

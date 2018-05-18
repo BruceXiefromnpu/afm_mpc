@@ -58,7 +58,10 @@ classdef condensedMPCprob_OA < CondensedMPCProb
             obj.lb = []; 
 
         end
-        
+        function reset_warm_start_data(self)
+          N = self.N_mpc;
+          self.warm_start_data = qpOASES_auxInput('x0', zeros(N,1));
+        end
         function U = call_qp_solver(self, f, Ainq, lbA, ubA, lb, ub)
             
             if isempty(Ainq) 

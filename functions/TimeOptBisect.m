@@ -44,6 +44,7 @@ classdef TimeOptBisect
             parse(p, varargin{:});
             % path for cvx
             P_tmp = path(); % so we can reset the path when we're done
+            warning('off', 'MATLAB:dispatcher:nameConflict')
             addpath(genpath(fullfile(getMatPath, 'solvers/cvx')))
 
             verbose = p.Results.verbose;
@@ -96,6 +97,7 @@ classdef TimeOptBisect
             end
             
             path(P_tmp);
+            warning('on', 'MATLAB:dispatcher:nameConflict')
             [~, t_DT, X_DT] = lsim(self.sys, u, (0:1:k0-1)'*self.Ts, x0);
 
             xx = timeseries(X_DT, t_DT);
