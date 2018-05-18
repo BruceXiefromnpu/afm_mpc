@@ -3,18 +3,19 @@
 
 % clc
 clear
-%  close all
+
 
 % Options
 figbase  = 50;
 verbose = 0;
+saveon = 0;
 controlParamName = 'exp01Controls.csv';
 refTrajName      = 'ref_traj_track.csv';
 outputDataName = 'exp01outputBOTH.csv';
 % Build data paths
 
 addpath('../functions')
-% PATH_sim_model       = pwd;  % for simulink simulations
+addpath('../models')
 
 % ---- Paths for shuffling data to labview and back. ------
 %labview reads data here
@@ -26,7 +27,7 @@ refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 % location of the vi which runs the experiment.
 
 % where the different experiments are stored.
-save_root = fullfile(PATHS.exp, 'experiments', 'many_steps_data')
+save_root = fullfile(PATHS.exp, 'experiments', 'many_steps_data');
 
 % ---------- Load Parametric Models  -----------
 
@@ -42,27 +43,10 @@ umax = 5;
 TOL = .01;
 
 
-%%
-SYS = ss(Gvib);
-PLANT = ss(Gvib);
-% PLANT = ss(modelFit.models.G_uz2stage);
-% SYS = ss(modelFit.models.G_uz2stage);
-
-Nd = 9;
-SYS.iodelay = 0;
-SYS.InputDelay = 0;
-
-PLANT.InputDelay = Nd;
-PLANT = absorbDelay(PLANT);
-
-SYS.InputDelay = Nd;
-SYS = absorbDelay(SYS);
-
-Ts  = SYS.Ts;
-
-
-
-Ns  = length(SYS.b);
+with_hyst = false;
+plants = CanonPlants.plants_with_drift_inv(with_hyst);
+Ts  = plants.SYS.Ts;
+Ns  = length(plants.SYS.b);
 
 %--------------------------------------------------------------------------
 %                  Design reference "trajectory"                          %
@@ -83,7 +67,7 @@ elseif trajstyle == 4
   traj_dat = load(fname_traj);
   t_vec = traj_dat.t_vec;
   u_vec = traj_dat.u_vec;
-  yref = timeseries(u_vec*dcgain(PLANT), t_vec);
+  yref = timeseries(u_vec*dcgain(plants.PLANT), t_vec);
   t = yref.Time;
   yref = yref.Data;
 end
@@ -103,22 +87,22 @@ thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 du_max   = StageParams.du_max;
 
 
-can_cntrl = CanonCntrlParams_01(SYS);
-[sys_recyc, Q1, R1, S1] = build_control(SYS, can_cntrl);
+can_cntrl = CanonCntrlParams_01(plants.SYS);
+[Q1, R1, S1] = build_control(plants.sys_recyc, can_cntrl);
 
-K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R1, S1);
-sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
+K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R1, S1);
+sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
 
 % ------------------------- Observer Gain ---------------------------------
 can_obs_params = CanonObsParams_01();
-[sys_obsDist, L_dist] = build_obs(SYS, can_obs_params);
+[sys_obsDist, L_dist] = build_obs(plants.SYS, can_obs_params);
 
 % ------------------------- Plot Closed loop pz----------------------------
 if 1
   f10 = figure(10); clf
   pzplotCL(sys_cl, K_lqr, [], f10);
   figure(20); clf
-  pzplot(PLANT);
+  pzplot(plants.PLANT);
   title('observer')
   hold on
   opts.pcolor = 'r';
@@ -126,11 +110,11 @@ if 1
 end
 
 % ------- FeedForward gains.
-[Nx, Nu] = SSTools.getNxNu(sys_recyc);
+[Nx, Nu] = SSTools.getNxNu(plants.sys_recyc);
 Nbar = K_lqr*Nx + Nu;
 gdrift_inv = 1/gdrift;
 
-sims_fp = SimAFM(PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false);
+sims_fp = SimAFM(plants.PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false);
 if 1
   sims_fp.r = r;
   sims_fp.w = w;
