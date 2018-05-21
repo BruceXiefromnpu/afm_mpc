@@ -39,18 +39,21 @@ classdef CanonPlants
         hyst.wp = wp;
         hyst.r = r;
         hyst.w = w;
-        
+        gdrift_inv = 1/gdrift;  
       else
         load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
-        [Gvib, gdrift] = eject_gdrift(modelFit.models.G_uz2stage);
-        hyst = [];
+        [Gvib, gdrift_inv] = eject_gdrift(modelFit.models.G_uz2stage);
+        gdrift = 1/gdrift_inv;
+        hyst.r = [];
+        hyst.w = [];
+        hyst.rp = [];
+        hyst.wp = [];
       end
       
       
       %PLANT = ss(Gvib);
       SYS = ss(Gvib);
-      gdrift_inv = 1/gdrift;
-
+      
       plants.gdrift = gdrift;
       plants.gdrift_inv = gdrift_inv;
       
@@ -60,7 +63,7 @@ classdef CanonPlants
       SYS = ss2ss(SYS, T);
       PLANT = SYS;
       
-      Nd = 8;
+      Nd = 9;
       SYS.iodelay = 0;
       SYS.InputDelay = Nd;
       
