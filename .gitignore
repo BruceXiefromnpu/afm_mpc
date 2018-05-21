@@ -39,6 +39,10 @@ auto/
 # simulink backups
 *.r2016b
 slprj/
+*.mexw64
+*.asv
+*.csv
+*.autosave
 
 # Gtags ignores
 GPATH
@@ -52,3 +56,8 @@ ltximg/
 #vim ignores
 *.swp
 
+
+#
+*.dll
+*.dll.sim
+*.exe.sim
