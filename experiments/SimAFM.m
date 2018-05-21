@@ -194,7 +194,7 @@ classdef SimAFM
         ref_f_1 = ref(1);
       end
 
-      Ns = size(self.sys_obs.b,1) - size(self.sys_obs.c,1);
+      Ns = size(self.sys_obs.b,1);
       Ns_mpc = Ns + size(self.sys_obs.b,2);
       umax = 0;
       
@@ -205,6 +205,7 @@ classdef SimAFM
       if isnumeric(self.controller)
         MPC_mat = [];
         fprintf(fid, '0, 0, 0, 0\n');
+        K = self.controller;
       else
         % Should I make the FGMProb class do this??
         Nmpc = self.controller.N_mpc;

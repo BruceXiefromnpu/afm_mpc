@@ -14,6 +14,7 @@ outputDataName = 'exp01outputBOTH.csv';
 % Build data paths
 
 addpath('../functions')
+addpath('../functions/canon')
 % PATH_sim_model       = pwd;  % for simulink simulations
 
 % ---- Paths for shuffling data to labview and back. ------
