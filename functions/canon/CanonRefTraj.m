@@ -33,7 +33,7 @@ classdef CanonRefTraj
     end
     
     function ref_traj = ref_traj_load(fpath)
-      load('many_steps.mat')
+      load(fpath)
       ref_traj = ref_traj_params.ref_traj;
     end
     

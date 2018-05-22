@@ -37,13 +37,14 @@ save_root = fullfile(PATHS.exp, 'experiments', 'many_steps_data');
 % r = r;
 % w = theta_hyst;
 
-umax = 5;
+
 
 TOL = .01;
 saveon = true;
 %%
 md = 2;
-plants = CanonPlants.plants_with_drift_inv(false);
+with_hyst = true;
+plants = CanonPlants.plants_with_drift_inv(with_hyst);
 
 Ts  = plants.SYS.Ts;
 if md == 2
@@ -62,13 +63,15 @@ end
 N    = 800;
 r1 = 6;
 r2 = -6;
-trajstyle =3;
+trajstyle =4;
 if trajstyle == 1
   yref = CanonRefTraj.ref_traj_1(r1, N);
 elseif trajstyle == 2
     yref = CanonRefTraj.ref_traj_2(r1, r2, N);
 elseif trajstyle == 3
   yref = CanonRefTraj.ref_traj_load('many_steps.mat');
+elseif trajstyle == 4
+  yref = CanonRefTraj.ref_traj_load('many_steps_rand_longts.mat');
 end
 rw = 8.508757290909093e-07;
 rng(1);
@@ -127,7 +130,7 @@ can_obs_params = CanonObsParams_01();
 [sys_obsDist, L_dist] = build_obs(plants.SYS, can_obs_params);
 
 if 1
-  %%
+  
   f10 = figure(10); clf
   pzplotCL(plants.sys_recyc, K_lqr, [], f10);
 
@@ -178,10 +181,10 @@ sims_fpl = SimAFM(plants.PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false);
 sims_fpm = SimAFM(plants.PLANT, mpcProb, Nx, sys_obsDist, L_dist, du_max, false);
 
 if 1
-%   sims_fpl.r = plants.hyst.r;
-%   sims_fpl.w = plants.hyst.w;
-%   sims_fpl.rp = plants.hyst.rp;
-%   sims_fpl.wp = plants.hyst.wp;
+  sims_fpl.r = plants.hyst.r;
+  sims_fpl.w = plants.hyst.w;
+  sims_fpl.rp = plants.hyst.rp;
+  sims_fpl.wp = plants.hyst.wp;
   sims_fpl.gdrift_inv = plants.gdrift_inv;
   sims_fpl.gdrift = plants.gdrift;
 end
@@ -261,10 +264,10 @@ sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
 sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
   true, 'nw', nw, 'nf', nf);
 if 1
-  % sims_fxpl.r = r;
-  % sims_fxpl.w = w;
-  % sims_fxpl.rp = rp;
-  % sims_fxpl.wp = wp;
+  sims_fxpl.r = plants.hyst.r;
+  sims_fxpl.w = plants.hyst.w;
+  sims_fxpl.rp = plants.hyst.rp;
+  sims_fxpl.wp = plants.hyst.wp;
   sims_fxpl.gdrift_inv = plants.gdrift_inv;
   sims_fxpl.gdrift = plants.gdrift;
 end
@@ -400,7 +403,10 @@ title('Current')
 [~, F61] = plotState(xhat_exp, F61);
 fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 %%
-save('many_steps_data/many_steps_mpc_invHyst_invDrift2.mat', 'y_exp', 'u_exp', 'du_exp', 'wp', 'rp')
+
+save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
+  'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_mpc_fp_sim')
+% save('many_steps_data/many_steps_mpc_invHyst_invDrift2.mat', 'y_exp', 'u_exp', 'du_exp', 'wp', 'rp')
 
 
 

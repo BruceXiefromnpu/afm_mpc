@@ -64,13 +64,15 @@ end
 N    = 800;
 r1 = 1;
 r2 = -6;
-trajstyle =3;
+trajstyle =4;
 if trajstyle == 1
   yref = CanonRefTraj.ref_traj_1(r1, N);
 elseif trajstyle == 2
     yref = CanonRefTraj.ref_traj_2(r1, r2, N);
 elseif trajstyle == 3
   yref = CanonRefTraj.ref_traj_load('many_steps.mat');
+elseif trajstyle == 4
+  yref = CanonRefTraj.ref_traj_load('many_steps_rand_longts.mat');
 end
 rw = 8.508757290909093e-07;
 rng(1);
@@ -130,6 +132,7 @@ if 1
   sims_fpl.gdrift_inv = plants.gdrift_inv;
   sims_fpl.gdrift = plants.gdrift;
 end
+
 [y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref);
 
 linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', yref.Data(1),...
@@ -189,10 +192,13 @@ sim_exp_fxpl = stepExpDu(y_fxpl, U_full_fxpl, dU_fxpl, fxpl_Opts);
 
 h2 = plot(sim_exp_fxpl, F1, 'umode', 'both');
 legend([h1(1), h2(1)])
-
+%
+fprintf('Max of U_nom = %.2f\n', max(U_nom_fxpl.Data));
+fprintf('Max of U_full = %.2f\n', max(U_full_fxpl.Data));
 
 [~, F61] = plotState(Xhat_fxpl, F61, [], [], '--');
 fprintf('max of Xhat = %.2f\n', max(abs(Xhat_fxpl.Data(:))));
+
 
 
 
@@ -228,10 +234,7 @@ clc
 num = num{1};
 den = den{1};
 
-% AllMatrix = packMatrixDistEst(sys_obsDist, L_dist, K_lqr, Nx);
-% saveControlData(AllMatrix, 0, 0, Ns, Nd, ref_f_1, y_uKx, controlDataPath, refTrajPath);
-
-umax = 6;
+umax = 10;
 ymax = max(yref.Data)*1.3
 clear e;
 clear vi;
@@ -276,12 +279,22 @@ afm_exp = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
 H2 = plot(afm_exp, F1);
 subplot(3,1,1)
 % plot(y_exp.Time, yy, ':k')
+subplot(3,1,2)
+
+plot(u_exp.Time, u_exp.data, '--m')
 
 figure(1000); clf
 plot(Ipow_exp.Time, (Ipow_exp.Data/15)*1000)
 ylabel('current [mA]')
 grid on
 title('Current')
+%%
+
+save('many_steps_data/many_steps_rand_fxplin_invHystDrift.mat', 'y_exp', 'u_exp',...
+  'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_lin_fp_sim')
+
+
+
 %%
 
 

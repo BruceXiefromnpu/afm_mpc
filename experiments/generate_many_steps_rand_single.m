@@ -1,8 +1,8 @@
 %%
 rng(5);
-saveon = false;
+saveon = true;
 Ts = StageParams.Ts;
-n_space = 1600;
+n_space = 2000;
 N_repeat = 1;
 N_steps = 20;
 imps = -5.5 + (5.5+5.5)*rand(N_steps,1)
@@ -25,13 +25,14 @@ t_vec = (0:length(u_vec)-1)'*Ts;
 figure(1); clf
 plot(t_vec, u_vec);
 grid on
-%%
+
 
 ref_traj_params.ref_traj = timeseries(u_vec(:), t_vec(:));
 ref_traj_params.impulse_idx = impulse_idx;
 ref_traj_params.ref_s = ref_s;
 if saveon
-    save('many_steps_longts.mat', 'ref_traj_params' )
+  'ppp'
+    save('many_steps_rand_longts.mat', 'ref_traj_params' )
 end
 
 

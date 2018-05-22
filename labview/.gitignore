@@ -2,3 +2,6 @@ fpga_VIs/fpga_subVIs/hysteresis_PI_no_sat/
 fpga_VIs/fixed-point/mults/dspMult_18x18/
 fpga_VIs/fixed-point/mults/dspMult_32x32/
 *.lvlps
+*.html
+*.vdb
+
