@@ -1,6 +1,7 @@
 clear
 clc
 
+addpath('~/gradschool/sysID/matlab/functions')
 % modelFit_file = 'FRF_data_current_stage.mat';
 modelFit_file = 'pow_amp/FRF_data_current_stage2.mat';
 
@@ -17,7 +18,7 @@ Ts = modelFit.frf.Ts;
 
 %%
 % --------------------------------------------------------------- %
-% --------- Second, we work on the stage system ----------------- %
+% --------- First, we work on the stage system ----------------- %
 % 
 F3 = figure(3); clf
 F4 = figure(4); clf
@@ -78,30 +79,33 @@ frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
 plotPZ_freqs(sys_stage_log, F4);
 %%
 
+
+% ---------------------------------------------------------------- %
+% --------- Second, we work on the powI system -------------------- %
+
 % Visualize everything
 F1 = figure(1); clf
 frfBode(G_uz2powI_frf, freqs, F1, 'r', 'Hz');
 
 
-
-
-% ---------------------------------------------------------------- %
-% --------- First, we work on the powI system -------------------- %
 % Divide the derivative (z-1) out of the systems FRF.
 ejw = exp(1j*Ts*modelFit.frf.w_s(:));
 
-der_frf_ct = (1j*modelFit.frf.w_s(:));
-der_frf = ejw - 1;
-G_uz2powI_int_frf = G_uz2powI_frf./der_frf;
-
+% der_frf_ct = (1j*modelFit.frf.w_s(:));
+derz_frf = ejw - 1;
+G_deluz2powI_frf = G_uz2powI_frf./derz_frf;
+mag_max = max(abs(G_deluz2powI_frf));
+derz_frf = derz_frf*mag_max;
+I_max = 0.1; %Amps
+fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
 
 F2 = figure(2); clf;
-frfBode(G_uz2powI_int_frf, freqs, F2, 'r', 'Hz');
+frfBode(G_deluz2powI_frf, freqs, F2, 'r', 'Hz');
 
 Nd1 = 4;
 ss_opts = frf2ss_opts('Ts', Ts);
 
-f2ss = frf2ss(G_uz2powI_int_frf, omegas, Nd1, ss_opts); % 12
+f2ss = frf2ss(G_deluz2powI_frf, omegas, Nd1, ss_opts); % 12
 sys = f2ss.realize(12); % 12
 
 g_der = zpk([1], [], 1, Ts); % 
@@ -111,18 +115,25 @@ frfBode(sys*g_der, freqs, F1, '--k', 'Hz');
 %
 
 sos_fos = SosFos(sys, 'iodelay', sys.InputDelay);
-LG = LogCostZPK(G_uz2powI_int_frf, freqs*2*pi, sos_fos);
+LG = LogCostZPK(G_deluz2powI_frf, freqs*2*pi, sos_fos);
 LG.solve_lsq(2, LGopts)
 
-[sys3, p] = LG.sos_fos.realize();
-sys3.InputDelay = max(round(p, 0), 0);
-frfBode(sys3*g_der, freqs, F1, '--b', 'Hz');
-frfBode(sys3, freqs, F2, '--b', 'Hz');
+[G_deluz2Ipow, p] = LG.sos_fos.realize();
+G_deluz2pow.InputDelay = max(round(p, 0), 0);
+frfBode(G_deluz2Ipow*g_der, freqs, F1, '--b', 'Hz');
+frfBode(G_deluz2Ipow, freqs, F2, '--b', 'Hz');
 
-plotPZ_freqs(sys3*g_der, F1);
+plotPZ_freqs(G_deluz2Ipow*g_der, F1);
 
+% compute impulse response for 1-norm:
+[y, t] = impulse(G_deluz2Ipow);
+y = y*Ts; % matlab makes the impulse 1/Ts tall.
+nm1 = sum(abs(y))
 
+delumax = I_max/nm1;
+fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
 
+fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 
 
 %%
