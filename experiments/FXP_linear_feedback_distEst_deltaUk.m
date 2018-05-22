@@ -64,7 +64,7 @@ end
 N    = 800;
 r1 = 1;
 r2 = -6;
-trajstyle =1;
+trajstyle =3;
 if trajstyle == 1
   yref = CanonRefTraj.ref_traj_1(r1, N);
 elseif trajstyle == 2
@@ -168,7 +168,7 @@ sys_obs_fxp.b = fi(sys_obsDist.b, 1, nw, 29);
 sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
 
 % --------------------  Fixed Linear stuff -----------------------------
-%%
+%
 clc
 sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
   true, 'nw', nw, 'nf', nf);
@@ -207,7 +207,9 @@ sims_fxpl.write_control_data(fxplin_dat_path, yref, traj_path)
 % Build the u-reset.
 %%
 if 1
-  reset_piezo();
+  dry_run = false;
+  reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
+            'verbose', true, 'dry_run', dry_run)
 end
 %%
 % Save the controller to .csv file for implementation
@@ -217,7 +219,7 @@ clear vi; clear e;
 SettleTicks = 20000;
 Iters = length(yref.Data)-1;
 
-Iters =799;
+% Iters =700;
 Iters = min(Iters, length(yref.Data)-1);
 
 
@@ -229,7 +231,7 @@ den = den{1};
 % AllMatrix = packMatrixDistEst(sys_obsDist, L_dist, K_lqr, Nx);
 % saveControlData(AllMatrix, 0, 0, Ns, Nd, ref_f_1, y_uKx, controlDataPath, refTrajPath);
 
-umax = 2;
+umax = 6;
 ymax = max(yref.Data)*1.3
 clear e;
 clear vi;
@@ -246,7 +248,7 @@ vipath =['C:\Users\arnold\Documents\matlab\afm_mpc_journal\',...
 % rp = 0; wp = 0;
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
    'num', num, 'den', den, 'TF Order', (length(den)-1),...
-   'r_s', plants.hyst.rp, 'w-s', plants.hyst.wp, 'N_hyst', length(plants.hyst.rp),...
+   'r_s', plants.hyst.rp, 'w_s', plants.hyst.wp, 'N_hyst', length(plants.hyst.rp),...
    'du_max', du_max,'dry_run', false,...
    'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
    'traj_path', traj_path, 'control_data_path', fxplin_dat_path);
@@ -265,18 +267,18 @@ du_exp = timeseries(AFMdata(:,3), t_exp);
 ufull_exp = timeseries(AFMdata(:,4), t_exp);
 
 Ipow_exp = timeseries(AFMdata(:,5), t_exp);
-xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
-yy = xhat_exp.Data*sys_obsDist.c';
+% xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
+% yy = xhat_exp.Data*sys_obsDist.c';
 
 expOpts = stepExpOpts(linOpts, 'pstyle', '--g', 'name',  'AFM Stage');
 
-afm_exp = stepExpDu(y_exp, u_exp, du_exp, expOpts);
+afm_exp = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
 H2 = plot(afm_exp, F1);
 subplot(3,1,1)
-plot(y_exp.Time, yy, ':k')
+% plot(y_exp.Time, yy, ':k')
 
 figure(1000); clf
-plot(I_exp.Time, (I_exp.Data/15)*1000)
+plot(Ipow_exp.Time, (Ipow_exp.Data/15)*1000)
 ylabel('current [mA]')
 grid on
 title('Current')
