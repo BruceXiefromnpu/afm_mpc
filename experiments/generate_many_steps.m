@@ -1,5 +1,5 @@
 %%
-
+Ts = StageParams.Ts;
 n_space = 1600;
 N_repeat = 3;
 imps = [ 1, 2.5,-2,1.25, -2, 1, -3, -.5]';
@@ -20,11 +20,12 @@ t_vec = (0:length(u_vec)-1)'*Ts;
 figure
 plot(t_vec, u_vec);
 grid on
-%%
+%
 clc
 ref_traj_params.ref_traj = timeseries(u_vec(:), t_vec(:));
 ref_traj_params.impulse_idx = impulse_idx;
 ref_traj_params.ref_s = ref_s;
-save('many_steps_longts.mat', 'ref_traj_params' )
+root = fullfile(PATHS.exp, 'experiments', 'many_steps_data');
+save(fullfile(root, 'many_steps_short.mat'), 'ref_traj_params' )
 
 
