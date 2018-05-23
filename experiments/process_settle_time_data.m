@@ -6,23 +6,33 @@
 clear, clc
 
 % where the different experiments are stored.
-root = fullfile(PATHS.exp, 'experiments', 'many_steps_data')
+% root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand')
+root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data')
 
 % addpath('many_steps_data')
 
 % Data with the sequence of references:
-load('many_steps.mat')
+load(fullfile(root, 'many_steps_short.mat'))
+reft_pi = load(fullfile(root, 'many_steps.mat'))
+
+% load(fullfile(root, 'many_steps_rand_longts.mat'))
+% reft_pi = load(fullfile(root, 'many_steps_rand_longts.mat'))
 
 saveon = true;
 
 whos
-L = 800;
+% L = 800;
 TOL = 0.01;
-tol_mode = 'rel';
+tol_mode = 'abs';
 verbose = 0;
 ref_s = ref_traj_params.ref_s;
-step_idx = ref_traj_params.impulse_idx;
+ref_s_pi = reft_pi.ref_traj_params.ref_s;
+if ref_s ~=ref_s_pi
+  error('need refs the same')
+end
 
+step_idx = ref_traj_params.impulse_idx;
+step_idx_pi = reft_pi.ref_traj_params.impulse_idx;
 
 figure(1000); clf
 plot(ref_traj_params.ref_traj.Time, ref_traj_params.ref_traj.Data)
@@ -57,11 +67,33 @@ end
 
 TS_s_cell = {};
 
-load(fullfile(root,'many_steps_fxplin_invHystDrift.mat'))
+% ---------- Linear FXP Sim -------------------------% 
+load(fullfile(root,'many_steps_linfxp_sim.mat'))
+TS_hyst = get_many_steps_ts(y_fxpl, ref_s, step_idx, TOL, verbose, 1, tol_mode);
+TS_dat_tmp.ts_s = TS_hyst;
+TS_dat_tmp.name = 'Lin (fxp) (SIM)';
+TS_dat_cell{1} = TS_dat_tmp;
+
+% h2 = plot(y_exp.Time, y_exp.Data, '-b');
+% h2.DisplayName = 'Invert hyst (linfp, no sat operator)';
+
+% ---------- Linear FXP Sim -------------------------% 
+load(fullfile(root,'many_steps_mpcfxp_sim.mat'))
+TS_hyst = get_many_steps_ts(y_fxpm, ref_s, step_idx, TOL, verbose, 1, tol_mode);
+TS_dat_tmp.ts_s = TS_hyst;
+TS_dat_tmp.name = 'MPC (fxp) (SIM)';
+TS_dat_cell{end+1} = TS_dat_tmp;
+
+% h2 = plot(y_exp.Time, y_exp.Data, '-b');
+% h2.DisplayName = 'Invert hyst (linfp, no sat operator)';
+
+
+% ---------- Linear FXP Experiment -------------------------% 
+load(fullfile(root,'many_steps_linfxp_invHyst_invDrift.mat'))
 TS_hyst = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, verbose, 1, tol_mode);
 TS_dat_tmp.ts_s = TS_hyst;
 TS_dat_tmp.name = 'Lin (fxp) w/ $\mathcal{H}^{-1}$';
-TS_dat_cell{1} = TS_dat_tmp;
+TS_dat_cell{end+1} = TS_dat_tmp;
 
 h2 = plot(y_exp.Time, y_exp.Data, '-b');
 h2.DisplayName = 'Invert hyst (linfp, no sat operator)';
@@ -79,7 +111,7 @@ h2.DisplayName = 'Invert hyst (linfp, no sat operator)';
 
 % ------------------  PI-control --------------------------
 load(fullfile(root,'many_steps_pi.mat'))
-TS_pi = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, verbose, 1, tol_mode);
+TS_pi = get_many_steps_ts(y_exp, ref_s_pi, step_idx_pi, TOL, verbose, 1, tol_mode);
 TS_dat_tmp.ts_s = TS_pi;
 TS_dat_tmp.name = 'PI';
 TS_dat_cell{end+1} = TS_dat_tmp;
@@ -88,7 +120,7 @@ h4 = plot(y_exp.Time, y_exp.Data, '-m');
 h4.DisplayName = 'PI';
 
 
-load(fullfile(root,'many_steps_mpc_invHyst_invDrift2.mat'))
+load(fullfile(root,'many_steps_mpc_invHyst_invDrift.mat'))
 TS_mpc = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, verbose, 1, tol_mode);
 TS_dat_tmp.ts_s = TS_mpc;
 TS_dat_tmp.name = 'MPC with $\mathcal{H}^{-1}$';
