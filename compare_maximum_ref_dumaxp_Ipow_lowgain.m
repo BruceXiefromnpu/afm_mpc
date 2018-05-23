@@ -26,7 +26,7 @@ umax = 5;
 % 3). LQR generation gain.
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
-du_max   = StageParams.du_max;
+du_max   = StageParams.du_max_vib;
 plants = CanonPlants.plants_with_drift_inv(false);
 sys_recyc = plants.sys_recyc;
 Ts = sys_recyc.Ts;
@@ -68,10 +68,10 @@ grid on
 
 gamma = 1.00001;
 % gam_s = linspace(gamma, 5, 10)
-gam_s = logspace(log10(gamma), log10(5), 10)
-
+gam_s = logspace(log10(gamma), log10(20), 30)
+%%
 % gam_s = [1, 100, 1000, 2500, 5000, 10000];
-ref_s = 0.1:0.5:11.5;
+ref_s = 0.1:0.5:15.5;
 
 
 N_mpc_s = [4, 8, 12, 16, 20]; % original
@@ -124,16 +124,16 @@ step_data_timeopt = StepDataTimeOpt(step_params_timeopt, 'savedata', true,...
 %                        BUILD TRAJECTORIES                               %
 %                                                                         %
 % ======================================================================= %
-
+verbose = 0;
 close all
 % ------------- Generate/Load Time-Opt max Trajectories ----------------- %
 step_data_timeopt = step_data_timeopt.build_timeopt_trajs('force', 0,...
-                    'verbose', 3, 'max_iter', 50, 'TOL', 1e-4, 'do_eject', false);
+                    'verbose', verbose, 'max_iter', 50, 'TOL', 1e-4, 'do_eject', false);
 
 % ------------- Generate/Load CLQR max Trajectories --------------------- %
 tic
 try
-    step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 0, 'verbose', 3);
+    step_data_clqr = build_clqr_trajs(step_data_clqr, 'force', 0, 'verbose', verbose);
     logger('Finished building clqr_data. Total time = %.2f\n', toc);
 catch ME
     errMsg_logger = getReport(ME, 'extended', 'hyperlinks', 'off');
@@ -149,7 +149,7 @@ Judge = MaxSpJudgeCLQR(step_data_clqr, threshold);
 try
 
     step_data_lin.max_ref_judge = Judge;
-    step_data_lin = step_data_lin.build_max_setpoints('force', 0, 'verbose', 3);
+    step_data_lin = step_data_lin.build_max_setpoints('force', 0, 'verbose', verbose);
 
     logger('Finished building max setpoints, linear. Total time = %.2f\n\n', toc);
 catch ME
@@ -163,7 +163,7 @@ catch ME
 tic
 try
     step_data_mpc.max_ref_judge = Judge;
-    step_data_mpc = step_data_mpc.build_max_setpoints('force', 0, 'verbose', 1);
+    step_data_mpc = step_data_mpc.build_max_setpoints('force', 0, 'verbose', verbose);
    logger('Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
 catch ME
     errMsg = getReport(ME,  'extended','hyperlinks', 'off');

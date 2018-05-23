@@ -10,6 +10,8 @@ classdef StageParams
 %     Rsense
   
   properties (Constant)
+    du_max_1nm = 0.140;     % See publish_plotting/compute_du_1norm_bounds.m
+    du_max_1nm_vib = 0.1007; % See publish_plotting/compute_du_1norm_bounds.m
     du_max = 0.198;
     opamp2powI = 1/15.15;
 %     R1 = 29.7e6;

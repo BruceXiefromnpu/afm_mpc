@@ -296,8 +296,29 @@ where where $I_{\text{max}} = 0.1$~A and $||g_o||_1 \approx 0.724$.
 
 Notably, this bound is conservative, since for higher frequencies a pure derivative overestimates the amount of actual current draw. Ideally, we would use our parametric model of \(G_{I_{X},u_{X}}\) and enforce a constraint on the output of that model. However, such an approach renders the constraint set for $u_X$ complex and is it not feasible to solve that problem using the fast gradient method. In our experimental implementations, we will enforce \eqref{eqn:du_limit}. However, in Section~\ref{sec:time_save_analysis} we will consider how much performance is given up through this method via a simulation study. 
 
-Finally, the slew rate limit used in the MPC/linear feedback controller must be discounted from \eqref{eqn:du_limit} to account for the inverse inverse drift and hysteresis compensatators.
+Finally, the slew rate limit used in the MPC/linear feedback controller must be discounted from \eqref{eqn:du_limit} to account for the inverse inverse drift and hysteresis compensatators. This adjustment for the inverse drift operator is follows essentially the same argument as above. We have
+\begin{equation}
+\Delta y_d = G_d^{-1} \Delta u(z)
+\end{equation}
+and thus $|\Delta y_d| \leq |g_d^{-1}|_1 ||\Delta u||_{\infty}$. We find that $|g_d^{-1}|_1  = 1.39$ and thus, we need $|\Delta u| \leq 0.1381/1.39 = 0.0992$.
 
+Computing a bound for the inverse hysteresis operator is more complicated. Recall the inverse operator is also an PI hysteresis operator and that it is composed of a linear combination of the fundamental elements REF. So start by rewriting the operation of a single element as
+
+\begin{equation}
+  z_i(k)  = 
+  \begin{cases}
+    u(k) + r_i, & u(k) \leq z_i(k-1) -r\\
+    z_i(k-1), & z_i(k-1) - r < u(k) < z_i(k-1) + r_i\\
+    u(k) - r_i, & u(k) \geq z_i(k-1) +r\\
+  \end{cases}
+\end{equation}
+Then the increment in the output is given by
+\begin{align}
+  z_i(k+1)- z_i(k) &= \max\{u(k+1),\: \min\{z_i(k), u(k+1) - r_i\}\}\\
+  &- \max\{u(k),\: \min\{z_i(k-1), u(k) - r_i\}\}.
+\end{align}
+
+TKTKTKTKT FINISH THIS
 
 \section{Control Setup}
 \subsection{The Incremental Form}\label{sec:incremental}
@@ -413,7 +434,7 @@ The observer gain is given by $\begin{bmatrix}L & L_d\end{bmatrix}$. It is shown
 
 To design $L$, we use the method outlined in \cite{doyle_robustness_1979}, which sets $L$ is the steady state solution of the discrete LQR problem applied to the dual of $G$, where $Q = Q_w + BB^T$ and $R$ is a turning parameter. We design $L_m$ such that the disturbance pole is placed at $z=0.8$.
 
-To achieve zero offset tracking, disturbance estimators re-compute the steady state target at each time-step. For a an output disturbance ($B_d=0$ model with $C_d=I$, this simply means that the reference is adjusted by subtracting $\hat d_k$. In other words, at each time step, we need to compute
+To achieve zero offset tracking, disturbance estimators re-compute the steady-state target at each time-step. For an output disturbance ($B_d=0$ model with $C_d=I$, this simply means that the reference is adjusted by subtracting $\hat d_k$. In other words, at each time step, we need to compute
 \begin{equation}
   x_{e} = \hat{x}(k) - N_x(r_k - \hat{d}_k).
 \end{equation}

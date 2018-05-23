@@ -34,15 +34,23 @@ classdef CanonPlants
     % space. 
       
       if with_hyst
-        load(fullfile(PATHS.sysid, 'hysteresis/steps_hyst_model.mat'));
+        load(fullfile(PATHS.sysid, ['hysteresis/steps_hyst_model.mat']));
         hyst.rp = rp;
         hyst.wp = wp;
         hyst.r = r;
         hyst.w = w;
         gdrift_inv = 1/gdrift;  
+        
+        % Grab the current model.
+        mf = load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'));
+        plants.G_delu2powI = mf.modelFit.models.G_deluz2powI;
+        
       else
-        load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
+        load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'));
         [Gvib, gdrift_inv] = eject_gdrift(modelFit.models.G_uz2stage);
+        
+        plants.G_delu2powI = modelFit.models.G_deluz2powI;
+        
         gdrift = 1/gdrift_inv;
         hyst.r = [];
         hyst.w = [];
@@ -55,6 +63,7 @@ classdef CanonPlants
       SYS = ss(Gvib);
       
       plants.gdrift = gdrift;
+      
       plants.gdrift_inv = gdrift_inv;
       
       SYS = balreal(SYS);

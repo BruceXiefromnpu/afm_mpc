@@ -5,7 +5,7 @@ clc
 
 % plotting options
 lw = 1.3;
-saveOn = 0; % set this to 0 to avoid saving the computed FRFs.
+saveOn = true; % set this to 0 to avoid saving the computed FRFs.
 
 
 rmpath('C:\Users\arnold\Documents\MATLAB\miscScripts\system_id\')
@@ -20,6 +20,7 @@ FC_data_file = 'x-axis_sines_info_HIRESFourierCoef_5-14-2018-02.csv';
 
 dataRoot = '/media/labserver/mpc-journal/sysID/FRF_data/'
 FC_path = fullfile(dataRoot, FC_data_file);
+load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'));
 
 % For saving results:
 frf_File = strrep(FC_path, '.csv', '.mat');
@@ -89,15 +90,20 @@ set(gca, 'Position', [0.1300 0.1100 0.7750 0.3543])
 
 % ----------------------------------------------------------------------- %
 % Find the TF-bound
-derz = tf([1 -1], 1, Ts);
+
+nm1 = modelFit.models.g_deluz2pow_1norm;
+derz = tf([1 -1], 1, Ts)*nm1;
 derz_frf = squeeze(freqresp(derz, freqs*2*pi));
-Derz_Guz2I = G_uz2powI./derz_frf;
-mag_max = max(abs(Derz_Guz2I));
-derz = mag_max*derz;
-derz_frf = derz_frf*mag_max;
-I_max = 0.1; %Amps
-fprintf('Mag-max = %.3f, deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
-      
+
+% derz = tf([1 -1], 1, Ts);
+% derz_frf = squeeze(freqresp(derz, freqs*2*pi));
+% Derz_Guz2I = G_uz2powI./derz_frf;
+% mag_max = max(abs(Derz_Guz2I));
+% derz = mag_max*derz;
+% derz_frf = derz_frf*mag_max;
+% I_max = 0.1; %Amps
+% fprintf('Mag-max = %.3f, deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
+     
       
 F3 = figure(3); clf
 ax3 = gca();
@@ -114,7 +120,7 @@ h5.DisplayName = '$G_{I_x, V_X}$';
 
 h10_bnd = semilogx(freqs, 20*log10(abs(derz_frf)),...
           ':k', 'LineWidth', lw);
-h10_bnd.DisplayName = '$\tilde{G}_{I_X,u_X}$ (bound)';
+h10_bnd.DisplayName = '$(z-1) ||g_{I_X,\Delta u_X}||_1$ ';
 xlim([freqs(1), freqs(end)])
 
 leg = legend([h3,h4,h5, h10_bnd]);
