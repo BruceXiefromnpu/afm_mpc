@@ -100,11 +100,7 @@ classdef SimAFM
       VSS_LINEAR_CONTROL=Simulink.Variant('VSS_CONTROL_MODE==1');
       VSS_MPC_CONTROL=Simulink.Variant('VSS_CONTROL_MODE == 2');
       
-      % VSS_NO_HYST_NO_DRIFT=Simulink.Variant('VSS_EXT_DIST_MODE==1');
-      % VSS_HYST_AND_DRIFT=Simulink.Variant('VSS_EXT_DIST_MODE==2');
-      % VSS_HYST_ONLY=Simulink.Variant('VSS_EXT_DIST_MODE==3');
-      % VSS_EXT_DIST_MODE = 1;
-      
+ 
       %#ok<*NASGU>
       VSS_LINEAR_CONTROL=Simulink.Variant('VSS_CONTROL_MODE==1');
       VSS_MPC_CONTROL=Simulink.Variant('VSS_CONTROL_MODE == 2');
@@ -173,6 +169,24 @@ classdef SimAFM
         nf = sim_obj.nf;
         id = 'Simulink:Engine:BlkIgnoringUsedAsDStateFlag';
         warning('off', id);
+        
+
+        if ~isnumeric(sim_obj.controller)
+        % Since we are in the fixed-point case, check if we are doing MPC. It
+        % is too slow to use the s-fun, we have to go back to the matlab fun,
+        % this sucks but is what it is.
+          IH_fxp = sim_obj.controller.I_HL;
+          ML_x0_fxp = sim_obj.controller.ML;
+          beta_fxp =  sim_obj.controller.beta;
+          maxIter =  sim_obj.controller.maxIter;
+          N_mpc =  sim_obj.controller.N_mpc;
+          z0 =  sim_obj.controller.warm_start_data(1:N_mpc);
+          y0 =  sim_obj.controller.warm_start_data(N_mpc+1:end);
+          du_max = sim_obj.controller.uMax;
+          nw_fgm = sim_obj.controller.nw;
+          nf_fgm = sim_obj.controller.nf;
+          Ns = size(ML_x0_fxp,2);
+        end
         sim('FXP_AFMss_obshas_uk', [], options)
       end
       % provides Y, U, dU, Xhat, U_nominal      
@@ -195,7 +209,7 @@ classdef SimAFM
       end
 
       Ns = size(self.sys_obs.b,1);
-      Ns_mpc = Ns + size(self.sys_obs.b,2);
+      Ns_mpc = Ns; %*size(self.sys_obs.b,2);
       umax = 0;
       
       fid = fopen(data_path, 'w+');
