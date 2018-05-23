@@ -1,3 +1,8 @@
+clear
+load(fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat'))
+save_root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand');
+TOL = 0.01;
+
 G = ss(modelFit.models.G_uz2stage);
 G = absorbDelay(G);
 Ts = G.Ts;
@@ -6,7 +11,7 @@ z= tf('z', Ts);
 % Kp = 0.05;
 % D = zpk(Kp + Ki/(z-1))
 C = 0.035972*(z-0.5298)/(z-1)
-
+D=C;
 [num,den] = tfdata(D, 'v');
 Kp = num(1);
 Ki = num(2) + Kp;
@@ -41,11 +46,9 @@ elseif trajstyle == 2
     ref_0 = 0;
     ref_traj = timeseries(yref, t);
 elseif trajstyle == 3
-  load('many_steps.mat')
+  
+  load(fullfile(save_root, 'many_steps_rand_longts.mat'))
   ref_traj = ref_traj_params.ref_traj;
-  ref_traj.Data = ref_traj.Data;
-  t = ref_traj.Time;
-  yref = ref_traj.Data;
 end
 
 
@@ -77,8 +80,10 @@ fprintf(fid, '%.6f, ', ref_traj.Data);
 fprintf(fid, '\n');
 fclose(fid);
 Iters = length(ref_traj.Data);
-umax = 5.5;
-ymax = 4;
+umax = 10;
+ymax = 8;
+
+SettleTicks = 1000;
 % ymax = max(abs(ref_traj.Data(:)))*1.2;
 
 Iters = min(Iters, length(ref_traj.data));
@@ -90,7 +95,7 @@ vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\play_AFM_PI.vi
             'traj_path', traj_path, 'Ki', Ki, 'Kp', Kp);
           
 vi.Run
-
+%
 AFMdat = csvread(dat_out_path);
 t_exp = (0:size(AFMdat,1)-1)'*Ts;
 y_exp = timeseries(AFMdat(:,1), t_exp);
@@ -111,7 +116,7 @@ plot(sim_exp_pi, F1, 'umode', 'both');
 
 ref_s = ref_traj_params.ref_s;
 step_idx = ref_traj_params.impulse_idx;
-TS_pi = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, 1);
+TS_pi = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, 1, 'abs');
 %%
-save('many_steps_data/many_steps_pi.mat', 'y_exp', 'u_exp', 'I_exp')
+save(fullfile(save_root, 'many_steps_pi.mat'), 'y_exp', 'u_exp', 'I_exp', 'ref_s', 'ref_traj')
 

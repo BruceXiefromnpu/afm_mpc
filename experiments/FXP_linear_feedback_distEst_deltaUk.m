@@ -64,7 +64,7 @@ end
 N    = 800;
 r1 = 1;
 r2 = -6;
-trajstyle =4;
+trajstyle =3;
 if trajstyle == 1
   yref = CanonRefTraj.ref_traj_1(r1, N);
 elseif trajstyle == 2
@@ -289,62 +289,17 @@ ylabel('current [mA]')
 grid on
 title('Current')
 %%
+% save('many_steps_data/many_steps_fxplin_noinv.mat', 'y_exp', 'u_exp',...
+%   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_lin_fp_sim')
 
-save('many_steps_data/many_steps_rand_fxplin_invHystDrift.mat', 'y_exp', 'u_exp',...
+save('many_steps_data/many_steps_fxplin_invHystDrift.mat', 'y_exp', 'u_exp',...
   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_lin_fp_sim')
 
 
-
-%%
-
-
-
-A_obs_cl = sys_obsDist.a - L_dist*sys_obsDist.c;
-A_obs_cl_vec = [];
-for k=1:size(A_obs_cl,1)
-  A_obs_cl_vec = [A_obs_cl_vec; A_obs_cl(k, :)'];
-end
-
-assert(sum(A_obs_cl_vec == A_obs_cl_vec) == length(A_obs_cl_vec));
-AllMatrix = [sys_obsDist.b(:); L_dist; K_lqr(:); A_obs_cl_vec; Nx(:)];
-
-clear e;
-clear vi;
-ns = length(K_lqr)-1;
+% save('many_steps_data/many_steps_rand_fxplin_invHystDrift.mat', 'y_exp', 'u_exp',...
+%   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_lin_fp_sim')
 
 
-% test_dataPath = fullfile(lv_unittest_path, 'all_matrix_cols.csv');
-dlmwrite(controlDataPath, AllMatrix, 'delimiter', ',', 'precision', 12)
-
-
-Iters = 500
-SettleTicks = 100;
-% -----------------------RUN THE Experiment--------------------------------
-vipath ='C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\fixed-point-host\play_FXP_AFMss_LinearDistEst_singleAxis.vi';
-[e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
-           'umax', 3, 'ymax', 5, 'du_max', du_max, 'Ns', ns, 'x_ref', ref_f_1,...
-           'All_matrix', AllMatrix, 'dry_run', false, 'read_write_file', false,...
-           'dry_run', false, 'All_matrix', AllMatrix);
-            
-vi.Run
-
-dat = vi.GetControlValue('result_data');
-size(dat)
-
-
-y_exp2 = dat(:,1);
-u_exp2 = dat(:,2);
-t = (0:length(y_exp2)-1)'*Ts;
-x_exp2 = timeseries(dat(:,4:end), t);
-yhat = x_exp2.Data*sys_obsDist.c';
-figure(59)
-subplot(2,1,1)
-h1 = plot(t, y_exp2, '--m')
-plot(t, yhat, ':b')
-subplot(2,1,2)
-h1 = plot(t, u_exp2, '--m')
-
-% plotState(x_exp2);
 
 
 

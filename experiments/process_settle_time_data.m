@@ -7,6 +7,7 @@ clear, clc
 
 % where the different experiments are stored.
 root = fullfile(PATHS.exp, 'experiments', 'many_steps_data')
+
 % addpath('many_steps_data')
 
 % Data with the sequence of references:
@@ -56,10 +57,10 @@ end
 
 TS_s_cell = {};
 
-load(fullfile(root,'many_steps_hyst_nosat_R4.mat'))
+load(fullfile(root,'many_steps_fxplin_invHystDrift.mat'))
 TS_hyst = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, verbose, 1, tol_mode);
 TS_dat_tmp.ts_s = TS_hyst;
-TS_dat_tmp.name = 'Lin (fp) w/ $\mathcal{H}^{-1}$';
+TS_dat_tmp.name = 'Lin (fxp) w/ $\mathcal{H}^{-1}$';
 TS_dat_cell{1} = TS_dat_tmp;
 
 h2 = plot(y_exp.Time, y_exp.Data, '-b');
@@ -67,14 +68,14 @@ h2.DisplayName = 'Invert hyst (linfp, no sat operator)';
 
 
 % ------------- Linear, with no inversion -----------------
-load(fullfile(root,'many_steps_noinvert.mat'))
-TS_lin_noinv = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, verbose, 1, tol_mode);
-TS_dat_tmp.ts_s = TS_lin_noinv;
-TS_dat_tmp.name = 'Lin (fp) w/ no-inv';
-TS_dat_cell{end+1} = TS_dat_tmp;
-
-h3 = plot(y_exp.Time, y_exp.Data, '-g');
-h3.DisplayName = 'linfp, no inversion';
+% load(fullfile(root,'many_steps_noinvert.mat'))
+% TS_lin_noinv = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, verbose, 1, tol_mode);
+% TS_dat_tmp.ts_s = TS_lin_noinv;
+% TS_dat_tmp.name = 'Lin (fp) w/ no-inv';
+% TS_dat_cell{end+1} = TS_dat_tmp;
+% 
+% h3 = plot(y_exp.Time, y_exp.Data, '-g');
+% h3.DisplayName = 'linfp, no inversion';
 
 % ------------------  PI-control --------------------------
 load(fullfile(root,'many_steps_pi.mat'))
@@ -87,7 +88,7 @@ h4 = plot(y_exp.Time, y_exp.Data, '-m');
 h4.DisplayName = 'PI';
 
 
-load(fullfile(root,'many_steps_mpc_invHyst_invDrift.mat'))
+load(fullfile(root,'many_steps_mpc_invHyst_invDrift2.mat'))
 TS_mpc = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, verbose, 1, tol_mode);
 TS_dat_tmp.ts_s = TS_mpc;
 TS_dat_tmp.name = 'MPC with $\mathcal{H}^{-1}$';
@@ -96,7 +97,7 @@ TS_dat_cell{end+1} = TS_dat_tmp;
 h5 = plot(y_exp.Time, y_exp.Data, '--k');
 h5.DisplayName = 'MPC (inv H \& drft)';
 % leg = legend([h1, h2, h3,h4, h5]);
-leg = legend([h2, h3,h4, h5]);
+leg = legend([h2, h4, h5]);
 
 
 set(leg, 'Location', 'NorthEast')

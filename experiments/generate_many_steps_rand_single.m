@@ -31,8 +31,8 @@ ref_traj_params.ref_traj = timeseries(u_vec(:), t_vec(:));
 ref_traj_params.impulse_idx = impulse_idx;
 ref_traj_params.ref_s = ref_s;
 if saveon
-  'ppp'
-    save('many_steps_rand_longts.mat', 'ref_traj_params' )
+  root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand');
+  save(fullfile(root, 'many_steps_rand_longts.mat'), 'ref_traj_params' );
 end
 
 
