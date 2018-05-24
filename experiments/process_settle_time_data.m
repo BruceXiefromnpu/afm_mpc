@@ -6,7 +6,7 @@
 clear, clc
 
 % where the different experiments are stored.
-root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand')
+root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand_24-May-2018_01')
 % root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data')
 
 % addpath('many_steps_data')
@@ -15,15 +15,15 @@ root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand')
 % load(fullfile(root, 'many_steps_short.mat'))
 % reft_pi = load(fullfile(root, 'many_steps.mat'))
 
-load(fullfile(root, 'many_steps_rand_longts.mat'))
-reft_pi = load(fullfile(root, 'many_steps_rand_longts.mat'))
+load(fullfile(root, 'many_steps_rand.mat'))
+reft_pi = load(fullfile(root, 'many_steps_rand.mat'))
 
 saveon = true;
 
 whos
 % L = 800;
 TOL = 0.01;
-tol_mode = 'rel';
+tol_mode = 'abs';
 verbose = 0;
 ref_s = ref_traj_params.ref_s;
 ref_s_pi = reft_pi.ref_traj_params.ref_s;
@@ -127,11 +127,11 @@ h4.DisplayName = TS_dat_tmp.name;
 % h3.DisplayName = 'linfp, no inversion';
 
 % ------------------  PI-control --------------------------
-load(fullfile(root,'many_steps_pi.mat'))
-TS_pi = get_many_steps_ts(y_exp, ref_s_pi, step_idx_pi, TOL, verbose, 1, tol_mode);
-TS_dat_tmp.ts_s = TS_pi;
-TS_dat_tmp.name = 'PI';
-TS_dat_cell{end+1} = TS_dat_tmp;
+% load(fullfile(root,'many_steps_pi.mat'))
+% TS_pi = get_many_steps_ts(y_exp, ref_s_pi, step_idx_pi, TOL, verbose, 1, tol_mode);
+% TS_dat_tmp.ts_s = TS_pi;
+% TS_dat_tmp.name = 'PI';
+% TS_dat_cell{end+1} = TS_dat_tmp;
 
 % h5 = plot(y_exp.Time, y_exp.Data, '-m');
 % h5.DisplayName = 'PI';
