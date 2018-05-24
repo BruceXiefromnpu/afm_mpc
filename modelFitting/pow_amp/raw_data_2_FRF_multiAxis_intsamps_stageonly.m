@@ -22,12 +22,14 @@ clc
 % in 'output-data-file-name' indicator in play_sysID_Z_Axis.vi'.
 
 
-FC_data_file = 'x-axis_sines_infoFourierCoef_4-16-2018stage-01.csv';
-% x-axis_sines_info_intsamps_out_FourierCoef_4-15-2018stageonly-01.csv';
+% FC_data_file = 'x-axis_sines_infoFourierCoef_4-16-2018stage-01.csv';
+FC_data_file = 'x-axis_sines_info_HIRESFourierCoef_5-14-2018-01.csv';
+
+
 
 % Run this script from inside the z-axis-swept-sines/matlab folder and this
 % will automatically get the right path for the data. 
-dataRoot = '/media/labserver/mpc-journal/sysID/pow-amp/'
+dataRoot = '/media/labserver/mpc-journal/sysID/FRF_data/'
 FC_path = fullfile(dataRoot, FC_data_file);
 % For saving results:
 frf_FileName = strrep(FC_data_file, '.csv', '.mat');
@@ -122,7 +124,7 @@ modelFit.frf.freq_s    = freqs;
 
 
 if saveOn +1
-        save('FRF_data_current_stage2.mat', 'modelFit');
+        save(strrep(FC_path, '.csv', '.mat'), 'modelFit');
 end
 
 
