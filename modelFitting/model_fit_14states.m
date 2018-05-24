@@ -6,7 +6,7 @@ clc
 addpath('~/gradschool/sysID/matlab/functions')
 
 % modelFit_file = fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat');
-modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_info_HIRESFourierCoef_5-14-2018-01.mat');
+modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_info_HIRESFourierCoef_5-24-2018-01.mat');
 
 load(modelFit_file)
 
@@ -19,7 +19,7 @@ G_uz2powI_frf = modelFit.frf.G_uz2powI;
 omegas = freqs*2*pi;
 Ts = modelFit.frf.Ts;
 
-%
+
 % --------------------------------------------------------------- %
 % --------- First, we work on the stage system ----------------- %
 % 
@@ -148,16 +148,16 @@ fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_
 fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 
 
-%%
-
-modelFit.models.G_uz2stage = sys_stage_log;
-modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
-modelFit.models.G_deluz2powI = G_deluz2Ipow;
-modelFit.models.g_deluz2pow_1norm = nm1;
-modelFit.models.du_max_nm1 = delumax;
-if 1
-    save(modelFit_file, 'modelFit');
-end
+% %%
+% 
+% modelFit.models.G_uz2stage = sys_stage_log;
+% modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
+% modelFit.models.G_deluz2powI = G_deluz2Ipow;
+% modelFit.models.g_deluz2pow_1norm = nm1;
+% modelFit.models.du_max_nm1 = delumax;
+% if 1
+%     save(modelFit_file, 'modelFit');
+% end
 
 %%
 % Now, Fit the drift model.
@@ -171,7 +171,7 @@ G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
 k_start = 2677;
 y_exp = driftData.y_exp(k_start:end) - mean(driftData.y_exp(1:k_start));
 u_exp = driftData.u_exp(k_start:end);
-t_vec = (0:length(y_exp)-1)'*Ts;
+t_exp = (0:length(y_exp)-1)'*Ts;
 
 % F100 = figure(100); clf
 % plot_ind(t_vec, y_exp);
@@ -184,7 +184,7 @@ np = 2;
 normalize_dc = false;
 Gvib = eject_gdrift(G_uz2stage, normalize_dc);
 
-gdrift_cost = @(theta)fit_gdrift(theta, Gvib, y_exp, u_exp, t_vec, np);
+gdrift_cost = @(theta)fit_gdrift(theta, Gvib, y_exp, u_exp, t_exp, np);
 
 opts = optimoptions(@lsqnonlin);
 opts.MaxFunctionEvaluations = 5000;
@@ -194,19 +194,19 @@ theta = lsqnonlin(gdrift_cost, theta0, lb, ub, opts);
 
 gdrift = zpk(theta(np+1:end-1), theta(1:np), theta(end), Ts);
 
-ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_vec);
-y_vib = lsim(Gvib, u_exp, t_vec);
+ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_exp);
+y_vib = lsim(Gvib, u_exp, t_exp);
 
-% clf;
-% h1 = plot(t_vec, y_exp);
-% h1.DisplayName = 'Exp. Step Response';
+clf;
+h1 = plot(t_exp, y_exp);
+h1.DisplayName = 'Exp. Step Response';
 figure(100)
 hold on
-h2 = plot(t_vec, ydrift_est0, '-g');
+h2 = plot(t_exp, ydrift_est0, '-r');
 h2.DisplayName = '$G_{vib}G_d$';
 
-%%
-h3 = plot(t_vec, y_vib, ':k');
+
+h3 = plot(t_exp, y_vib, ':k');
 h3.DisplayName = '$G_{vib}$';
 leg1 = legend([h1, h2, h3]);
 xlim([0, 0.28])
@@ -220,9 +220,57 @@ set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
 % saveas(F100, fullfile(PATHS.jfig, 'drift_fit.svg'));
 
 
+%%
+% Now, see if we can get a bit better fit in the time domain by tweaking the
+% first two complex resonances at 400 hz.
+figure(20); clf
+pzplot(Gvib);
+hold on
+
+p = sort(pole(Gvib))
+z = sort(zero(Gvib))
+
+p_eject = p(end-4+1:end)';
+z_eject = z(end-4+1:end)';
+
+geject = zpk(z_eject, p_eject, 1, Ts);
+geject = geject/dcgain(geject);
+
+Gvib_high = minreal(Gvib/geject)
+
+pzplot(Gvib_high, 'r')
 
 
 
+k0 = 1.0489;
+theta_0 = [real(z_eject([1,3])), imag(z_eject([1,3])),...
+           real(p_eject([1,3])), imag(p_eject([1,3])), k0]
+
+g_fit = @(theta) zpk( [theta(1:2) + 1j*(theta(3:4)), theta(1:2) - 1j*(theta(3:4))],...
+          [theta(5:6)  + 1j*theta(7:8), theta(5:6) - 1j*theta(7:8)], theta(end), Ts);
 
 
 
+yerr = @(theta) lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp) - y_exp;
+
+
+theta = lsqnonlin(yerr, theta_0, lb, ub, opts);
+
+
+ydrift_est2 = lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp);
+
+figure(100)
+plot(t_exp, ydrift_est2, 'g')
+%%
+
+modelFit.models.G_uz2stage = sys_stage_log;
+modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
+modelFit.models.G_deluz2powI = G_deluz2Ipow;
+modelFit.models.g_deluz2pow_1norm = nm1;
+modelFit.models.du_max_nm1 = delumax;
+modelFit.models.Gvib = Gvib_high*g_fit(theta);
+modelFit.models.gdrift = gdrift;
+
+if 1
+    save(modelFit_file, 'modelFit');
+end

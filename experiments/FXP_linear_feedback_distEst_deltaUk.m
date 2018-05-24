@@ -36,11 +36,12 @@ umax = 5;
 TOL = .01;
 
 %%
-close all
+% close all
 md = 1;
 % --------------- Load Plants -------------------
 with_hyst = true;
-plants = CanonPlants.plants_with_drift_inv(with_hyst);
+% plants = CanonPlants.plants_with_drift_inv(with_hyst);
+plants = CanonPlants.plants_ns14();
 
 
 Ts  = plants.SYS.Ts;
@@ -64,7 +65,7 @@ end
 N    = 800;
 r1 = 1;
 r2 = -6;
-trajstyle =3;
+trajstyle =1;
 if trajstyle == 1
   yref = CanonRefTraj.ref_traj_1(r1, N);
 elseif trajstyle == 2
@@ -91,7 +92,8 @@ thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 du_max   = StageParams.du_max;
 
 % Pull out open-loop pole-zero information.
-can_cntrl = CanonCntrlParams_01(plants.SYS);
+can_cntrl = CanonCntrlParams_ns14(plants.SYS);
+% can_cntrl = CanonCntrlParams_01(plants.SYS);
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
 gam_lin = 3;
 gam_mpc = 0.5;
@@ -106,8 +108,7 @@ end
 
 % -------------------------------------------------------------------------
 % ------------------------- Observer Gain ---------------------------------
-%
-% ------------------------- Observer Gain ---------------------------------
+
 can_obs_params = CanonObsParams_01();
 [sys_obsDist, L_dist] = build_obs(plants.SYS, can_obs_params);
 if 1
@@ -140,7 +141,7 @@ linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', yref.Data(1),...
 
 sim_exp = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
 
-F1 = figure(59); clf
+F1 = figure(59); %clf
 h1 = plot(sim_exp, F1);
 subplot(3,1,1)
 plot(yref.time, yref.Data, '--k', 'LineWidth', .05);
@@ -172,7 +173,7 @@ sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
 
 % --------------------  Fixed Linear stuff -----------------------------
 %
-clc
+
 sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
   true, 'nw', nw, 'nf', nf);
 
