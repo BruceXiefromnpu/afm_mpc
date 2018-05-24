@@ -28,9 +28,9 @@ F4 = figure(4); clf
 frfBode(G_uz2stage_frf, freqs, F3, 'r', 'Hz');
 frfBode(G_uz2stage_frf, freqs, F4, 'r', 'Hz');
 
-Nd2 = 10;
+Nd2 =9;
 ns2 = 14;
-k_estmax = 250;
+k_estmax = 244;
 ss_opts = frf2ss_opts('Ts', Ts);
 
 f2ss = frf2ss(G_uz2stage_frf, omegas, Nd2, ss_opts); % 12
@@ -58,29 +58,30 @@ sys_stage_log.InputDelay = max(round(p, 0), 0);
 fprintf('LG says delay = %.2f\n', p);
 
 frfBode(sys_stage_log, freqs, F4, '--k', 'Hz');
-plotPZ_freqs(sys_stage_log, F4);
+% plotPZ_freqs(sys_stage_log, F4);
 
-figure(50);
+figure(50); clf
 pzplot(sys_stage_log);
 
-% return
-%
-Z = sort(zero(sys_stage_log));
-Z_eject = zpk([], Z(abs(Z)>1), 1, Ts);
-Z_eject = Z_eject/dcgain(Z_eject);
-sys_stage_log = minreal(Z_eject*sys_stage_log);
-
-sos_fos = SosFos(sys_stage_log, 'iodelay', p);
-LG = LogCostZPK(G_uz2stage_frf(1:k_estmax), omegas(1:k_estmax), sos_fos);
-LG.solve_lsq(2, LGopts)
-[sys_stage_log, p] = LG.sos_fos.realize();
-fprintf('LG says delay = %.2f\n', p);
-
-sys_stage_log.InputDelay = max(round(p, 0), 0);
-frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
+return
+% 
+% Z = sort(zero(sys_stage_log));
+% Z_eject = zpk([], Z(real(Z)<0.8), 1, Ts);
+% Z_eject = Z_eject/dcgain(Z_eject);
+% sys_stage_log = minreal(Z_eject*sys_stage_log);
+% 
+% sos_fos = SosFos(sys_stage_log, 'iodelay', p);
+% LG = LogCostZPK(G_uz2stage_frf(1:k_estmax), omegas(1:k_estmax), sos_fos);
+% LG.solve_lsq(2, LGopts)
+% [sys_stage_log, p] = LG.sos_fos.realize();
+% fprintf('LG says delay = %.2f\n', p);
+% 
+% sys_stage_log.InputDelay = max(round(p, 0), 0);
+% frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
 
 plotPZ_freqs(sys_stage_log, F4);
-
+subplot(2,1,1)
+title('Model with logfit')
 figure(50); hold on;
 pzplot(sys_stage_log, 'r')
 %%
@@ -148,17 +149,6 @@ fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_
 fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 
 
-% %%
-% 
-% modelFit.models.G_uz2stage = sys_stage_log;
-% modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
-% modelFit.models.G_deluz2powI = G_deluz2Ipow;
-% modelFit.models.g_deluz2pow_1norm = nm1;
-% modelFit.models.du_max_nm1 = delumax;
-% if 1
-%     save(modelFit_file, 'modelFit');
-% end
-
 %%
 % Now, Fit the drift model.
 addpath('hysteresis')
@@ -197,10 +187,10 @@ gdrift = zpk(theta(np+1:end-1), theta(1:np), theta(end), Ts);
 ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_exp);
 y_vib = lsim(Gvib, u_exp, t_exp);
 
+figure(100)
 clf;
 h1 = plot(t_exp, y_exp);
 h1.DisplayName = 'Exp. Step Response';
-figure(100)
 hold on
 h2 = plot(t_exp, ydrift_est0, '-r');
 h2.DisplayName = '$G_{vib}G_d$';
@@ -217,8 +207,19 @@ xlabel('time [s]')
 ylabel('$y_X$ [v]')
 ax = gca;
 set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
-% saveas(F100, fullfile(PATHS.jfig, 'drift_fit.svg'));
 
+% saveas(F100, fullfile(PATHS.jfig, 'drift_fit.svg'));
+modelFit.models.G_uz2stage = sys_stage_log;
+modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
+modelFit.models.G_deluz2powI = G_deluz2Ipow;
+modelFit.models.g_deluz2pow_1norm = nm1;
+modelFit.models.du_max_nm1 = delumax;
+modelFit.models.Gvib = Gvib;
+modelFit.models.gdrift = gdrift;
+
+if 1
+    save(modelFit_file, 'modelFit');
+end
 
 %%
 % Now, see if we can get a bit better fit in the time domain by tweaking the

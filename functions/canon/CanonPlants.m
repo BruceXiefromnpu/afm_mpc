@@ -27,14 +27,14 @@ classdef CanonPlants
       SYS = ss2ss(SYS, T);
       PLANT = SYS;
       
-      Nd = 9;
-      SYS.iodelay = 0;
-      SYS.InputDelay = Nd;
+      Nd = SYS.InputDelay;
+      %keyboard
+      %SYS.iodelay = 0;
+      %SYS.InputDelay = Nd;
       
       plants.sys_nodelay = SYS;
       
       SYS = absorbDelay(SYS);
-      PLANT.InputDelay = Nd;
       PLANT = absorbDelay(PLANT);
       
       plants.PLANT = PLANT;

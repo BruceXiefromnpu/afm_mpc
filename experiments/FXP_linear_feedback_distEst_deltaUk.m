@@ -40,8 +40,8 @@ TOL = .01;
 md = 1;
 % --------------- Load Plants -------------------
 with_hyst = true;
-% plants = CanonPlants.plants_with_drift_inv(with_hyst);
-plants = CanonPlants.plants_ns14();
+plants = CanonPlants.plants_with_drift_inv(with_hyst);
+% plants = CanonPlants.plants_ns14();
 
 
 Ts  = plants.SYS.Ts;
@@ -63,9 +63,9 @@ end
 
 % Get a ref trajectory to track.
 N    = 800;
-r1 = 1;
+r1 = .25;
 r2 = -6;
-trajstyle =1;
+trajstyle =4;
 if trajstyle == 1
   yref = CanonRefTraj.ref_traj_1(r1, N);
 elseif trajstyle == 2
@@ -92,8 +92,8 @@ thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 du_max   = StageParams.du_max;
 
 % Pull out open-loop pole-zero information.
-can_cntrl = CanonCntrlParams_ns14(plants.SYS);
-% can_cntrl = CanonCntrlParams_01(plants.SYS);
+% can_cntrl = CanonCntrlParams_ns14(plants.SYS);
+can_cntrl = CanonCntrlParams_01(plants.SYS);
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
 gam_lin = 3;
 gam_mpc = 0.5;
@@ -141,11 +141,11 @@ linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', yref.Data(1),...
 
 sim_exp = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
 
-F1 = figure(59); %clf
-h1 = plot(sim_exp, F1);
-subplot(3,1,1)
-plot(yref.time, yref.Data, '--k', 'LineWidth', .05);
-xlm = xlim();
+% % F1 = figure(59); clf
+% % h1 = plot(sim_exp, F1);
+% % subplot(3,1,1)
+% % plot(yref.time, yref.Data, '--k', 'LineWidth', .05);
+% % xlm = xlim();
 
 F61 = figure(61); clf
 plotState(Xhat_fp, F61);
@@ -172,7 +172,6 @@ sys_obs_fxp.b = fi(sys_obsDist.b, 1, nw, 29);
 sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
 
 % --------------------  Fixed Linear stuff -----------------------------
-%
 
 sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
   true, 'nw', nw, 'nf', nf);
@@ -191,8 +190,8 @@ fxpl_Opts = stepExpOpts('pstyle', '--k', 'TOL', TOL, 'y_ref', r1,...
                       'controller', K_lqr, 'name',  'FXP lin Sim.');
 sim_exp_fxpl = stepExpDu(y_fxpl, U_full_fxpl, dU_fxpl, fxpl_Opts);
 
-h2 = plot(sim_exp_fxpl, F1, 'umode', 'both');
-legend([h1(1), h2(1)])
+% % h2 = plot(sim_exp_fxpl, F1, 'umode', 'both');
+% % legend([h1(1), h2(1)])
 %
 fprintf('Max of U_nom = %.2f\n', max(U_nom_fxpl.Data));
 fprintf('Max of U_full = %.2f\n', max(U_full_fxpl.Data));
@@ -229,13 +228,14 @@ Iters = length(yref.Data)-1;
 % Iters =700;
 Iters = min(Iters, length(yref.Data)-1);
 
+% Iters = 650;
 
-clc
+
 [num, den] = tfdata(plants.gdrift_inv);
 num = num{1};
 den = den{1};
 
-umax = 10;
+umax = 12;
 ymax = max(yref.Data)*1.3
 clear e;
 clear vi;
@@ -252,7 +252,7 @@ vipath =['C:\Users\arnold\Documents\matlab\afm_mpc_journal\',...
 % rp = 0; wp = 0;
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
    'num', num, 'den', den, 'TF Order', (length(den)-1),...
-   'r_s', plants.hyst.rp, 'w_s', plants.hyst.wp, 'N_hyst', length(plants.hyst.rp),...
+   'r_s', plants.hyst.rp, 'w_s', plants.hyst.wp, 'N_hyst', 1*length(plants.hyst.rp),...
    'du_max', du_max,'dry_run', false,...
    'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
    'traj_path', traj_path, 'control_data_path', fxplin_dat_path);
@@ -271,15 +271,15 @@ du_exp = timeseries(AFMdata(:,3), t_exp);
 ufull_exp = timeseries(AFMdata(:,4), t_exp);
 
 Ipow_exp = timeseries(AFMdata(:,5), t_exp);
-% xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
-% yy = xhat_exp.Data*sys_obsDist.c';
+xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
+yy = xhat_exp.Data*sys_obsDist.c';
 
-expOpts = stepExpOpts(linOpts, 'pstyle', '--g', 'name',  'AFM Stage');
+expOpts = stepExpOpts(linOpts, 'pstyle', '--m', 'name',  'AFM Stage');
 
 afm_exp = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
 H2 = plot(afm_exp, F1);
 subplot(3,1,1)
-% plot(y_exp.Time, yy, ':k')
+plot(y_exp.Time, yy, ':k')
 subplot(3,1,2)
 
 plot(u_exp.Time, u_exp.data, '--m')
