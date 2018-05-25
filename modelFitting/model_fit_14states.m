@@ -28,14 +28,17 @@ F4 = figure(4); clf
 frfBode(G_uz2stage_frf, freqs, F3, 'r', 'Hz');
 frfBode(G_uz2stage_frf, freqs, F4, 'r', 'Hz');
 
-Nd2 =9;
+Nd2 =10;
 ns2 = 14;
-k_estmax = 244;
+k_estmax = 250;
 ss_opts = frf2ss_opts('Ts', Ts);
 
 f2ss = frf2ss(G_uz2stage_frf, omegas, Nd2, ss_opts); % 12
 sys_stage = f2ss.realize(ns2); % 12
-                               
+
+figure(50); clf
+pzplot(sys_stage);
+
 Z = zero(sys_stage);
 Z_eject = zpk([], Z(find(abs(Z) > 1)), 1, Ts);
 Z_eject = Z_eject/dcgain(Z_eject);
@@ -43,7 +46,6 @@ sys_stage = minreal(Z_eject*sys_stage);
 
 frfBode(sys_stage, freqs, F3, '--k', 'Hz');
 plotPZ_freqs(sys_stage, F3);
-
 
 % Now, we refine with the logrithmic least squares fit.
 LGopts = optimoptions(@lsqnonlin, 'Display', 'iter',...
@@ -59,14 +61,10 @@ fprintf('LG says delay = %.2f\n', p);
 
 frfBode(sys_stage_log, freqs, F4, '--k', 'Hz');
 % plotPZ_freqs(sys_stage_log, F4);
-
-figure(50); clf
-pzplot(sys_stage_log);
-
-return
-% 
-% Z = sort(zero(sys_stage_log));
-% Z_eject = zpk([], Z(real(Z)<0.8), 1, Ts);
+% return
+% Z = sort(zero(sys_stage_log))
+% zej = Z(real(Z)<0.51)
+% Z_eject = zpk([], zej, 1, Ts);
 % Z_eject = Z_eject/dcgain(Z_eject);
 % sys_stage_log = minreal(Z_eject*sys_stage_log);
 % 
@@ -75,82 +73,19 @@ return
 % LG.solve_lsq(2, LGopts)
 % [sys_stage_log, p] = LG.sos_fos.realize();
 % fprintf('LG says delay = %.2f\n', p);
-% 
-% sys_stage_log.InputDelay = max(round(p, 0), 0);
-% frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
+
+sys_stage_log.InputDelay = max(round(p, 0), 0)+1;
+frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
 
 plotPZ_freqs(sys_stage_log, F4);
 subplot(2,1,1)
 title('Model with logfit')
 figure(50); hold on;
 pzplot(sys_stage_log, 'r')
-%%
-
-% ---------------------------------------------------------------- %
-% --------- Second, we work on the powI system -------------------- %
-
-% Visualize everything
-F10 = figure(10); clf
-frfBode(G_uz2powI_frf, freqs, F10, 'r', 'Hz');
-
-
-% Divide the derivative (z-1) out of the systems FRF.
-ejw = exp(1j*Ts*modelFit.frf.w_s(:));
-
-% der_frf_ct = (1j*modelFit.frf.w_s(:));
-derz_frf = ejw - 1;
-G_deluz2powI_frf = G_uz2powI_frf./derz_frf;
-
-mag_max = max(abs(G_deluz2powI_frf));
-derz_frf_adj = derz_frf*mag_max;
-I_max = 0.1; %Amps
-fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
-
-F20 = figure(20); clf;
-frfBode(G_deluz2powI_frf, freqs, F20, 'r', 'Hz');
-%
-Nd1 = 4;
-ss_opts = frf2ss_opts('Ts', Ts);
-
-f2ss = frf2ss(G_deluz2powI_frf, omegas, Nd1, ss_opts); % 12
-sys = f2ss.realize(8); 
-% Remove NMP zeros
-Z = zero(sys);
-Z_eject = zpk([], Z(find(abs(Z) > 1)), 1, Ts);
-Z_eject = Z_eject/dcgain(Z_eject);
-sys = minreal(Z_eject*sys)
-
-
-g_der = zpk([1], [], 1, Ts); % 
-frfBode(sys, freqs, F20, '--k', 'Hz');
-sys.InputDelay = 3;
-frfBode(sys*g_der, freqs, F10, '--k', 'Hz');
-
-sos_fos = SosFos(sys, 'iodelay', sys.InputDelay);
-LG = LogCostZPK(G_deluz2powI_frf, freqs*2*pi, sos_fos);
-LG.solve_lsq(2, LGopts)
-
-[G_deluz2Ipow, p] = LG.sos_fos.realize();
-G_deluz2Ipow.InputDelay = max(round(p, 0), 0);
-
-frfBode(G_deluz2Ipow*g_der, freqs, F10, '--b', 'Hz');
-frfBode(G_deluz2Ipow, freqs, F20, '--b', 'Hz');
-
-plotPZ_freqs(G_deluz2Ipow*g_der, F10);
-
-% compute impulse response for 1-norm:
-[y, t] = impulse(G_deluz2Ipow);
-y = y*Ts; % matlab makes the impulse 1/Ts tall.
-nm1 = sum(abs(y))
-
-delumax = I_max/nm1;
-fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
-
-fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
-
 
 %%
-% Now, Fit the drift model.
+% ----------------------------------------------------------------
+% --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
 load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_4-30-2018_01.mat'))
 Ts = modelFit.frf.Ts;
@@ -162,10 +97,6 @@ k_start = 2677;
 y_exp = driftData.y_exp(k_start:end) - mean(driftData.y_exp(1:k_start));
 u_exp = driftData.u_exp(k_start:end);
 t_exp = (0:length(y_exp)-1)'*Ts;
-
-% F100 = figure(100); clf
-% plot_ind(t_vec, y_exp);
-
 
 theta0 = [0.9922    0.9997    0.9997    0.9927    .8];
 lb = [-1, -1, -1, -1, -Inf];
@@ -209,6 +140,180 @@ ax = gca;
 set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
 
 % saveas(F100, fullfile(PATHS.jfig, 'drift_fit.svg'));
+
+%
+% Now, see if we can get a bit better fit in the time domain by tweaking the
+% first two complex resonances at 400 hz.
+% figure(20); clf
+% pzplot(Gvib);
+% hold on
+% 
+% p = sort(pole(Gvib))
+% z = sort(zero(Gvib))
+% 
+% p_eject = p(end-4+1:end)';
+% z_eject = z(end-4+1:end)';
+% 
+% geject = zpk(z_eject, p_eject, 1, Ts);
+% geject = geject/dcgain(geject);
+% 
+% Gvib_high = minreal(Gvib/geject)
+% 
+% pzplot(Gvib_high, 'r')
+% 
+% 
+% 
+% k0 = 1.0489;
+% theta_0 = [real(z_eject([1,3])), imag(z_eject([1,3])),...
+%            real(p_eject([1,3])), imag(p_eject([1,3])), k0]
+% 
+% g_fit = @(theta) zpk( [theta(1:2) + 1j*(theta(3:4)), theta(1:2) - 1j*(theta(3:4))],...
+%           [theta(5:6)  + 1j*theta(7:8), theta(5:6) - 1j*theta(7:8)], theta(end), Ts);
+% 
+% 
+% 
+% yerr = @(theta) lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp) - y_exp;
+% 
+% 
+% theta = lsqnonlin(yerr, theta_0, lb, ub, opts);
+% 
+% 
+% ydrift_est2 = lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp);
+ 
+% figure(100)
+% plot(t_exp, ydrift_est2, 'g')
+frfBode(Gvib_high*gdrift, freqs, F4, '--k', 'Hz')
+%%
+% ------------------- Fit Hysteresis -------------------------------------
+hyst_file = 'hystID_data_5-4-2018_01.mat';
+hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
+load(hyst_path)
+
+ux = hystData.u_exp;
+yx = hystData.y_exp - mean(hystData.y_exp(1:500));
+tvec = hystData.t_exp;
+
+figure
+plot(ux)
+
+% start with prior infomation for guess
+guess_data = load('steps_hyst_model.mat');
+
+r = linspace(0, umax*0.5, nw);
+r = ([0:nw-1]'./(nw) )*umax
+d = [0; 4.5; 9];
+
+d = [0; 5; 10]
+w = ones(nw, 1);
+
+umax = max(abs(ux));
+nw = 7;
+
+ws = [1; 0.0001; 0.0001];
+G = Gvib*gdrift;
+u_hyst_fun = @(theta) PIHyst.hyst_play_sat_op(ux, r, theta(1:nw), d, theta(nw+1:end), w*0);
+
+cost_hyst_only = @(theta) downsample(lsim(G, u_hyst_fun(theta),... 
+                tvec) - yx, 50); 
+              
+%%              
+opts = optimoptions(@lsqnonlin);
+opts.MaxFunctionEvaluations = 10000;
+opts.Display = 'iter';
+theta_0 = [w; ws];
+% theta_0 = w;
+% lb = [0*w; 0*ws];
+lb = [];
+ub = [];
+theta = lsqnonlin(cost_hyst_only, theta_0, lb, ub, opts);
+
+% theta = theta_0;
+u_est_steps_all = PIHyst.hyst_play_sat_op(ux, r, theta(1:nw), d, theta(nw+1:end), w*0);
+
+y_est_all = lsim(G, u_est_steps_all, tvec);
+
+
+
+figure(18); clf;
+h1 = plot(downsample(tvec, 50), downsample(yx, 50));
+hold on
+h2 = plot(downsample(tvec, 50), downsample(y_est_all, 50), 'r');
+h1.DisplayName = 'Experimental';
+h2.DisplayName = 'Fit';
+legend([h1, h2])
+grid on
+
+w = theta(1:nw);
+ws = theta(nw+1:end);
+[rp, wp, dp, wsp] = PIHyst.invert_hyst_sat_PI(r, w, d, ws);
+
+
+
+
+
+%%
+% ----------------------------------------------------------------------- %
+% Now, we try fitting the drift and hysteresis together, without this
+% saturation business
+% w = ones(nw, 1);
+dat = load('steps_hyst_model.mat')
+gdrift = modelFit.models.drift.gdrift;
+w0 = [3.9355, 4.9039, -4.701, 2.7965, 1.2377, -2.8405, 2.5493];
+idx_w0 = [1:length(w0)];
+ws0 = ws(:)';
+idx_ws0 = [1:length(ws0)] + idx_w0(1);
+[num, den] = tfdata(gdrift, 'v');
+
+idx_num = [1,2,3] + idx_ws0(end);
+idx_den = [1,2] + idx_num(end);
+
+theta_0 = [w0, ws0, num, den(2:end)];
+
+%%
+clc
+gdrift_h = @(theta) tf(theta(idx_num), [1, theta(idx_den)], Ts);
+G = @(theta) Gvib*gdrift_h(theta);
+u_hyst_fun = @(theta) PIHyst.hyst_play_sat_op(ux, r, theta(idx_w0), d, theta(idx_ws0), w0*0);
+
+cost_hyst_only = @(theta) downsample(lsim(G(theta), u_hyst_fun(theta),... 
+                tvec) - yx, 50); 
+              
+              
+opts = optimoptions(@lsqnonlin);
+opts.MaxFunctionEvaluations = 10000;
+opts.Display = 'iter';
+
+lb = [];
+ub = [];
+theta = lsqnonlin(cost_hyst_only, theta_0, lb, ub, opts);
+
+% theta = theta_0;
+%%
+u_est_steps_all = PIHyst.hyst_play_sat_op(ux, r, theta(idx_w0), d, theta(idx_ws0), w*0);
+
+y_est_all = lsim(G(theta), u_est_steps_all, tvec);
+
+figure(19); clf;
+h1 = plot(downsample(tvec, 50), downsample(yx, 50));
+hold on
+h2 = plot(downsample(tvec, 50), downsample(y_est_all, 50), 'r');
+h1.DisplayName = 'Experimental';
+h2.DisplayName = 'Fit';
+legend([h1, h2])
+grid on
+
+w = theta(1:nw);
+ws = theta(nw+1:end);
+[rp, wp, dp, wsp] = PIHyst.invert_hyst_sat_PI(r, w, d, ws);
+
+
+
+
+
+
+
+
+%%
 modelFit.models.G_uz2stage = sys_stage_log;
 modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
 modelFit.models.G_deluz2powI = G_deluz2Ipow;
@@ -217,61 +322,7 @@ modelFit.models.du_max_nm1 = delumax;
 modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift = gdrift;
 
-if 1
+if 0
     save(modelFit_file, 'modelFit');
 end
 
-%%
-% Now, see if we can get a bit better fit in the time domain by tweaking the
-% first two complex resonances at 400 hz.
-figure(20); clf
-pzplot(Gvib);
-hold on
-
-p = sort(pole(Gvib))
-z = sort(zero(Gvib))
-
-p_eject = p(end-4+1:end)';
-z_eject = z(end-4+1:end)';
-
-geject = zpk(z_eject, p_eject, 1, Ts);
-geject = geject/dcgain(geject);
-
-Gvib_high = minreal(Gvib/geject)
-
-pzplot(Gvib_high, 'r')
-
-
-
-k0 = 1.0489;
-theta_0 = [real(z_eject([1,3])), imag(z_eject([1,3])),...
-           real(p_eject([1,3])), imag(p_eject([1,3])), k0]
-
-g_fit = @(theta) zpk( [theta(1:2) + 1j*(theta(3:4)), theta(1:2) - 1j*(theta(3:4))],...
-          [theta(5:6)  + 1j*theta(7:8), theta(5:6) - 1j*theta(7:8)], theta(end), Ts);
-
-
-
-yerr = @(theta) lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp) - y_exp;
-
-
-theta = lsqnonlin(yerr, theta_0, lb, ub, opts);
-
-
-ydrift_est2 = lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp);
-
-figure(100)
-plot(t_exp, ydrift_est2, 'g')
-%%
-
-modelFit.models.G_uz2stage = sys_stage_log;
-modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
-modelFit.models.G_deluz2powI = G_deluz2Ipow;
-modelFit.models.g_deluz2pow_1norm = nm1;
-modelFit.models.du_max_nm1 = delumax;
-modelFit.models.Gvib = Gvib_high*g_fit(theta);
-modelFit.models.gdrift = gdrift;
-
-if 1
-    save(modelFit_file, 'modelFit');
-end
