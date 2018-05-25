@@ -193,41 +193,47 @@ ux = hystData.u_exp;
 yx = hystData.y_exp - mean(hystData.y_exp(1:500));
 tvec = hystData.t_exp;
 
+umax = max(abs(ux));
+ymax = max(abs(yx));
+
 figure
 plot(ux)
 
 % start with prior infomation for guess
 guess_data = load('steps_hyst_model.mat');
 
-r = linspace(0, umax*0.5, nw);
+% r = linspace(0, umax*0.5, nw);
+nw = 7;
 r = ([0:nw-1]'./(nw) )*umax
-d = [0; 4.5; 9];
 
-d = [0; 5; 10]
+% d = [-9; -4.5; 0; 4.5; 9];
+n_d = 2;
+id_plus = (1:n_d);
+id_neg = (-n_d:-1);
+dplus = ((id_plus - 0.5)/n_d ) * ymax;
+dmin = ( (id_neg + 0.5)/n_d ) *ymax; 
+
 w = ones(nw, 1);
 
-umax = max(abs(ux));
-nw = 7;
 
-ws = [1; 0.0001; 0.0001];
+ws = [0.0001; 0.0001; 1; 0.0001; 0.0001];
 G = Gvib*gdrift;
 u_hyst_fun = @(theta) PIHyst.hyst_play_sat_op(ux, r, theta(1:nw), d, theta(nw+1:end), w*0);
 
 cost_hyst_only = @(theta) downsample(lsim(G, u_hyst_fun(theta),... 
                 tvec) - yx, 50); 
               
-%%              
+%%
+clc
 opts = optimoptions(@lsqnonlin);
 opts.MaxFunctionEvaluations = 10000;
 opts.Display = 'iter';
 theta_0 = [w; ws];
-% theta_0 = w;
-% lb = [0*w; 0*ws];
+
 lb = [];
 ub = [];
 theta = lsqnonlin(cost_hyst_only, theta_0, lb, ub, opts);
 
-% theta = theta_0;
 u_est_steps_all = PIHyst.hyst_play_sat_op(ux, r, theta(1:nw), d, theta(nw+1:end), w*0);
 
 y_est_all = lsim(G, u_est_steps_all, tvec);

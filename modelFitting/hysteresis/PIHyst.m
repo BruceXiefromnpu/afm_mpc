@@ -115,8 +115,10 @@ classdef PIHyst
         for i=1:length(d)
           if d(i) == 0
             Sd_vec(i) = u_k;
-          else
+          elseif d(i) > 0
             Sd_vec(i) = max(u_k - d(i), 0);
+          else
+            Sd_vec(i) = min(u_k - d(i), 0);
           end
         end
         y(k) = ws'*Sd_vec;
