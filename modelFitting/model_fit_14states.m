@@ -82,7 +82,68 @@ subplot(2,1,1)
 title('Model with logfit')
 figure(50); hold on;
 pzplot(sys_stage_log, 'r')
+%%
+% ---------------------------------------------------------------- %
+% --------- Second, we work on the powI system -------------------- %
 
+% Visualize everything
+F10 = figure(10); clf
+frfBode(G_uz2powI_frf, freqs, F10, 'r', 'Hz');
+
+
+% Divide the derivative (z-1) out of the systems FRF.
+ejw = exp(1j*Ts*modelFit.frf.w_s(:));
+
+% der_frf_ct = (1j*modelFit.frf.w_s(:));
+derz_frf = ejw - 1;
+G_deluz2powI_frf = G_uz2powI_frf./derz_frf;
+
+mag_max = max(abs(G_deluz2powI_frf));
+derz_frf_adj = derz_frf*mag_max;
+I_max = 0.1; %Amps
+fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
+
+F20 = figure(20); clf;
+frfBode(G_deluz2powI_frf, freqs, F20, 'r', 'Hz');
+%
+Nd1 = 4;
+ss_opts = frf2ss_opts('Ts', Ts);
+
+f2ss = frf2ss(G_deluz2powI_frf, omegas, Nd1, ss_opts); % 12
+sys = f2ss.realize(8); 
+% Remove NMP zeros
+Z = zero(sys);
+Z_eject = zpk([], Z(find(abs(Z) > 1)), 1, Ts);
+Z_eject = Z_eject/dcgain(Z_eject);
+sys = minreal(Z_eject*sys)
+
+
+g_der = zpk([1], [], 1, Ts); % 
+frfBode(sys, freqs, F20, '--k', 'Hz');
+sys.InputDelay = 3;
+frfBode(sys*g_der, freqs, F10, '--k', 'Hz');
+
+sos_fos = SosFos(sys, 'iodelay', sys.InputDelay);
+LG = LogCostZPK(G_deluz2powI_frf, freqs*2*pi, sos_fos);
+LG.solve_lsq(2, LGopts)
+
+[G_deluz2Ipow, p] = LG.sos_fos.realize();
+G_deluz2Ipow.InputDelay = max(round(p, 0), 0);
+
+frfBode(G_deluz2Ipow*g_der, freqs, F10, '--b', 'Hz');
+frfBode(G_deluz2Ipow, freqs, F20, '--b', 'Hz');
+
+plotPZ_freqs(G_deluz2Ipow*g_der, F10);
+
+% compute impulse response for 1-norm:
+[y, t] = impulse(G_deluz2Ipow);
+y = y*Ts; % matlab makes the impulse 1/Ts tall.
+nm1 = sum(abs(y))
+
+delumax = I_max/nm1;
+fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
+
+fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 %%
 % ----------------------------------------------------------------
 % --------------------- Now, Fit the drift model -----------------
@@ -182,142 +243,65 @@ set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
  
 % figure(100)
 % plot(t_exp, ydrift_est2, 'g')
-frfBode(Gvib_high*gdrift, freqs, F4, '--k', 'Hz')
+% frfBode(Gvib_high*gdrift, freqs, F4, '--k', 'Hz')
 %%
-% ------------------- Fit Hysteresis -------------------------------------
+% ------------------- Fit Hysteresis + Sat -------------------------------------
+
+
 hyst_file = 'hystID_data_5-4-2018_01.mat';
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
 load(hyst_path)
 
-ux = hystData.u_exp;
-yx = hystData.y_exp - mean(hystData.y_exp(1:500));
-tvec = hystData.t_exp;
+kk = length(hystData.y_exp);
+ux = hystData.u_exp(1:kk);
+yx = hystData.y_exp(1:kk) - mean(hystData.y_exp(1:500));
+tvec = hystData.t_exp(1:kk);
 
 umax = max(abs(ux));
 ymax = max(abs(yx));
 
-figure
+figure(500); clf
 plot(ux)
-
-% start with prior infomation for guess
-guess_data = load('steps_hyst_model.mat');
-
-% r = linspace(0, umax*0.5, nw);
-nw = 7;
-r = ([0:nw-1]'./(nw) )*umax
-
-% d = [-9; -4.5; 0; 4.5; 9];
-n_d = 2;
-id_plus = (1:n_d);
-id_neg = (-n_d:-1);
-dplus = ((id_plus - 0.5)/n_d ) * ymax;
-dmin = ( (id_neg + 0.5)/n_d ) *ymax; 
-
-w = ones(nw, 1);
-
-
-ws = [0.0001; 0.0001; 1; 0.0001; 0.0001];
-G = Gvib*gdrift;
-u_hyst_fun = @(theta) PIHyst.hyst_play_sat_op(ux, r, theta(1:nw), d, theta(nw+1:end), w*0);
-
-cost_hyst_only = @(theta) downsample(lsim(G, u_hyst_fun(theta),... 
-                tvec) - yx, 50); 
-              
-%%
-clc
-opts = optimoptions(@lsqnonlin);
-opts.MaxFunctionEvaluations = 10000;
-opts.Display = 'iter';
-theta_0 = [w; ws];
-
-lb = [];
-ub = [];
-theta = lsqnonlin(cost_hyst_only, theta_0, lb, ub, opts);
-
-u_est_steps_all = PIHyst.hyst_play_sat_op(ux, r, theta(1:nw), d, theta(nw+1:end), w*0);
-
-y_est_all = lsim(G, u_est_steps_all, tvec);
-
-
-
-figure(18); clf;
-h1 = plot(downsample(tvec, 50), downsample(yx, 50));
-hold on
-h2 = plot(downsample(tvec, 50), downsample(y_est_all, 50), 'r');
-h1.DisplayName = 'Experimental';
-h2.DisplayName = 'Fit';
-legend([h1, h2])
 grid on
 
-w = theta(1:nw);
-ws = theta(nw+1:end);
-[rp, wp, dp, wsp] = PIHyst.invert_hyst_sat_PI(r, w, d, ws);
+Nhyst = 7;
+nw = Nhyst;
+Nsat = 5;
 
-
-
+yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
+[r, w, d, ws] = PIHyst.fit_hyst_sat_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst, Nsat);
+[rp, wp] = PIHyst.invert_hyst_PI(r, w);
+[dp, wsp] = PIHyst.invert_sat(d, ws);
+hyst_sat = struct('r', r, 'w', w, 'rp', rp, 'wp', wp,...
+                  'd', d, 'ws', ws, 'dp', dp, 'wsp', wsp);
 
 
 %%
-% ----------------------------------------------------------------------- %
-% Now, we try fitting the drift and hysteresis together, without this
-% saturation business
-% w = ones(nw, 1);
-dat = load('steps_hyst_model.mat')
-gdrift = modelFit.models.drift.gdrift;
-w0 = [3.9355, 4.9039, -4.701, 2.7965, 1.2377, -2.8405, 2.5493];
-idx_w0 = [1:length(w0)];
-ws0 = ws(:)';
-idx_ws0 = [1:length(ws0)] + idx_w0(1);
-[num, den] = tfdata(gdrift, 'v');
+clear PIHyst
+[r2, w2] = PIHyst.fit_hyst_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst);
 
-idx_num = [1,2,3] + idx_ws0(end);
-idx_den = [1,2] + idx_num(end);
+u_pisat = PIHyst.hyst_play_sat_op(ux, r, w, d, ws, w*0);
+u_pi  = PIHyst.hyst_play_op(ux, r2, w2, w*0);
 
-theta_0 = [w0, ws0, num, den(2:end)];
-
-%%
-clc
-gdrift_h = @(theta) tf(theta(idx_num), [1, theta(idx_den)], Ts);
-G = @(theta) Gvib*gdrift_h(theta);
-u_hyst_fun = @(theta) PIHyst.hyst_play_sat_op(ux, r, theta(idx_w0), d, theta(idx_ws0), w0*0);
-
-cost_hyst_only = @(theta) downsample(lsim(G(theta), u_hyst_fun(theta),... 
-                tvec) - yx, 50); 
-              
-              
-opts = optimoptions(@lsqnonlin);
-opts.MaxFunctionEvaluations = 10000;
-opts.Display = 'iter';
-
-lb = [];
-ub = [];
-theta = lsqnonlin(cost_hyst_only, theta_0, lb, ub, opts);
-
-% theta = theta_0;
-%%
-u_est_steps_all = PIHyst.hyst_play_sat_op(ux, r, theta(idx_w0), d, theta(idx_ws0), w*0);
-
-y_est_all = lsim(G(theta), u_est_steps_all, tvec);
-
-figure(19); clf;
-h1 = plot(downsample(tvec, 50), downsample(yx, 50));
+figure(1000); clf
+plot(tvec, yprime)
 hold on
-h2 = plot(downsample(tvec, 50), downsample(y_est_all, 50), 'r');
-h1.DisplayName = 'Experimental';
-h2.DisplayName = 'Fit';
-legend([h1, h2])
+plot(tvec, u_pisat)
 grid on
 
-w = theta(1:nw);
-ws = theta(nw+1:end);
-[rp, wp, dp, wsp] = PIHyst.invert_hyst_sat_PI(r, w, d, ws);
+y_hyst_sat = lsim(Gvib*gdrift, u_pisat, tvec);
+y_hyst = lsim(Gvib*gdrift, u_pi, tvec);
 
+figure(2000); clf
+plot(tvec, yx)
+hold on
+plot(tvec, y_hyst_sat)
+plot(tvec, y_hyst, '--')
+grid on
 
+[rp2, wp2] = PIHyst.invert_hyst_PI(r2, w2)
 
-
-
-
-
+hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2)
 
 %%
 modelFit.models.G_uz2stage = sys_stage_log;
@@ -327,8 +311,61 @@ modelFit.models.g_deluz2pow_1norm = nm1;
 modelFit.models.du_max_nm1 = delumax;
 modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift = gdrift;
-
-if 0
+modelFit.models.hyst = hyst;
+modelFit.models.hyst_sat = hyst_sat;
+if 1
     save(modelFit_file, 'modelFit');
 end
 
+
+return
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+r = ([0:nw-1]'./(nw) )*umax;
+
+%n_d = 0;
+id_plus = (1:n_d);
+id_neg = (-n_d:-1);
+dplus = ((id_plus - 0.5)/n_d ) * ymax;
+dmin = ( (id_neg + 0.5)/n_d ) *ymax;
+dp = [dmin, 0, dplus]';
+
+% create dummy vectors:
+w = r*0;
+ws = dp*0;
+
+[~, HU_mat] = PIHyst.hyst_play_op(downsample(ux, 100), r, r*0, r*0);
+
+
+[~, Syp_mat] = PIHyst.sat_op(downsample(yprime, 100), dp, dp*0);
+
+H = [HU_mat'; -Syp_mat']*[HU_mat, -Syp_mat];
+
+UH = -eye(size(w,1));
+neg1 = -ones(1, n_d);
+N = 2*n_d+1;
+US = zeros(N, N);
+On = ones(n_d+1);
+Us1 = -triu(On);
+Us2 = -triu(On)';
+US = blkdiag(Us1(1:n_d, 1:n_d), Us2);
+US(1:n_d, n_d+1) = -1;
+
+Ainq = blkdiag(UH, US);
+binq = [w(:)*0; ws(:)*0] - .011;
+
+Aeq = [ymax*ones(1, length(r)) - r', zeros(1, length(dp))];
+beq = ymax;
+
+opts = optimset('quadprog');
+opts.Display = 'off';
+[w_wsp, JVAL] = quadprog(H, H(:,1)*0, Ainq, binq, Aeq, beq, [], [], [], opts);
+fprintf('N-r = %.0f,  N-d = %.0f, JVAL = %g\n', length(r), length(d), JVAL);
+
+w = w_wsp(1:length(r));
+wsp = w_wsp(length(r)+1:end);
+
+[d, ws] = PIHyst.invert_sat(dp, wsp);

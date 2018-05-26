@@ -62,21 +62,21 @@ pzplot(sys_stage_log);
 
 return
 
-Z = sort(zero(sys_stage_log));
-Z_eject = zpk([], Z(1:1), 1, Ts);
-Z_eject = Z_eject/dcgain(Z_eject);
-sys_stage_log = minreal(Z_eject*sys_stage_log);
-
-sos_fos = SosFos(sys_stage_log, 'iodelay', p);
-LG = LogCostZPK(G_uz2stage_frf(1:k_estmax), omegas(1:k_estmax), sos_fos);
-LG.solve_lsq(2, LGopts)
-[sys_stage_log, p] = LG.sos_fos.realize();
-fprintf('LG says delay = %.2f\n', p);
-
-sys_stage_log.InputDelay = max(round(p, 0), 0);
-frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
-
-plotPZ_freqs(sys_stage_log, F4);
+% Z = sort(zero(sys_stage_log));
+% Z_eject = zpk([], Z(1:1), 1, Ts);
+% Z_eject = Z_eject/dcgain(Z_eject);
+% sys_stage_log = minreal(Z_eject*sys_stage_log);
+% 
+% sos_fos = SosFos(sys_stage_log, 'iodelay', p);
+% LG = LogCostZPK(G_uz2stage_frf(1:k_estmax), omegas(1:k_estmax), sos_fos);
+% LG.solve_lsq(2, LGopts)
+% [sys_stage_log, p] = LG.sos_fos.realize();
+% fprintf('LG says delay = %.2f\n', p);
+% 
+% sys_stage_log.InputDelay = max(round(p, 0), 0);
+% frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
+% 
+% plotPZ_freqs(sys_stage_log, F4);
 %%
 
 % ---------------------------------------------------------------- %
@@ -143,12 +143,135 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 
 
 %%
+% ----------------------------------------------------------------
+% --------------------- Now, Fit the drift model -----------------
+addpath('hysteresis')
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_4-30-2018_01.mat'))
+Ts = modelFit.frf.Ts;
+G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
 
 
+
+k_start = 2677;
+y_exp = driftData.y_exp(k_start:end) - mean(driftData.y_exp(1:k_start));
+u_exp = driftData.u_exp(k_start:end);
+t_exp = (0:length(y_exp)-1)'*Ts;
+
+theta0 = [0.9922    0.9997    0.9997    0.9927    .8];
+lb = [-1, -1, -1, -1, -Inf];
+ub = -lb;
+np = 2;
+normalize_dc = false;
+Gvib = eject_gdrift(G_uz2stage, normalize_dc);
+
+gdrift_cost = @(theta)fit_gdrift(theta, Gvib, y_exp, u_exp, t_exp, np);
+
+opts = optimoptions(@lsqnonlin);
+opts.MaxFunctionEvaluations = 5000;
+opts.MaxIterations = 1000;
+opts.Display = 'iter';
+theta = lsqnonlin(gdrift_cost, theta0, lb, ub, opts);
+
+gdrift = zpk(theta(np+1:end-1), theta(1:np), theta(end), Ts);
+
+ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_exp);
+y_vib = lsim(Gvib, u_exp, t_exp);
+
+figure(100)
+clf;
+h1 = plot(t_exp, y_exp);
+h1.DisplayName = 'Exp. Step Response';
+hold on
+h2 = plot(t_exp, ydrift_est0, '-r');
+h2.DisplayName = '$G_{vib}G_d$';
+
+
+h3 = plot(t_exp, y_vib, ':k');
+h3.DisplayName = '$G_{vib}$';
+leg1 = legend([h1, h2, h3]);
+xlim([0, 0.28])
+ylim([-0.005, 0.15])
+grid on
+% grid minor;
+xlabel('time [s]')
+ylabel('$y_X$ [v]')
+ax = gca;
+set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
+
+
+%%
+% ------------------- Fit Hysteresis + Sat -------------------------------------
+
+
+hyst_file = 'hystID_data_5-4-2018_01.mat';
+hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
+load(hyst_path)
+
+kk = length(hystData.y_exp);
+ux = hystData.u_exp(1:kk);
+yx = hystData.y_exp(1:kk) - mean(hystData.y_exp(1:500));
+tvec = hystData.t_exp(1:kk);
+
+umax = max(abs(ux));
+ymax = max(abs(yx));
+
+figure(500); clf
+plot(ux)
+grid on
+
+Nhyst = 7;
+nw = Nhyst;
+Nsat = 5;
+
+yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
+[r, w, d, ws] = PIHyst.fit_hyst_sat_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst, Nsat);
+[rp, wp] = PIHyst.invert_hyst_PI(r, w);
+[dp, wsp] = PIHyst.invert_sat(d, ws);
+hyst_sat = struct('r', r, 'w', w, 'rp', rp, 'wp', wp,...
+                  'd', d, 'ws', ws, 'dp', dp, 'wsp', wsp);
+
+
+%%
+clear PIHyst
+[r2, w2] = PIHyst.fit_hyst_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst);
+
+u_pisat = PIHyst.hyst_play_sat_op(ux, r, w, d, ws, w*0);
+u_pi  = PIHyst.hyst_play_op(ux, r2, w2, w*0);
+
+figure(1000); clf
+plot(tvec, yprime)
+hold on
+plot(tvec, u_pisat)
+grid on
+
+y_hyst_sat = lsim(Gvib*gdrift, u_pisat, tvec);
+y_hyst = lsim(Gvib*gdrift, u_pi, tvec);
+
+figure(2000); clf
+plot(tvec, yx)
+hold on
+plot(tvec, y_hyst_sat)
+plot(tvec, y_hyst, '--')
+grid on
+
+[rp2, wp2] = PIHyst.invert_hyst_PI(r2, w2)
+
+hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2)
+
+
+% modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
+% modelFit.models.G_deluz2powI = G_deluz2Ipow;
+% modelFit.models.g_deluz2pow_1norm = nm1;
+% modelFit.models.du_max_nm1 = delumax;
+modelFit.models.G_uz2stage = sys_stage_log;
 modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
 modelFit.models.G_deluz2powI = G_deluz2Ipow;
 modelFit.models.g_deluz2pow_1norm = nm1;
 modelFit.models.du_max_nm1 = delumax;
+modelFit.models.Gvib = Gvib;
+modelFit.models.gdrift = gdrift;
+modelFit.models.hyst = hyst;
+modelFit.models.hyst_sat = hyst_sat;
 if 1
     save(modelFit_file, 'modelFit');
 end
