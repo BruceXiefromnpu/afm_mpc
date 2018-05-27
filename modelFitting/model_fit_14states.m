@@ -28,14 +28,17 @@ F4 = figure(4); clf
 frfBode(G_uz2stage_frf, freqs, F3, 'r', 'Hz');
 frfBode(G_uz2stage_frf, freqs, F4, 'r', 'Hz');
 
-Nd2 =9;
+Nd2 =10;
 ns2 = 14;
-k_estmax = 244;
+k_estmax = 250;
 ss_opts = frf2ss_opts('Ts', Ts);
 
 f2ss = frf2ss(G_uz2stage_frf, omegas, Nd2, ss_opts); % 12
 sys_stage = f2ss.realize(ns2); % 12
-                               
+
+figure(50); clf
+pzplot(sys_stage);
+
 Z = zero(sys_stage);
 Z_eject = zpk([], Z(find(abs(Z) > 1)), 1, Ts);
 Z_eject = Z_eject/dcgain(Z_eject);
@@ -43,7 +46,6 @@ sys_stage = minreal(Z_eject*sys_stage);
 
 frfBode(sys_stage, freqs, F3, '--k', 'Hz');
 plotPZ_freqs(sys_stage, F3);
-
 
 % Now, we refine with the logrithmic least squares fit.
 LGopts = optimoptions(@lsqnonlin, 'Display', 'iter',...
@@ -59,14 +61,10 @@ fprintf('LG says delay = %.2f\n', p);
 
 frfBode(sys_stage_log, freqs, F4, '--k', 'Hz');
 % plotPZ_freqs(sys_stage_log, F4);
-
-figure(50); clf
-pzplot(sys_stage_log);
-
-return
-% 
-% Z = sort(zero(sys_stage_log));
-% Z_eject = zpk([], Z(real(Z)<0.8), 1, Ts);
+% return
+% Z = sort(zero(sys_stage_log))
+% zej = Z(real(Z)<0.51)
+% Z_eject = zpk([], zej, 1, Ts);
 % Z_eject = Z_eject/dcgain(Z_eject);
 % sys_stage_log = minreal(Z_eject*sys_stage_log);
 % 
@@ -75,9 +73,9 @@ return
 % LG.solve_lsq(2, LGopts)
 % [sys_stage_log, p] = LG.sos_fos.realize();
 % fprintf('LG says delay = %.2f\n', p);
-% 
-% sys_stage_log.InputDelay = max(round(p, 0), 0);
-% frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
+
+sys_stage_log.InputDelay = max(round(p, 0), 0)+1;
+frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
 
 plotPZ_freqs(sys_stage_log, F4);
 subplot(2,1,1)
@@ -85,7 +83,6 @@ title('Model with logfit')
 figure(50); hold on;
 pzplot(sys_stage_log, 'r')
 %%
-
 % ---------------------------------------------------------------- %
 % --------- Second, we work on the powI system -------------------- %
 
@@ -147,10 +144,9 @@ delumax = I_max/nm1;
 fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
 
 fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
-
-
 %%
-% Now, Fit the drift model.
+% ----------------------------------------------------------------
+% --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
 load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_4-30-2018_01.mat'))
 Ts = modelFit.frf.Ts;
@@ -162,10 +158,6 @@ k_start = 2677;
 y_exp = driftData.y_exp(k_start:end) - mean(driftData.y_exp(1:k_start));
 u_exp = driftData.u_exp(k_start:end);
 t_exp = (0:length(y_exp)-1)'*Ts;
-
-% F100 = figure(100); clf
-% plot_ind(t_vec, y_exp);
-
 
 theta0 = [0.9922    0.9997    0.9997    0.9927    .8];
 lb = [-1, -1, -1, -1, -Inf];
@@ -209,6 +201,109 @@ ax = gca;
 set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
 
 % saveas(F100, fullfile(PATHS.jfig, 'drift_fit.svg'));
+
+%
+% Now, see if we can get a bit better fit in the time domain by tweaking the
+% first two complex resonances at 400 hz.
+% figure(20); clf
+% pzplot(Gvib);
+% hold on
+% 
+% p = sort(pole(Gvib))
+% z = sort(zero(Gvib))
+% 
+% p_eject = p(end-4+1:end)';
+% z_eject = z(end-4+1:end)';
+% 
+% geject = zpk(z_eject, p_eject, 1, Ts);
+% geject = geject/dcgain(geject);
+% 
+% Gvib_high = minreal(Gvib/geject)
+% 
+% pzplot(Gvib_high, 'r')
+% 
+% 
+% 
+% k0 = 1.0489;
+% theta_0 = [real(z_eject([1,3])), imag(z_eject([1,3])),...
+%            real(p_eject([1,3])), imag(p_eject([1,3])), k0]
+% 
+% g_fit = @(theta) zpk( [theta(1:2) + 1j*(theta(3:4)), theta(1:2) - 1j*(theta(3:4))],...
+%           [theta(5:6)  + 1j*theta(7:8), theta(5:6) - 1j*theta(7:8)], theta(end), Ts);
+% 
+% 
+% 
+% yerr = @(theta) lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp) - y_exp;
+% 
+% 
+% theta = lsqnonlin(yerr, theta_0, lb, ub, opts);
+% 
+% 
+% ydrift_est2 = lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp);
+ 
+% figure(100)
+% plot(t_exp, ydrift_est2, 'g')
+% frfBode(Gvib_high*gdrift, freqs, F4, '--k', 'Hz')
+%%
+% ------------------- Fit Hysteresis + Sat -------------------------------------
+
+
+hyst_file = 'hystID_data_5-4-2018_01.mat';
+hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
+load(hyst_path)
+
+kk = length(hystData.y_exp);
+ux = hystData.u_exp(1:kk);
+yx = hystData.y_exp(1:kk) - mean(hystData.y_exp(1:500));
+tvec = hystData.t_exp(1:kk);
+
+umax = max(abs(ux));
+ymax = max(abs(yx));
+
+figure(500); clf
+plot(ux)
+grid on
+
+Nhyst = 7;
+nw = Nhyst;
+Nsat = 5;
+
+yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
+[r, w, d, ws] = PIHyst.fit_hyst_sat_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst, Nsat);
+[rp, wp] = PIHyst.invert_hyst_PI(r, w);
+[dp, wsp] = PIHyst.invert_sat(d, ws);
+hyst_sat = struct('r', r, 'w', w, 'rp', rp, 'wp', wp,...
+                  'd', d, 'ws', ws, 'dp', dp, 'wsp', wsp);
+
+
+%%
+clear PIHyst
+[r2, w2] = PIHyst.fit_hyst_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst);
+
+u_pisat = PIHyst.hyst_play_sat_op(ux, r, w, d, ws, w*0);
+u_pi  = PIHyst.hyst_play_op(ux, r2, w2, w*0);
+
+figure(1000); clf
+plot(tvec, yprime)
+hold on
+plot(tvec, u_pisat)
+grid on
+
+y_hyst_sat = lsim(Gvib*gdrift, u_pisat, tvec);
+y_hyst = lsim(Gvib*gdrift, u_pi, tvec);
+
+figure(2000); clf
+plot(tvec, yx)
+hold on
+plot(tvec, y_hyst_sat)
+plot(tvec, y_hyst, '--')
+grid on
+
+[rp2, wp2] = PIHyst.invert_hyst_PI(r2, w2)
+
+hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2)
+
+%%
 modelFit.models.G_uz2stage = sys_stage_log;
 modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
 modelFit.models.G_deluz2powI = G_deluz2Ipow;
@@ -216,62 +311,61 @@ modelFit.models.g_deluz2pow_1norm = nm1;
 modelFit.models.du_max_nm1 = delumax;
 modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift = gdrift;
-
+modelFit.models.hyst = hyst;
+modelFit.models.hyst_sat = hyst_sat;
 if 1
     save(modelFit_file, 'modelFit');
 end
 
-%%
-% Now, see if we can get a bit better fit in the time domain by tweaking the
-% first two complex resonances at 400 hz.
-figure(20); clf
-pzplot(Gvib);
-hold on
 
-p = sort(pole(Gvib))
-z = sort(zero(Gvib))
+return
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-p_eject = p(end-4+1:end)';
-z_eject = z(end-4+1:end)';
+r = ([0:nw-1]'./(nw) )*umax;
 
-geject = zpk(z_eject, p_eject, 1, Ts);
-geject = geject/dcgain(geject);
+%n_d = 0;
+id_plus = (1:n_d);
+id_neg = (-n_d:-1);
+dplus = ((id_plus - 0.5)/n_d ) * ymax;
+dmin = ( (id_neg + 0.5)/n_d ) *ymax;
+dp = [dmin, 0, dplus]';
 
-Gvib_high = minreal(Gvib/geject)
+% create dummy vectors:
+w = r*0;
+ws = dp*0;
 
-pzplot(Gvib_high, 'r')
-
-
-
-k0 = 1.0489;
-theta_0 = [real(z_eject([1,3])), imag(z_eject([1,3])),...
-           real(p_eject([1,3])), imag(p_eject([1,3])), k0]
-
-g_fit = @(theta) zpk( [theta(1:2) + 1j*(theta(3:4)), theta(1:2) - 1j*(theta(3:4))],...
-          [theta(5:6)  + 1j*theta(7:8), theta(5:6) - 1j*theta(7:8)], theta(end), Ts);
+[~, HU_mat] = PIHyst.hyst_play_op(downsample(ux, 100), r, r*0, r*0);
 
 
+[~, Syp_mat] = PIHyst.sat_op(downsample(yprime, 100), dp, dp*0);
 
-yerr = @(theta) lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp) - y_exp;
+H = [HU_mat'; -Syp_mat']*[HU_mat, -Syp_mat];
 
+UH = -eye(size(w,1));
+neg1 = -ones(1, n_d);
+N = 2*n_d+1;
+US = zeros(N, N);
+On = ones(n_d+1);
+Us1 = -triu(On);
+Us2 = -triu(On)';
+US = blkdiag(Us1(1:n_d, 1:n_d), Us2);
+US(1:n_d, n_d+1) = -1;
 
-theta = lsqnonlin(yerr, theta_0, lb, ub, opts);
+Ainq = blkdiag(UH, US);
+binq = [w(:)*0; ws(:)*0] - .011;
 
+Aeq = [ymax*ones(1, length(r)) - r', zeros(1, length(dp))];
+beq = ymax;
 
-ydrift_est2 = lsim(Gvib_high*g_fit(theta)*gdrift, u_exp, t_exp);
+opts = optimset('quadprog');
+opts.Display = 'off';
+[w_wsp, JVAL] = quadprog(H, H(:,1)*0, Ainq, binq, Aeq, beq, [], [], [], opts);
+fprintf('N-r = %.0f,  N-d = %.0f, JVAL = %g\n', length(r), length(d), JVAL);
 
-figure(100)
-plot(t_exp, ydrift_est2, 'g')
-%%
+w = w_wsp(1:length(r));
+wsp = w_wsp(length(r)+1:end);
 
-modelFit.models.G_uz2stage = sys_stage_log;
-modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
-modelFit.models.G_deluz2powI = G_deluz2Ipow;
-modelFit.models.g_deluz2pow_1norm = nm1;
-modelFit.models.du_max_nm1 = delumax;
-modelFit.models.Gvib = Gvib_high*g_fit(theta);
-modelFit.models.gdrift = gdrift;
-
-if 1
-    save(modelFit_file, 'modelFit');
-end
+[d, ws] = PIHyst.invert_sat(dp, wsp);
