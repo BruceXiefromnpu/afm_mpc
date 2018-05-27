@@ -22,7 +22,7 @@
 --    devices, or systems.  Use in such applications are expressly            --
 --    prohibited.                                                             --
 --                                                                            --
---    (c) Copyright 1995-2017 Xilinx, Inc.                                    --
+--    (c) Copyright 1995-2018 Xilinx, Inc.                                    --
 --    All rights reserved.                                                    --
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -117,3 +117,7 @@ U0 : wrapped_Add_SCTL_L0_C3ADE5BE76064AA39E7EE6565DE88692
 -- synthesis translate_on
 
 END Add_SCTL_L0_C3ADE5BE76064AA39E7EE6565DE88692_a;
+
+configuration conf_C3ADE5BE76064AA39E7EE6565DE88692 of Add_SCTL_L0_C3ADE5BE76064AA39E7EE6565DE88692 is
+  for Add_SCTL_L0_C3ADE5BE76064AA39E7EE6565DE88692_a end for; 
+end conf_C3ADE5BE76064AA39E7EE6565DE88692; 
