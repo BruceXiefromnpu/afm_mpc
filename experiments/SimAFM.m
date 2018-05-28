@@ -17,6 +17,10 @@ classdef SimAFM
     w;
     rp;
     wp;
+    d;
+    ws;
+    dp;
+    wsp;
     gdrift_inv;
     gdrift;
    
@@ -45,6 +49,7 @@ classdef SimAFM
       self.x0 = PLANT.b*0;
       kd_sys =  tf(1,1, PLANT.Ts);
       
+      fi_zero = fi(0, 1, 16, 11);
       p = inputParser();
       p.addParameter('thenoise', []);
       p.addParameter('step_amp', 0);
@@ -52,6 +57,10 @@ classdef SimAFM
       p.addParameter('w', 0);
       p.addParameter('rp', 0);
       p.addParameter('wp', 0);
+      p.addParameter('d', 0);
+      p.addParameter('ws', 0);
+      p.addParameter('dp', fi_zero);
+      p.addParameter('wsp', fi_zero);
       p.addParameter('gdrift',  kd_sys);
       p.addParameter('gdrift_inv', kd_sys);
       p.addParameter('nw', 0);
@@ -64,6 +73,12 @@ classdef SimAFM
       self.w = p.Results.w;
       self.rp = p.Results.rp;
       self.wp = p.Results.wp;
+      self.d = p.Results.d;
+      self.ws = p.Results.ws;
+      self.dp = p.Results.dp;
+      self.wsp = p.Results.wsp;
+      
+      
       self.gdrift = p.Results.gdrift;
       self.gdrift_inv = p.Results.gdrift_inv;
       self.nw = p.Results.nw;
@@ -142,9 +157,14 @@ classdef SimAFM
 
       r = sim_obj.r;
       w = sim_obj.w;
+      d = sim_obj.d;
+      ws = sim_obj.ws;
       
       rp = sim_obj.rp;
       wp = sim_obj.wp;
+      dp = sim_obj.dp;
+      wsp = sim_obj.wsp;
+      
       % sim_obj.gdrift_inv = tf(1,1, PLANT.Ts);
       % sim_obj.gdrift = tf(1,1, PLANT.Ts);
       

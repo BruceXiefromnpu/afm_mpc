@@ -147,6 +147,7 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
 load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_4-30-2018_01.mat'))
+% load(fullfile(PATHS.sysid, 'hysteresis', 'drift_data.mat'))
 Ts = modelFit.frf.Ts;
 G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
 
@@ -161,7 +162,7 @@ theta0 = [0.9922    0.9997    0.9997    0.9927    .8];
 lb = [-1, -1, -1, -1, -Inf];
 ub = -lb;
 np = 2;
-normalize_dc = false;
+normalize_dc = true;
 Gvib = eject_gdrift(G_uz2stage, normalize_dc);
 
 gdrift_cost = @(theta)fit_gdrift(theta, Gvib, y_exp, u_exp, t_exp, np);
@@ -173,6 +174,8 @@ opts.Display = 'iter';
 theta = lsqnonlin(gdrift_cost, theta0, lb, ub, opts);
 
 gdrift = zpk(theta(np+1:end-1), theta(1:np), theta(end), Ts);
+
+
 
 ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_exp);
 y_vib = lsim(Gvib, u_exp, t_exp);
@@ -198,7 +201,12 @@ ylabel('$y_X$ [v]')
 ax = gca;
 set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
 
-
+plants2 = CanonPlants.plants_with_drift_inv(true);
+gdrift_old = plants2.gdrift
+gdrift
+ydrift_est2 = lsim(Gvib*gdrift_old, u_exp, t_exp);
+figure(100)
+plot(t_exp, ydrift_est2, '-g')
 %%
 % ------------------- Fit Hysteresis + Sat -------------------------------------
 
@@ -219,9 +227,9 @@ figure(500); clf
 plot(ux)
 grid on
 
-Nhyst = 7;
+Nhyst = 9;
 nw = Nhyst;
-Nsat = 5;
+Nsat = 7;
 
 yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
 [r, w, d, ws] = PIHyst.fit_hyst_sat_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst, Nsat);

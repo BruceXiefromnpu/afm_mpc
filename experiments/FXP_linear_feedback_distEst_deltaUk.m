@@ -39,33 +39,33 @@ TOL = .01;
 % close all
 md = 1;
 % --------------- Load Plants -------------------
+clear CanonPlants
 with_hyst = true;
+if 1
+plants2 = CanonPlants.plants_drift_inv_hyst_sat();
 plants = CanonPlants.plants_with_drift_inv(with_hyst);
+else
+plants = CanonPlants.plants_drift_inv_hyst_sat();
+plants2 = CanonPlants.plants_with_drift_inv(with_hyst);
+end  
 % plants = CanonPlants.plants_ns14();
 
-
 Ts  = plants.SYS.Ts;
-
 if md == 2
   plants.gdrift = zpk([], [], 1, Ts);
   plants.gdrift_inv = zpk([], [], 1, Ts);
 end
-
-% 3). Reduced order system for simulation.
-% sys_obs = absorbDelay(plants.SYS);
-% Ns  = length(sys_obs.b);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
 %                  Design reference "trajectory"                          %
 %                                                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 % Get a ref trajectory to track.
 N    = 800;
-r1 = .25;
+r1 = 1;
 r2 = -6;
-trajstyle =4;
+trajstyle =1;
 if trajstyle == 1
   yref = CanonRefTraj.ref_traj_1(r1, N);
 elseif trajstyle == 2
@@ -85,8 +85,6 @@ thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 % use in both the simulation and experimentant system.                    %
 %                                                                         %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% 3). LQR generation gain.
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
 du_max   = StageParams.du_max;
@@ -136,20 +134,20 @@ end
 
 [y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref);
 
-linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', yref.Data(1),...
+linOpts = stepExpOpts('pstyle', '--r', 'TOL', TOL, 'y_ref', yref.Data(1),...
                       'controller', K_lqr, 'name',  'Simulation');
 
 sim_exp = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
 
-% % F1 = figure(59); clf
-% % h1 = plot(sim_exp, F1);
-% % subplot(3,1,1)
-% % plot(yref.time, yref.Data, '--k', 'LineWidth', .05);
-% % xlm = xlim();
+F1 = figure(59); %clf
+h1 = plot(sim_exp, F1);
+subplot(3,1,1)
+plot(yref.time, yref.Data, '--k', 'LineWidth', .05);
+xlm = xlim();
 
 F61 = figure(61); clf
 plotState(Xhat_fp, F61);
-
+%%
 % -------------------- Setup Fixed stuff -----------------------------
 
 A_obs_cl = sys_obsDist.a - L_dist*sys_obsDist.c;
@@ -180,18 +178,24 @@ sims_fxpl.r = plants.hyst.r;
 sims_fxpl.w = plants.hyst.w;
 sims_fxpl.rp = fi(plants.hyst.rp, 1, 16, 11);
 sims_fxpl.wp = fi(plants.hyst.wp, 1, 16, 11);
+
+% sims_fxpl.d = plants.hyst_sat.d;
+% sims_fxpl.ws = plants.hyst_sat.ws;
+% sims_fxpl.dp = fi(plants.hyst_sat.dp, 1, 16, 11);
+% sims_fxpl.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
+
 sims_fxpl.gdrift_inv = plants.gdrift_inv;
 sims_fxpl.gdrift = plants.gdrift;
 
 
-
+%
 [y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref);
 fxpl_Opts = stepExpOpts('pstyle', '--k', 'TOL', TOL, 'y_ref', r1,...
                       'controller', K_lqr, 'name',  'FXP lin Sim.');
 sim_exp_fxpl = stepExpDu(y_fxpl, U_full_fxpl, dU_fxpl, fxpl_Opts);
 
-% % h2 = plot(sim_exp_fxpl, F1, 'umode', 'both');
-% % legend([h1(1), h2(1)])
+h2 = plot(sim_exp_fxpl, F1, 'umode', 'both');
+legend([h1(1), h2(1)])
 %
 fprintf('Max of U_nom = %.2f\n', max(U_nom_fxpl.Data));
 fprintf('Max of U_full = %.2f\n', max(U_full_fxpl.Data));
@@ -225,17 +229,15 @@ clear vi; clear e;
 SettleTicks = 20000;
 Iters = length(yref.Data)-1;
 
-% Iters =700;
 Iters = min(Iters, length(yref.Data)-1);
-
-% Iters = 650;
+% Iters = 300;
 
 
 [num, den] = tfdata(plants.gdrift_inv);
 num = num{1};
 den = den{1};
 
-umax = 12;
+umax = 7;
 ymax = max(yref.Data)*1.3
 clear e;
 clear vi;
@@ -243,20 +245,23 @@ clear vi;
 vipath =['C:\Users\arnold\Documents\matlab\afm_mpc_journal\',...
   'labview\fixed-point-host\play_FXP_AFMss_LinearDistEst_singleAxis.vi'];
 
-
-% [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
-%    'num', num, 'den', den, 'TF Order', (length(den)-1),...
-%     'r_s', rp, 'w-s', wp,'N_hyst', 7, 'du_max', du_max,...
-%             'umax', 7, 'ymax', 5, 'outputData BOTH', dataOut_path,...
-%             'reference traj path', refTrajPath, 'control_data_path', controlDataPath);
-% rp = 0; wp = 0;
+if 1
+[e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
+   'num', num, 'den', den, 'TF Order', (length(den)-1),...
+   'r_s', plants.hyst_sat.rp, 'w_s', plants.hyst_sat.wp, 'N_hyst', 1*length(plants.hyst_sat.rp),...
+   'sat_ds', plants.hyst_sat.dp, 'sat_ws', plants.hyst_sat.wsp, 'N_sat', 1*length(plants.hyst_sat.dp),...
+   'du_max', du_max,'dry_run', false,...
+   'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
+   'traj_path', traj_path, 'control_data_path', fxplin_dat_path);
+else
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
    'num', num, 'den', den, 'TF Order', (length(den)-1),...
    'r_s', plants.hyst.rp, 'w_s', plants.hyst.wp, 'N_hyst', 1*length(plants.hyst.rp),...
    'du_max', du_max,'dry_run', false,...
    'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
    'traj_path', traj_path, 'control_data_path', fxplin_dat_path);
-
+  
+end
 vi.Run
 % -------------------------------------------------------------------------
 %
@@ -274,7 +279,7 @@ Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
 
-expOpts = stepExpOpts(linOpts, 'pstyle', '--m', 'name',  'AFM Stage');
+expOpts = stepExpOpts(linOpts, 'pstyle', '--g', 'name',  'AFM Stage');
 
 afm_exp = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
 H2 = plot(afm_exp, F1);
@@ -282,7 +287,7 @@ subplot(3,1,1)
 plot(y_exp.Time, yy, ':k')
 subplot(3,1,2)
 
-plot(u_exp.Time, u_exp.data, '--m')
+% plot(u_exp.Time, u_exp.data, '--b')
 
 figure(1000); clf
 plot(Ipow_exp.Time, (Ipow_exp.Data/15)*1000)
