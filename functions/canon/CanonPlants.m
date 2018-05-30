@@ -131,7 +131,7 @@ classdef CanonPlants
       plants.Nd = Nd;
       
     end
-function plants = plants_drift_inv_hyst_sat()
+function [plants, frf_data] = plants_drift_inv_hyst_sat()
     % plants = plants_with_drift_inv(with_hyst)
     % Builds the standard versions of the plants. plants is a
     % structure with the following fields
@@ -186,6 +186,8 @@ function plants = plants_drift_inv_hyst_sat()
       plants.sys_recyc=SSTools.deltaUkSys(SYS);
       plants.sys_recyc_nodelay=SSTools.deltaUkSys(plants.sys_nodelay);
       plants.Nd = Nd;
+      
+      frf_data = modelFit.frf;
       
     end
     function plants_with_drift_internal()

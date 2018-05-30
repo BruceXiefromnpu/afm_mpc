@@ -31,9 +31,10 @@ P = path();
   
   u_reset = PIHyst.gen_reset_u(t1, t_final, Ts, k1, umax);
   if verbose
-    figure(100)
-    plot(u_reset)
-    grid on
+    figure(100);
+    t = (0:length(u_reset)-1)'*Ts;
+    plot(t, u_reset, '-k')
+    grid on, hold on
   end
   slewfname_in = 'hyst_reset_datain.csv';
   slewfpath_in = fullfile(pwd, slewfname_in);
@@ -54,10 +55,10 @@ P = path();
       yx_exp = stage_dat(:,2); % - dat(1,2);
       t_exp = (0:length(u_exp)-1)'*Ts;
 
-      figure(101); clf
-      plot(t_exp, u_exp)
+      figure(100); 
+      plot(t_exp, u_exp, 'r')
       hold on
-      plot(t_exp, yx_exp)
+      plot(t_exp, yx_exp, 'b')
       grid on
     end
   end
