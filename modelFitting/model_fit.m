@@ -146,7 +146,7 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % ----------------------------------------------------------------
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_4-30-2018_01.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
 % load(fullfile(PATHS.sysid, 'hysteresis', 'drift_data.mat'))
 Ts = modelFit.frf.Ts;
 G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;

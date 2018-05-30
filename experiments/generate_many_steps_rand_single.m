@@ -2,13 +2,14 @@
 rng(5);
 saveon = true;
 Ts = StageParams.Ts;
-n_space = 2000;
+n_space = 2500;
 N_repeat = 1;
 N_steps = 20;
-imps = -5.5 + (5.5+5.5)*rand(N_steps,1)
+ymax = 8;
+imps = -ymax + (2*ymax)*rand(N_steps,1)
 % imps = [ 1, 2.5,-2,1.25, -2, 1, -3, -.5]';
 imps = diff([0; imps]);
-imps = [imps; -sum(imps)];
+imps = [imps; -sum(imps); 7.5; -15; 7.5];
 imps = [0; repmat(imps, N_repeat, 1)];
 
 ref_s = cumsum(imps)
@@ -31,8 +32,9 @@ ref_traj_params.ref_traj = timeseries(u_vec(:), t_vec(:));
 ref_traj_params.impulse_idx = impulse_idx;
 ref_traj_params.ref_s = ref_s;
 if saveon
-  root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand');
-  save(fullfile(root, 'many_steps_rand_longts.mat'), 'ref_traj_params' );
+%   root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand');
+root = pwd;
+  save(fullfile(root, 'many_steps_data_rand_ymax7.mat'), 'ref_traj_params' );
 end
 
 

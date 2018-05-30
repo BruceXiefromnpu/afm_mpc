@@ -85,7 +85,7 @@ classdef SimAFM
       self.nf = p.Results.nf;
     end
     
-    function [Y, U, U_nominal, dU, Xhat, Xerr] = sim(sim_obj, ref_traj)
+    function [Y, U_full, U_nominal, dU, Xhat, Xerr] = sim(sim_obj, ref_traj)
     % NOTE: rather than self, call it sim obj so it is more
     % readable in simulink.  
     % [Y, U, dU] = sim_MPC_fp(self, ref_f)
@@ -146,12 +146,11 @@ classdef SimAFM
       PLANT = sim_obj.PLANT;
       trun = ref_traj.Time(end);
       Ts = PLANT.Ts;
-      %trun = 5*Ts;
       x0 = sim_obj.x0;
-      % uss_0 = 0;
       
-      thenoise = sim_obj.thenoise; 
-      thenoise = timeseries(ref_traj.Time*0, ref_traj.Time);
+      
+      thenoise = sim_obj.thenoise;
+      %thenoise = timeseries(ref_traj.Time*0, ref_traj.Time);
       
       sim_obj.step_amp = 0;
 

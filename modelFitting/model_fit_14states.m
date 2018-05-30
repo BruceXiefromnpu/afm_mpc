@@ -148,7 +148,7 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % ----------------------------------------------------------------
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_4-30-2018_01.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
 Ts = modelFit.frf.Ts;
 G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
 
@@ -163,7 +163,7 @@ theta0 = [0.9922    0.9997    0.9997    0.9927    .8];
 lb = [-1, -1, -1, -1, -Inf];
 ub = -lb;
 np = 2;
-normalize_dc = false;
+normalize_dc = true;
 Gvib = eject_gdrift(G_uz2stage, normalize_dc);
 
 gdrift_cost = @(theta)fit_gdrift(theta, Gvib, y_exp, u_exp, t_exp, np);
@@ -246,7 +246,7 @@ set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
 % frfBode(Gvib_high*gdrift, freqs, F4, '--k', 'Hz')
 %%
 % ------------------- Fit Hysteresis + Sat -------------------------------------
-
+clc
 
 hyst_file = 'hystID_data_5-4-2018_01.mat';
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
@@ -264,9 +264,9 @@ figure(500); clf
 plot(ux)
 grid on
 
-Nhyst = 7;
+Nhyst = 9;
 nw = Nhyst;
-Nsat = 5;
+Nsat = 9;
 
 yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
 [r, w, d, ws] = PIHyst.fit_hyst_sat_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst, Nsat);
@@ -276,7 +276,7 @@ hyst_sat = struct('r', r, 'w', w, 'rp', rp, 'wp', wp,...
                   'd', d, 'ws', ws, 'dp', dp, 'wsp', wsp);
 
 
-%%
+%
 clear PIHyst
 [r2, w2] = PIHyst.fit_hyst_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst);
 
@@ -299,11 +299,11 @@ plot(tvec, y_hyst_sat)
 plot(tvec, y_hyst, '--')
 grid on
 
-[rp2, wp2] = PIHyst.invert_hyst_PI(r2, w2)
+[rp2, wp2] = PIHyst.invert_hyst_PI(r2, w2);
 
 hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2)
 
-%%
+
 modelFit.models.G_uz2stage = sys_stage_log;
 modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
 modelFit.models.G_deluz2powI = G_deluz2Ipow;
@@ -316,7 +316,7 @@ modelFit.models.hyst_sat = hyst_sat;
 if 1
     save(modelFit_file, 'modelFit');
 end
-
+%%
 
 return
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
