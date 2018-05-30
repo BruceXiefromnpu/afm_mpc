@@ -75,6 +75,8 @@ In the context of CS, we are interested in rapidly moving the AFM stage between 
 Point-to-point movements by AFM is also of interest in other areas like visceolastic property mapping \cite{killgore_visceolastic_2011}.\newline
 
 BOILER PLATE ABOUT MINIMUM TIME STUFF
+
+Reference \cite{broeck_time_2009} uses a quadratic cost with a terminal constraint combined with an exhaustive search over the control horizon length to formulate a Time Optimal MPC problem. However, the implementation only runs at 100~Hz, which is about 250 times too slow for our application. 
 \newline
 
 One of the primary constraints in setpoint is tracking is the power amplifiers current which roughly translates to a slew rate limitation on the control signal. In earlier work, we considered the use of model predictive control to directly address the rate of change limitation and showed that the range of stabilizable setpoints was increased as compared to a simple saturated linear feedback \cite{braker_application_2017}. The question which naturally arises from that study, and which is one of the main topics of this paper, is "how much \emph{time} is actually saved with MPC?" In essence, the stabilizable set of setpoints using saturated linear feedback can be expanded by relaxing the performance criteria. While we might expect this to result in a slower settling time, the question we seek to answer is \emph{how much slower}? In other words, given a range of setpoints we wish to be able to visit, to what extent does MPC reduce the settling time and is this reduction significant enough to warrant the additional complexity?
