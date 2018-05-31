@@ -5,11 +5,11 @@ Ts = StageParams.Ts;
 n_space = 2500;
 N_repeat = 1;
 N_steps = 20;
-ymax = 8;
+ymax = 7;
 imps = -ymax + (2*ymax)*rand(N_steps,1)
 % imps = [ 1, 2.5,-2,1.25, -2, 1, -3, -.5]';
 imps = diff([0; imps]);
-imps = [imps; -sum(imps); 7.5; -15; 7.5];
+imps = [imps; -sum(imps); 7.0; -14; 7.0];
 imps = [0; repmat(imps, N_repeat, 1)];
 
 ref_s = cumsum(imps)

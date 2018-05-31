@@ -146,7 +146,8 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % ----------------------------------------------------------------
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
+% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-30-2018_01_amp_p15.mat'))
 % load(fullfile(PATHS.sysid, 'hysteresis', 'drift_data.mat'))
 Ts = modelFit.frf.Ts;
 G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
@@ -181,8 +182,8 @@ ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_exp);
 y_vib = lsim(Gvib, u_exp, t_exp);
 
 figure(100)
-clf;
-h1 = plot(t_exp, y_exp);
+% clf;
+h1 = plot(t_exp, y_exp, 'b');
 h1.DisplayName = 'Exp. Step Response';
 hold on
 h2 = plot(t_exp, ydrift_est0, '-r');
@@ -193,7 +194,7 @@ h3 = plot(t_exp, y_vib, ':k');
 h3.DisplayName = '$G_{vib}$';
 leg1 = legend([h1, h2, h3]);
 xlim([0, 0.28])
-ylim([-0.005, 0.15])
+ylim([-0.005, max(u_exp*1.1)])
 grid on
 % grid minor;
 xlabel('time [s]')
@@ -201,12 +202,91 @@ ylabel('$y_X$ [v]')
 ax = gca;
 set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
 
-plants2 = CanonPlants.plants_with_drift_inv(true);
-gdrift_old = plants2.gdrift
-gdrift
-ydrift_est2 = lsim(Gvib*gdrift_old, u_exp, t_exp);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-30-2018_01_amp_3.mat'))
+% load(fullfile(PATHS.sysid, 'hysteresis', 'drift_data.mat'))
+Ts = modelFit.frf.Ts;
+G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
+
+
+
+k_start = 2677;
+y_exp = driftData.y_exp(k_start:end) - mean(driftData.y_exp(1:k_start));
+u_exp = driftData.u_exp(k_start:end);
+t_exp = (0:length(y_exp)-1)'*Ts;
+
+theta0 = [0.9922    0.9997    0.9997    0.9927    .8];
+lb = [-1, -1, -1, -1, -Inf];
+ub = -lb;
+np = 2;
+normalize_dc = true;
+Gvib = eject_gdrift(G_uz2stage, normalize_dc);
+
+gdrift_cost = @(theta)fit_gdrift(theta, Gvib, y_exp, u_exp, t_exp, np);
+
+opts = optimoptions(@lsqnonlin);
+opts.MaxFunctionEvaluations = 5000;
+opts.MaxIterations = 1000;
+opts.Display = 'iter';
+theta = lsqnonlin(gdrift_cost, theta0, lb, ub, opts);
+gdrift2 = zpk(theta(np+1:end-1), theta(1:np), theta(end), Ts);
+
+%%
+gv2 = zpk([0.993 + 1j*0.0938, 0.993 - 1j*0.0938], [0.994 + 1j*0.0915, 0.994 - 1j*0.0915], 1, Ts);
+sos_fos = SosFos(Gvib*gdrift2*gv2);
+theta0 = sos_fos.theta;
+
+cost = @(theta)fittime(sos_fos, theta, 9, y_exp, u_exp, t_exp);
+figure
+plot(cost(theta0))
+
+theta = lsqnonlin(cost, theta0, [], [], opts)
+%%
+sos_fos.theta = theta;
+sys4 = sos_fos.realize;
+sys4.InputDelay = 9;
+y_estall = lsim(sys4, u_exp, t_exp);
+figure(101); clf
+plot(t_exp, y_exp, 'b')
+hold on
+h2 = plot(t_exp, y_estall, 'g');
+
+F5 = figure(5); clf
+frfBode(G_uz2stage_frf, freqs, F5, 'r', 'Hz');
+frfBode(gdrift2*Gvib, freqs, F5, '--k', 'Hz');
+frfBode(sys4, freqs, F5, '--g', 'Hz');
+
+%%
+
+
+ydrift_est0 = lsim(Gvib*gdrift2, u_exp, t_exp);
+y_vib = lsim(Gvib, u_exp, t_exp);
+
 figure(100)
-plot(t_exp, ydrift_est2, '-g')
+
+h1 = plot(t_exp, y_exp, 'b');
+h1.DisplayName = 'Exp. Step Response';
+hold on
+h2 = plot(t_exp, ydrift_est0, '-r');
+h2.DisplayName = '$G_{vib}G_d$';
+
+
+h3 = plot(t_exp, y_vib, ':k');
+h3.DisplayName = '$G_{vib}$';
+leg1 = legend([h1, h2, h3]);
+xlim([0, 0.28])
+ylim([-0.005, max(u_exp*1.1)])
+grid on
+% grid minor;
+xlabel('time [s]')
+ylabel('$y_X$ [v]')
+ax = gca;
+set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
+
+%%
+gdrift = gdrift2;
+
+
 %%
 % ------------------- Fit Hysteresis + Sat -------------------------------------
 
@@ -238,8 +318,6 @@ yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
 hyst_sat = struct('r', r, 'w', w, 'rp', rp, 'wp', wp,...
                   'd', d, 'ws', ws, 'dp', dp, 'wsp', wsp);
 
-
-%%
 clear PIHyst
 [r2, w2] = PIHyst.fit_hyst_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst);
 

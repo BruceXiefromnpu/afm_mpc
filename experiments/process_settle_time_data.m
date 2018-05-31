@@ -6,7 +6,7 @@
 % clear, clc
 
 % where the different experiments are stored.
-root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand_29-May-2018_01')
+root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand_30-May-2018_01')
 % root2 = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand_29-May-2018_01')
 % root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data')
 
