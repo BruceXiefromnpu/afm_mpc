@@ -41,15 +41,33 @@ md = 1;
 % --------------- Load Plants -------------------
 clear CanonPlants
 with_hyst = true;
-if 1
+if 0
 plants2 = CanonPlants.plants_drift_inv_hyst_sat();
 plants = CanonPlants.plants_with_drift_inv(with_hyst);
 else
 plants = CanonPlants.plants_drift_inv_hyst_sat();
 plants2 = CanonPlants.plants_with_drift_inv(with_hyst);
+plants.gdrift = plants2.gdrift;
+plants.gdrift_inv = 1/plants.gdrift;
 end  
-% plants = CanonPlants.plants_ns14();
+plants = CanonPlants.plants_ns14();
+plants2 = CanonPlants.plants_drift_inv_hyst_sat();
+gd2 = plants2.gdrift;
+gd1 = plants.gdrift;
+gd  = gd2 * dcgain(gd1)/dcgain(gd2);
+plants.gdrift = gd;
+plants.gdrift_inv = 1/gd;
+figure
+pzplot(plants.SYS, plants2.SYS)
+%%
+% plants2 = CanonPlants.plants_with_drift_inv(with_hyst);
+% gd1 = plants.gdrift;
+% gd2 = plants2.gdrift;
+% gd = gd2*dcgain(gd1)/dcgain(gd2);
+% plants.gdrift = gd;
+% plants.gdrift_inv = 1/gd;
 
+%
 Ts  = plants.SYS.Ts;
 if md == 2
   plants.gdrift = zpk([], [], 1, Ts);
@@ -63,9 +81,9 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Get a ref trajectory to track.
 N    = 800;
-r1 = 1;
-r2 = -6;
-trajstyle =1;
+r1 = 7.5;
+r2 = -7.5;
+trajstyle =4;
 if trajstyle == 1
   yref = CanonRefTraj.ref_traj_1(r1, N);
 elseif trajstyle == 2
@@ -73,11 +91,14 @@ elseif trajstyle == 2
 elseif trajstyle == 3
   yref = CanonRefTraj.ref_traj_load('many_steps.mat');
 elseif trajstyle == 4
-  yref = CanonRefTraj.ref_traj_load('many_steps_rand_longts.mat');
+  yref = CanonRefTraj.ref_traj_load('many_steps_rand.mat');
+elseif trajstyle == 5
+  yref = load('many_steps_data_rand_ymax7.mat');
+  yref = yref.ref_traj_params.ref_traj;
 end
-rw = 8.508757290909093e-07;
+rw = 8.508757290909093e-08;
 rng(1);
-thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
+thenoise = timeseries(mvnrnd(0, rw, length(yref.Time)), yref.Time);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
@@ -87,13 +108,14 @@ thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
-du_max   = StageParams.du_max;
-
+% du_max   = StageParams.du_max;
+ du_max = StageParams.du_max/norm(plants.gdrift_inv, Inf)
+ 
 % Pull out open-loop pole-zero information.
-% can_cntrl = CanonCntrlParams_ns14(plants.SYS);
-can_cntrl = CanonCntrlParams_01(plants.SYS);
+can_cntrl = CanonCntrlParams_ns14(plants.SYS);
+% can_cntrl = CanonCntrlParams_01(plants.SYS);
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
-gam_lin = 3;
+gam_lin = 5;
 gam_mpc = 0.5;
 R1 = R0 + gam_mpc;
 
@@ -122,24 +144,29 @@ end
 [Nx, Nu] = SSTools.getNxNu(plants.sys_recyc);
 
 isfxp = false;
-sims_fpl = SimAFM(plants.PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false);
+sims_fpl = SimAFM(plants.PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false,...
+           'thenoise', thenoise);
 if 1
-  sims_fpl.r = plants.hyst.r;
-  sims_fpl.w = plants.hyst.w;
-  sims_fpl.rp = plants.hyst.rp;
-  sims_fpl.wp = plants.hyst.wp;
+  sims_fpl.r = plants.hyst_sat.r;
+  sims_fpl.w = plants.hyst_sat.w;
+  sims_fpl.rp = plants.hyst_sat.rp;
+  sims_fpl.wp = plants.hyst_sat.wp;
   sims_fpl.gdrift_inv = plants.gdrift_inv;
   sims_fpl.gdrift = plants.gdrift;
+  sims_fpl.d = plants.hyst_sat.d;
+  sims_fpl.ws = plants.hyst_sat.ws;
+  sims_fpl.dp = plants.hyst_sat.dp;
+  sims_fpl.wsp = plants.hyst_sat.wsp;
 end
 
 [y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref);
 
-linOpts = stepExpOpts('pstyle', '--r', 'TOL', TOL, 'y_ref', yref.Data(1),...
+linOpts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', yref.Data(1),...
                       'controller', K_lqr, 'name',  'Simulation');
 
 sim_exp = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
 
-F1 = figure(59); %clf
+F1 = figure(59); clf
 h1 = plot(sim_exp, F1);
 subplot(3,1,1)
 plot(yref.time, yref.Data, '--k', 'LineWidth', .05);
@@ -147,7 +174,7 @@ xlm = xlim();
 
 F61 = figure(61); clf
 plotState(Xhat_fp, F61);
-%%
+
 % -------------------- Setup Fixed stuff -----------------------------
 
 A_obs_cl = sys_obsDist.a - L_dist*sys_obsDist.c;
@@ -160,7 +187,7 @@ fprintf('B needs n_int = %d\n', ceil(log2(max(abs(sys_obsDist.b))))+2)
 nw = 32;
 nf = 26;
 
-du_max_fxp = fi(0.198, 1, 32, 27);
+du_max_fxp = fi(du_max, 1, 32, 26);
 K_fxp = fi(K_lqr, 1, nw,32-10);
 Nx_fxp = fi(Nx, 1, 32, 30);
 L_fxp = fi(L_dist, 1, 32, 30);
@@ -172,23 +199,20 @@ sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
 % --------------------  Fixed Linear stuff -----------------------------
 
 sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
-  true, 'nw', nw, 'nf', nf);
+  true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
 
-sims_fxpl.r = plants.hyst.r;
-sims_fxpl.w = plants.hyst.w;
-sims_fxpl.rp = fi(plants.hyst.rp, 1, 16, 11);
-sims_fxpl.wp = fi(plants.hyst.wp, 1, 16, 11);
-
-% sims_fxpl.d = plants.hyst_sat.d;
-% sims_fxpl.ws = plants.hyst_sat.ws;
-% sims_fxpl.dp = fi(plants.hyst_sat.dp, 1, 16, 11);
-% sims_fxpl.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
+sims_fxpl.r = plants.hyst_sat.r;
+sims_fxpl.w = plants.hyst_sat.w;
+sims_fxpl.rp = fi(plants.hyst_sat.rp, 1, 16, 11);
+sims_fxpl.wp = fi(plants.hyst_sat.wp, 1, 16, 11);
+sims_fxpl.d = plants.hyst_sat.d;
+sims_fxpl.ws = plants.hyst_sat.ws;
+sims_fxpl.dp = fi(plants.hyst_sat.dp, 1, 16, 11);
+sims_fxpl.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
 
 sims_fxpl.gdrift_inv = plants.gdrift_inv;
 sims_fxpl.gdrift = plants.gdrift;
 
-
-%
 [y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref);
 fxpl_Opts = stepExpOpts('pstyle', '--k', 'TOL', TOL, 'y_ref', r1,...
                       'controller', K_lqr, 'name',  'FXP lin Sim.');
@@ -205,8 +229,6 @@ fprintf('max of Xhat = %.2f\n', max(abs(Xhat_fxpl.Data(:))));
 
 
 
-
-
 sims_fxpl.sys_obs_fp = sys_obsDist;
 sims_fxpl.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 
@@ -215,6 +237,7 @@ traj_path = 'Z:\mpc-journal\step-exps\traj_data.csv';
 sims_fxpl.write_control_data(fxplin_dat_path, yref, traj_path)
 %----------------------------------------------------
 % Build the u-reset.
+return
 %%
 if 1
   dry_run = false;
@@ -239,6 +262,7 @@ den = den{1};
 
 umax = 7;
 ymax = max(yref.Data)*1.3
+% ymax = 0.5;
 clear e;
 clear vi;
 % -----------------------RUN THE Experiment--------------------------------
@@ -279,7 +303,7 @@ Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
 
-expOpts = stepExpOpts(linOpts, 'pstyle', '--g', 'name',  'AFM Stage');
+expOpts = stepExpOpts(linOpts, 'pstyle', '--m', 'name',  'AFM Stage');
 
 afm_exp = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
 H2 = plot(afm_exp, F1);
@@ -298,8 +322,16 @@ title('Current')
 % save('many_steps_data/many_steps_fxplin_noinv.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_lin_fp_sim')
 
-save('many_steps_data/many_steps_fxplin_invHystDrift.mat', 'y_exp', 'u_exp',...
-  'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_lin_fp_sim')
+experiment_directory = ['many_steps_data_rand_', date, '_01'];
+step_exp_root = fullfile(PATHS.exp, 'step-exps');
+save_root = fullfile(step_exp_root, experiment_directory);
+[status, message ] = mkdir(step_exp_root, experiment_directory);
+
+save(fullfile(save_root, 'many_steps_linfxp_invHystinvSatinvDrift_ns14.mat'), 'y_exp', 'u_exp',...
+  'du_exp', 'Ipow_exp')
+
+% save('many_steps_data/many_steps_fxplin_invHystDrift.mat', 'y_exp', 'u_exp',...
+%   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_lin_fp_sim')
 
 
 % save('many_steps_data/many_steps_rand_fxplin_invHystDrift.mat', 'y_exp', 'u_exp',...

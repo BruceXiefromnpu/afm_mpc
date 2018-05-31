@@ -8,12 +8,12 @@ classdef CanonPlants
   
   methods (Static)
     function plants = plants_ns14()
-      load(fullfile(PATHS.sysid, ['hysteresis/steps_hyst_model.mat']));
-      hyst.rp = rp;
-      hyst.wp = wp;
-      hyst.r = r;
-      hyst.w = w;
-      
+%       load(fullfile(PATHS.sysid, ['hysteresis/steps_hyst_model.mat']));
+%       hyst.rp = rp;
+%       hyst.wp = wp;
+%       hyst.r = r;
+%       hyst.w = w;
+%       
       modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_info_HIRESFourierCoef_5-24-2018-01.mat');
       load(modelFit_file)
       SYS = ss(modelFit.models.Gvib);
@@ -39,8 +39,9 @@ classdef CanonPlants
       
       plants.PLANT = PLANT;
       plants.SYS = SYS;
-      plants.hyst = hyst;
-      
+%       plants.hyst = hyst;
+      plants.hyst = modelFit.models.hyst;
+      plants.hyst_sat = modelFit.models.hyst_sat;
       plants.sys_recyc=SSTools.deltaUkSys(SYS);
       plants.sys_recyc_nodelay=SSTools.deltaUkSys(plants.sys_nodelay);
       plants.Nd = Nd;      
@@ -130,7 +131,7 @@ classdef CanonPlants
       plants.Nd = Nd;
       
     end
-function plants = plants_drift_inv_hyst_sat()
+function [plants, frf_data] = plants_drift_inv_hyst_sat()
     % plants = plants_with_drift_inv(with_hyst)
     % Builds the standard versions of the plants. plants is a
     % structure with the following fields
@@ -185,6 +186,8 @@ function plants = plants_drift_inv_hyst_sat()
       plants.sys_recyc=SSTools.deltaUkSys(SYS);
       plants.sys_recyc_nodelay=SSTools.deltaUkSys(plants.sys_nodelay);
       plants.Nd = Nd;
+      
+      frf_data = modelFit.frf;
       
     end
     function plants_with_drift_internal()

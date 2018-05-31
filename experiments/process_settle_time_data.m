@@ -3,10 +3,11 @@
 % calculates settle-time for each step. The settle-times for each
 % experiment are built up into a latex table and saved to a file. 
 
-clear, clc
+% clear, clc
 
 % where the different experiments are stored.
-root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand_24-May-2018_01')
+root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand_30-May-2018_01')
+% root2 = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand_29-May-2018_01')
 % root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data')
 
 % addpath('many_steps_data')
@@ -15,7 +16,7 @@ root = fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand_24-May-2018_01')
 % load(fullfile(root, 'many_steps_short.mat'))
 % reft_pi = load(fullfile(root, 'many_steps.mat'))
 
-load(fullfile(root, 'many_steps_rand.mat'))
+load(fullfile(pwd, 'many_steps_data_rand_ymax7.mat'))
 reft_pi = load(fullfile(root, 'many_steps_rand.mat'))
 
 saveon = true;
@@ -27,9 +28,9 @@ tol_mode = 'abs';
 verbose = 0;
 ref_s = ref_traj_params.ref_s;
 ref_s_pi = reft_pi.ref_traj_params.ref_s;
-if ref_s ~=ref_s_pi
-  error('need refs the same')
-end
+% if ref_s ~=ref_s_pi
+%   error('need refs the same')
+% end
 
 step_idx = ref_traj_params.impulse_idx;
 step_idx_pi = reft_pi.ref_traj_params.impulse_idx;
@@ -72,7 +73,8 @@ end
 %
 
 TS_s_cell = {};
-
+% step_idx = step_idx(1:end-2);
+% ref_s = ref_s(1:end-2);
 % ---------- Linear FXP Sim -------------------------% 
 load(fullfile(root,'many_steps_linfxp_sim.mat'))
 TS_hyst = get_many_steps_ts(y_fxpl, ref_s, step_idx, TOL, verbose, 1, tol_mode);
@@ -102,7 +104,17 @@ TS_dat_tmp.name = 'Lin (fxp) w/ $\mathcal{H}^{-1}$';
 TS_dat_cell{end+1} = TS_dat_tmp;
 
 h3 = plot(y_exp.Time, y_exp.Data, '-b');
-h3.DisplayName = 'Invert hyst (linfp, no sat operator)';
+h3.DisplayName = TS_dat_tmp.name;
+
+% % ---------- Linear ns14 + sat FXP Experiment -------------------------% 
+% load(fullfile(root,'many_steps_linfxp_invHystinvSatinvDrift_ns14.mat'))
+% TS_hyst = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, verbose, 1, tol_mode);
+% TS_dat_tmp.ts_s = TS_hyst;
+% TS_dat_tmp.name = 'Lin ns14, (fxp) w/ $\mathcal{H}^{-1} and sat$';
+% TS_dat_cell{end+1} = TS_dat_tmp;
+% 
+% h5 = plot(y_exp.Time, y_exp.Data, '--m');
+% h5.DisplayName = TS_dat_tmp.name;
 
 
 % ------------------  MPC Experiment --------------------------

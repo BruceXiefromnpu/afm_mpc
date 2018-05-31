@@ -1,7 +1,7 @@
 clear, clc
 
 Ts = 40e-6;
-dry_run = true;
+dry_run = false;
 saveon = true;
 
 step_amp = 0.15;
@@ -17,9 +17,10 @@ plot(t_vec, u_vec);
 grid on
 
 
+dry_run = false;
+reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
+  'verbose', true, 'dry_run', dry_run)
 
-reset_piezo('t1', 15, 't_final', 25, 'umax', 3, 'k1', 0.2,...
-            'verbose', true, 'dry_run', dry_run)
 if ~dry_run
   clear vi;
   vipath_reset = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\reset_piezo.vi';
@@ -41,7 +42,7 @@ if ~dry_run
     driftData.t_exp = t_exp;
     driftData.u_exp = u_exp;
     driftData.y_exp = y_exp;
-    save('driftID_data_4-30-2018_01.mat', 'driftData')
+    save(fullfile(PATHS.sysid, 'hysteresis','driftID_data_5-30-2018_01_amp_p15.mat'), 'driftData')
   end
 end
 
