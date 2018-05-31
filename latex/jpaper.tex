@@ -243,6 +243,7 @@ The goal then is to solve the non-linear least squares problem
 where $Y_{exp}$ is the experimental response of the stage, $\mathcal{Z}$ is the z-transform operator and $\theta$ is the vector of parameters. To the extent that $G_{vib}$ accurately models the vibtrational dynamics, the inclusion of $G_{vib}$ in \eqref{eqn:fit_drift_cost} effectively nullifies the vibrational aspects in the optimization.
 The red curve in Fig.~\ref{fig:drift_fit} shows the simulated step response of $G_dG_{vib}$. 
 
+It has been noted before in the literature that the rate of the creep affect itself is hysteretic \cite{Jung_open_loop_2000}, which I think in this context would imply that the real pole-zero pairs of $G_{drift}$ shift depending on the control history.
 
 \subsection{Hysteresis Modeling}\label{sec:hyst_model}
 There are many models for hysteresis. Here, we opt for simplicity (and by proxy, fast computation) and use the Prandtl-Ishlinksi Hysteresis model CITE. In typical raster scanning applications, hysteresis manifests as a bowing of the otherwise linear ramps. To motivate the need for hysteresis compensation in a step tracking application, consider Fig. REF, which shows an input signal of various steps applied open loop to the stage. The dotted-black curve is the input (scaled by the dc-gain $G_dG_{vib}$ while the solid black curve is the stage response. Observe that for the same steady state value of control, the steady state value of the stage is different. Effectively, the dc-gain of the system depends on the control history.
