@@ -400,6 +400,13 @@ sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
 
 return
 %%
+
+[ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp, sim_exp_fxpl, sim_exp_fxpm);
+
+
+
+
+%%
 %--------------------------------------------------------------------------
 % -------------- MPC Experiment -------------------------------------------
 
