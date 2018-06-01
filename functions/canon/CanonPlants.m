@@ -7,17 +7,20 @@ classdef CanonPlants
   
   
   methods (Static)
-    function plants = plants_ns14()
+    function [plants, frf_data] = plants_ns14()
 %       load(fullfile(PATHS.sysid, ['hysteresis/steps_hyst_model.mat']));
 %       hyst.rp = rp;
 %       hyst.wp = wp;
 %       hyst.r = r;
 %       hyst.w = w;
 %       
-      modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_info_HIRESFourierCoef_5-24-2018-01.mat');
+%       modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_info_HIRESFourierCoef_5-24-2018-01.mat');
+      modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat');
       load(modelFit_file)
-      SYS = ss(modelFit.models.Gvib);
+      plants = modelFit.models;
       
+      SYS = ss(modelFit.models.Gvib);
+      SYS.InputDelay = 10;
       plants.gdrift = modelFit.models.gdrift;
       plants.gdrift_inv = 1/plants.gdrift;
       
@@ -28,10 +31,7 @@ classdef CanonPlants
       PLANT = SYS;
       
       Nd = SYS.InputDelay;
-      %keyboard
-      %SYS.iodelay = 0;
-      %SYS.InputDelay = Nd;
-      
+
       plants.sys_nodelay = SYS;
       
       SYS = absorbDelay(SYS);
@@ -45,8 +45,11 @@ classdef CanonPlants
       plants.sys_recyc=SSTools.deltaUkSys(SYS);
       plants.sys_recyc_nodelay=SSTools.deltaUkSys(plants.sys_nodelay);
       plants.Nd = Nd;      
-
+      
+      
+      frf_data = modelFit.frf;
     end
+    
     function plants = plants_with_drift_inv(with_hyst)
     % plants = plants_with_drift_inv(with_hyst)
     % Builds the standard versions of the plants. plants is a

@@ -33,18 +33,18 @@ experiment_directory = ['many_steps_data_rand_', date, '_01'];
 step_exp_root = fullfile(PATHS.exp, 'step-exps');
 [status, message ] = mkdir(step_exp_root, experiment_directory);
 save_root = fullfile(step_exp_root, experiment_directory);
-
+%%
 TOL = .01;
 tol_mode = 'abs';
 saveon = false;
-%%
+
 md = 1;
 % ------- Load Plants -----
 with_hyst = true;
 %%% plants = CanonPlants.plants_with_drift_inv(with_hyst);
 
-[plants, frf_data] = CanonPlants.plants_drift_inv_hyst_sat();
-% plants2 = CanonPlants.plants_ns14;
+% [plants, frf_data] = CanonPlants.plants_drift_inv_hyst_sat();
+[plants, frf_data] = CanonPlants.plants_ns14;
 % plants.PLANT = plants2.PLANT; %*dcgain(plants.Gvib)/dcgain(plants2.PLANT);
 % plants.gdrift = plants2.gdrift;
 
@@ -63,9 +63,9 @@ end
 
 % Get a ref trajectory to track.
 N    = 800;
-r1 = 3*0.6;
+r1 = .65;
 r2 = -6;
-trajstyle =5;
+trajstyle =1;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
   yref = step_ref.yref;
@@ -99,7 +99,7 @@ subplot(3,1,1)
 hold on, grid on;
 step_ref.plot(F1, '-k', 'LineWidth', 0.5)
 
-F11 = figure(61); clf
+F11 = figure(61); %clf
 step_ref.plot(F11);
 step_ref.plot_settle_boundary(F11, TOL, tol_mode);
 % legend([h1(1)])
@@ -126,10 +126,10 @@ else
 end
 
 
-can_cntrl = CanonCntrlParams_01(plants.SYS);
+can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
 gam_lin = 3;
-gam_mpc = 0.1;
+gam_mpc = .1;
 R1 = R0 + gam_mpc;
 
 K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
@@ -242,7 +242,7 @@ h1 = sim_exp.plot(F1, 'umode', 'both');
 legend([h1(1)])
 h12 = sim_exp.ploty(F11)
 legend([h12(1)])
-%%
+%
 figure(70); clf
 % du_full = diff(U_full_fp_sim.Data);
 % du_full(end+1) = du_full(end);
@@ -383,6 +383,9 @@ hmpc_Ipow.DisplayName = 'MPC Current';
 
 end
 
+
+[ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp, sim_exp_fxpl, sim_exp_fxpm);
+
 if saveon
   save(fullfile(save_root, 'many_steps_linfxp_sim.mat'), 'sim_exp_fxpl');
        
@@ -399,11 +402,6 @@ sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
 
 
 return
-%%
-
-[ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp, sim_exp_fxpl, sim_exp_fxpm);
-
-
 
 
 %%
@@ -417,7 +415,7 @@ if 1
             'verbose', true, 'dry_run', dry_run)
 end
 
-%
+%%
 SettleTicks = 20000;
 % Iters = 2500;
 Iters = length(yref.Data)-1;
@@ -492,13 +490,14 @@ title('Current')
 
 [~, F61] = plotState(xhat_exp, F61);
 fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
+[ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp, sim_exp_fxpl, sim_exp_fxpm, afm_exp_mpc);
 %%
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
 save(fullfile(save_root, 'many_steps_mpc_invHyst_invDrift.mat'), 'afm_exp_mpc');
 
-%
+%%
 %--------------------------------------------------------------------------
 % --------------------------- LINEAR Experiment ---------------------------
 
@@ -517,8 +516,8 @@ traj_path = 'Z:\mpc-journal\step-exps\traj_data.csv';
 sims_fxpl.write_control_data(fxplin_dat_path, yref, traj_path)
 
 SettleTicks = 20000;
-% Iters = 2500;
-Iters = length(yref.Data)-1;
+% Iters = length(yref.Data)-1;
+Iters = 850;
 % create and pack data. Then save it.
 
 [num, den] = tfdata(plants.gdrift_inv);
@@ -535,8 +534,8 @@ vipath =['C:\Users\arnold\Documents\matlab\afm_mpc_journal\',...
 if 1
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
    'num', num, 'den', den, 'TF Order', 1*(length(den)-1),...
-   'r_s', plants.hyst_sat.rp, 'w_s', plants.hyst_sat.wp, 'N_hyst', 1*length(plants.hyst_sat.rp),...
-   'sat_ds', plants.hyst_sat.dp, 'sat_ws', plants.hyst_sat.wsp, 'N_sat', 1*length(plants.hyst_sat.dp),...
+   'r_s', plants.hyst_sat.rp, 'w_s', plants.hyst_sat.wp, 'N_hyst', 0*length(plants.hyst_sat.rp),...
+   'sat_ds', plants.hyst_sat.dp, 'sat_ws', plants.hyst_sat.wsp, 'N_sat', 0*length(plants.hyst_sat.dp),...
    'du_max', du_max,'dry_run', false,...
    'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
    'traj_path', traj_path, 'control_data_path', fxplin_dat_path);
@@ -564,7 +563,7 @@ ufull_exp = timeseries(AFMdata(:,4), t_exp);
 Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
-expOpts = stepExpOpts(linOpts, 'pstyle', '--r', 'name',  'AFM Stage (Linear)');
+expOpts = stepExpDuOpts(linOpts, 'pstyle', '-b', 'name',  'AFM Stage (Linear)');
 
 afm_exp_lin = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
 Ts_vec_afm_lin = afm_exp_lin.settle_time(TOL, tol_mode, 1);
@@ -572,11 +571,13 @@ fprintf('Total AFM lin FXP settle-time = %.3f [ms]\n', sum(Ts_vec_afm_lin)*1000)
 
 H_linexp = plot(afm_exp_lin, F1, 'umode', 'both');
 subplot(3,1,1)
-legend([h1(1), h2(1), h3(1), H_mpcexp(1), H_linexp(1)]);
+% legend([h1(1), h2(1), h3(1), H_mpcexp(1), H_linexp(1)]);
+legend([h1(1), h2(1), h3(1), H_linexp(1)]);
 plot(y_exp.Time, yy, ':k')
 
 H_linexp2 = afm_exp_lin.ploty(F11);
-legend([h12, h22, h32, H_mpcexp2])
+% legend([h12, h22, h32, H_mpcexp2])
+legend([h12, h22, h32, H_linexp2])
 
 figure(1000); clf
 plot(Ipow_exp.Time, (Ipow_exp.Data/15)*1000)

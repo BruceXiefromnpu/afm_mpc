@@ -69,8 +69,7 @@ plotPZ_freqs(sys_stage_log, F4);
 figure(50);
 pzplot(sys_stage_log);
 
-return
-
+% return
 % Z = sort(zero(sys_stage_log));
 % Z_eject = zpk([], Z(1:1), 1, Ts);
 % Z_eject = Z_eject/dcgain(Z_eject);
@@ -86,7 +85,7 @@ return
 % frfBode(sys_stage_log, freqs, F4, '--b', 'Hz');
 % 
 % plotPZ_freqs(sys_stage_log, F4);
-%%
+%
 
 % ---------------------------------------------------------------- %
 % --------- Second, we work on the powI system -------------------- %
@@ -155,7 +154,8 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % ----------------------------------------------------------------
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_4-30-2018_01.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-30-2018_01_amp_1.mat'))
+% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_4-30-2018_01.mat'))
 % load(fullfile(PATHS.sysid, 'hysteresis', 'drift_data.mat'))
 Ts = modelFit.frf.Ts;
 G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
@@ -189,7 +189,7 @@ gdrift = zpk(theta(np+1:end-1), theta(1:np), theta(end), Ts);
 ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_exp);
 y_vib = lsim(Gvib, u_exp, t_exp);
 
-figure(100)
+figure(105)
 clf;
 h1 = plot(t_exp, y_exp);
 h1.DisplayName = 'Exp. Step Response';
@@ -202,13 +202,13 @@ h3 = plot(t_exp, y_vib, ':k');
 h3.DisplayName = '$G_{vib}$';
 leg1 = legend([h1, h2, h3]);
 xlim([0, 0.28])
-ylim([-0.005, 0.15])
+% ylim([-0.005, 0.15])
 grid on
 % grid minor;
 xlabel('time [s]')
 ylabel('$y_X$ [v]')
 ax = gca;
-set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
+% set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
 
 
 %%
@@ -231,9 +231,9 @@ figure(500); clf
 plot(ux)
 grid on
 
-Nhyst = 12;
+Nhyst = 7;
 nw = Nhyst;
-Nsat = 11;
+Nsat = 5;
 
 yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
 [r, w, d, ws] = PIHyst.fit_hyst_sat_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst, Nsat);
