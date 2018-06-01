@@ -10,7 +10,7 @@
 %       fields are used to construct the y-axis labels
 %       yunits:  string of units for output, '[v]' 
 %       uunits:  string of units for input,  '[v]'
-%       y_ref:   vector of references: [1.5; 1]
+%       step_ref:   vector of references: [1.5; 1]
 %       TOL:    Settling tolerance, 0.01
 %
 %       controller: eg, a linear fdbk struct, ptos structure, etc.
@@ -82,14 +82,14 @@ classdef stepExpDu
     yunits;
     uunits;
     yscaling;
-    y_ref;
+    step_ref;
     TOL;
     
   end
   
   methods
     function obj = stepExpDu(y, u, du, varargin)
-      opts = stepExpOpts(varargin{:});
+      opts = stepExpDuOpts(varargin{:});
       
       obj.y = y;
       obj.u = u;
@@ -133,10 +133,13 @@ classdef stepExpDu
       elseif strcmp(opts.umode, 'both')
         [H_line, H_text]= plot_both_internal(obj.y, obj.u, obj.du, opts, F1);
       end
-      
-      
-      
     end % end standard plot function
+    
+    function [hline, F1] = ploty(self, F1)
+      F1 = figure(F1);
+      hline = plot(self.y.Time, self.y.Data, self.pstyle);
+      hline.DisplayName = self.name;
+    end
     
     % =================================================================
     function [H_line, F1, H_text] = plotZoom(obj, xlm, ylm, varargin)
@@ -169,14 +172,69 @@ classdef stepExpDu
         plotSettleBoundary(obj, opts,F1, H_zoomSubplots)
       end
     end % end plotZoom function
+    
     % =================================================================
-    function TS_s = settle_time(obj)
-      for kk = 1:size(obj.y.Data, 2)
-        TS_s(kk) = settle_time(obj.y.Time, obj.y.Data(:,kk)*obj.yscaling,...
-          obj.y_ref(kk)*obj.yscaling, obj.TOL*obj.y_ref(kk)*obj.yscaling);
-        
+    function [Ts_vec] = settle_time(self, TOL, TOL_mode, verbose, fid)
+      % TS_s_vec = settle_time(TOL, TOL_mode, verbose, fid)
+      
+      if ~exist('fid', 'var') || isempty(fid)
+        fid = 1;
       end
-    end
+      if ~exist('TOL_mode', 'var')
+        TOL_mode = 'rel';
+      end
+      
+      if ~strcmp(TOL_mode, 'rel') & ~strcmp(TOL_mode, 'abs')
+        error('Expected TOL_mode = ("rel" | "abs")\n')
+      end
+      
+      % could do this by reshaping, but in the future, I don't expect all the steps
+      % to last for the same amount of time. So we need a cell array.
+      Y_cell = {};
+      Ts_vec = zeros(length(self.step_ref.step_amps)-1, 1);
+      for k = 2:length(self.step_ref.step_amps)
+        
+        idx_start = self.step_ref.step_idx(k);
+        if k == length(self.step_ref.step_amps)
+          idx_end = length(self.y.Time);
+        else
+          idx_end = self.step_ref.step_idx(k+1)-1;
+        end
+        idx = idx_start:idx_end;
+        Y_cell{k} = timeseries(self.y.Data(idx), self.y.Time(idx));
+        
+        ref_k = self.step_ref.step_amps(k);
+        ref_prev = self.step_ref.step_amps(k-1);
+        delta_ref = ref_k - ref_prev;
+        
+        if strcmp(TOL_mode, 'abs')
+          TOL_r = TOL;
+        else
+          TOL_r = TOL*abs(delta_ref);
+        end
+        
+        if verbose >1
+          ts_k = settle_time(Y_cell{k}.Time, Y_cell{k}.Data, ref_k, TOL_r, k);
+        else
+          ts_k = settle_time(Y_cell{k}.Time, Y_cell{k}.Data, ref_k, TOL_r);
+        end
+        Ts_vec(k-1) = ts_k;
+        if verbose > 0
+          fprintf('Ts = %.5f [ms], ref = %.1f, delta_ref = %.1f\n', ts_k*1000,...
+            ref_k, delta_ref);
+        end
+      
+      end
+    end % settle_time    
+
+    
+%     function TS_s = settle_time(obj)
+%       for kk = 1:size(obj.y.Data, 2)
+%         TS_s(kk) = settle_time(obj.y.Time, obj.y.Data(:,kk)*obj.yscaling,...
+%           obj.step_ref(kk)*obj.yscaling, obj.TOL*obj.step_ref(kk)*obj.yscaling);
+%         
+%       end
+%     end
     
   end %end methods
   
@@ -324,15 +382,15 @@ end
 function plotSettleBoundary(obj, opts, F1, H_zoomSubplots)
     for kk = 1:length(H_zoomSubplots)
        
-        y_upper = [obj.y_ref(kk) + obj.y_ref(kk)*obj.TOL,...
-                   obj.y_ref(kk) + obj.y_ref(kk)*obj.TOL]*opts.yscaling;
-        y_lower = [obj.y_ref(kk) - obj.y_ref(kk)*obj.TOL,...
-                   obj.y_ref(kk) - obj.y_ref(kk)*obj.TOL]*opts.yscaling;
+        y_upper = [obj.step_ref(kk) + obj.step_ref(kk)*obj.TOL,...
+                   obj.step_ref(kk) + obj.step_ref(kk)*obj.TOL]*opts.yscaling;
+        y_lower = [obj.step_ref(kk) - obj.step_ref(kk)*obj.TOL,...
+                   obj.step_ref(kk) - obj.step_ref(kk)*obj.TOL]*opts.yscaling;
         subplot(H_zoomSubplots(kk))
             x_s = xlim;
             plot(x_s,y_upper, ':k')
             plot(x_s, y_lower, ':k')
-            plot(x_s, [obj.y_ref(kk), obj.y_ref(kk)]*opts.yscaling, '--k')
+            plot(x_s, [obj.step_ref(kk), obj.step_ref(kk)]*opts.yscaling, '--k')
     end
 end
 % =========================================================================
@@ -404,7 +462,7 @@ function opts = buildStepExpPlotOpts(obj, pre_opts)
 %         yunits;
 %         uunits;
 %         yscaling;
-%         y_ref;
+%         step_ref;
 %         TOL;
     
 % Ensure we have sensible defaults, in case needed fields are empty.

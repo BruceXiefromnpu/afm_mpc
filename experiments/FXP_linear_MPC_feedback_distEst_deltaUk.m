@@ -35,6 +35,7 @@ step_exp_root = fullfile(PATHS.exp, 'step-exps');
 save_root = fullfile(step_exp_root, experiment_directory);
 
 TOL = .01;
+tol_mode = 'abs';
 saveon = false;
 %%
 md = 1;
@@ -66,11 +67,15 @@ r1 = 3*0.6;
 r2 = -6;
 trajstyle =5;
 if trajstyle == 1
-  yref = CanonRefTraj.ref_traj_1(r1, N);
+  step_ref = StepRef(r1, N);
+  yref = step_ref.yref;
 elseif trajstyle == 2
-    yref = CanonRefTraj.ref_traj_2(r1, r2, N);
+  step_ref = StepRef([r1, r2], N);
+  yref = step_ref.yref;
 elseif trajstyle == 3
   ref_path = fullfile(save_root, 'many_steps_short.mat');
+  ref_dat = load(ref_path);
+  
   yref = CanonRefTraj.ref_traj_load(ref_path)
 elseif trajstyle == 4
   copyfile('many_steps_rand.mat', fullfile(save_root, 'many_steps_rand.mat'));
@@ -78,12 +83,28 @@ elseif trajstyle == 4
   yref = CanonRefTraj.ref_traj_load(ref_path);
   yref.Data = yref.Data/4;
 elseif trajstyle == 5
-  yref = load('many_steps_data_rand_ymax7.mat');
-  yref = yref.ref_traj_params.ref_traj;  
+  step_root = fullfile(PATHS.exp, 'step-exps');
+  
+  load(fullfile(step_root, 'many_steps_data_rand_ymax7.mat'), 'step_ref');
+  yref = step_ref.yref;
 end
+
 rw = 8.508757290909093e-07;
 rng(1);
 thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*1, yref.Time);
+
+
+F1 = figure(60); clf
+subplot(3,1,1)
+hold on, grid on;
+step_ref.plot(F1, '-k', 'LineWidth', 0.5)
+
+F11 = figure(61); clf
+step_ref.plot(F11);
+step_ref.plot_settle_boundary(F11, TOL, tol_mode);
+% legend([h1(1)])
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
@@ -204,24 +225,24 @@ if 1
   sims_fpl.wsp = plants.hyst_sat.wsp;
 end
 
-% [y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref);
+[y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref);
 % ts_lfp = settle_time(y_lin_fp_sim.Time(1:800), y_lin_fp_sim.Data(1:800), r1, TOL*r1);
 % fprintf('linear fp settle-time = %.3f [ms]\n', ts_lfp*1000);
-% % fprintf('perc increase over time-optimal: %.3f\n', (ts_lfp/ts_to)*100);
-% linOpts = stepExpOpts('pstyle', '--k', 'TOL', TOL, 'y_ref', r1,...
-%                       'controller', K_lqr, 'name',  'FP lin Sim.');
-% 
-% sim_exp = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
+% fprintf('perc increase over time-optimal: %.3f\n', (ts_lfp/ts_to)*100);
 
-F1 = figure(60); clf
-% % h1 = sim_exp.plot(F1, 'umode', 'both');
-% % % H1 = plot(sim_exp, F1);
-subplot(3,1,1)
-hold on, grid on;
-plot(yref.time, yref.Data, '--k', 'LineWidth', .05);
-% legend([h1(1)])
+linOpts = stepExpDuOpts('pstyle', '--k', 'TOL', TOL, 'step_ref', step_ref,...
+                      'controller', K_lqr, 'name',  'FP lin Sim.');
 
+sim_exp = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
+Ts_vec_lfp = sim_exp.settle_time(TOL, tol_mode, 1);
+fprintf('Total linear fp settle-time = %.3f [ms]\n', sum(Ts_vec_lfp)*1000);
 
+F1 = figure(60);
+h1 = sim_exp.plot(F1, 'umode', 'both');
+legend([h1(1)])
+h12 = sim_exp.ploty(F11)
+legend([h12(1)])
+%%
 figure(70); clf
 % du_full = diff(U_full_fp_sim.Data);
 % du_full(end+1) = du_full(end);
@@ -233,8 +254,8 @@ xlm = xlim();
 % plot(xlm, -[du_max_orig, du_max_orig], ':k')
 % legend('du (actual)', 'du (nominal)')
 % grid on
-F61 = figure(61); clf
-% plotState(Xhat_fp, F61);
+F71 = figure(71); clf
+% plotState(Xhat_fp, F71);
 
 % -------------------- Setup Fixed stuff -----------------------------
 
@@ -282,15 +303,19 @@ sims_fxpl.gdrift = plants.gdrift;
 
 
 [y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref);
-fxpl_Opts = stepExpOpts('pstyle', '-r', 'TOL', TOL, 'y_ref', r1,...
+fxpl_Opts = stepExpDuOpts('pstyle', '-r', 'TOL', TOL, 'step_ref', step_ref,...
                       'controller', K_lqr, 'name',  'FXP lin Sim.');
 sim_exp_fxpl = stepExpDu(y_fxpl, U_full_fxpl, dU_fxpl, fxpl_Opts);
+Ts_vec_fxpl = sim_exp_fxpl.settle_time(TOL, tol_mode, 1);
+fprintf('Total linear fxp settle-time = %.3f [ms]\n', sum(Ts_vec_fxpl)*1000);
 
 h2 = plot(sim_exp_fxpl, F1, 'umode', 'both');
 legend([h2(1)])
+figure(F11)
+h22 = sim_exp_fxpl.ploty(F11);
+legend([h12, h22]);
 
-
-[~, F61] = plotState(Xhat_fxpl, F61, [], [], '--r');
+[~, F71] = plotState(Xhat_fxpl, F71, [], [], '--r');
 fprintf('max of Xhat = %.2f\n', max(abs(Xhat_fxpl.Data(:))));
 fprintf('max of M*Xhat = %.2f\n', max(max(abs(ML_x0*Xhat_fxpl.Data'))));
 
@@ -301,7 +326,8 @@ hlin_Ipow = plot(U_full_fxpl.Time, Ipow, '--k');
 hlin_Ipow.DisplayName = 'Linear Current';
 hold on, grid on;
 
-% --------------------- MPC, fgm fixed-point ------------------------
+% ----------------------------------------------------------------------- %
+% --------------------- MPC, fgm fixed-point ---------------------------- %
 nw_fgm = 32;
 nf_fgm = 28;
 
@@ -335,15 +361,19 @@ sims_fxpm.gdrift = plants.gdrift;
 
 if 1
   [y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref);
-  fxpm_Opts = stepExpOpts('pstyle', '--g', 'TOL', TOL, 'y_ref', r1,...
+  fxpm_Opts = stepExpDuOpts('pstyle', '--g', 'TOL', TOL, 'step_ref', step_ref,...
                           'controller', K_lqr, 'name',  'FXP MPC Simulation');
 
   sim_exp_fxpm = stepExpDu(y_fxpm, U_full_fxpm, dU_fxpm, fxpm_Opts);
   h3 = plot(sim_exp_fxpm, F1, 'umode', 'both');
-
   legend([h1(1), h2(1), h3(1)]);
-  ts_mfxp = settle_time(y_fxpm.Time(1:800), y_fxpm.Data(1:800), r1, TOL*r1);
-  fprintf('mpc fp settle-time = %.3f [ms]\n', ts_mfxp*1000);
+  
+  h32 = sim_exp_fxpm.ploty(F11);
+  legend([h12, h22, h32]);
+
+
+  Ts_vec_fxpm = sim_exp_fxpm.settle_time(TOL, tol_mode, 1);
+  fprintf('Total MPC FXP settle-time = %.3f [ms]\n', sum(Ts_vec_fxpm)*1000);
 
 figure(1000);
 hold on
@@ -354,11 +384,10 @@ hmpc_Ipow.DisplayName = 'MPC Current';
 end
 
 if saveon
-  save(fullfile(save_root, 'many_steps_linfxp_sim.mat'),...
-       'y_fxpl', 'U_full_fxpl', 'U_nom_fxpl', ...
-       'dU_fxpl')
-  save(fullfile(save_root, 'many_steps_mpcfxp_sim.mat'),...
-       'y_fxpm', 'U_full_fxpm', 'U_nom_fxpm', 'dU_fxpm');
+  save(fullfile(save_root, 'many_steps_linfxp_sim.mat'), 'sim_exp_fxpl');
+       
+  save(fullfile(save_root, 'many_steps_mpcfxp_sim.mat'), 'sim_exp_fxpm');
+       
 end
 
 sims_fxpm.sys_obs_fp = sys_obsDist;
@@ -430,14 +459,23 @@ ufull_exp = timeseries(AFMdata(:,4), t_exp);
 Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
-expOpts = stepExpOpts(linOpts, 'pstyle', '--m', 'name',  'AFM Stage (MPC), gamma=0.1');
+expOpts = stepExpDuOpts(linOpts, 'pstyle', '--m', 'name',...
+          sprintf('AFM Stage (MPC), gamma=%.1f', gam_mpc);
 
-afm_exp = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
-H_mpcexp = plot(afm_exp, F1, 'umode', 'both');
-%
+afm_exp_mpc = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
+
+Ts_vec_afm_mpc = afm_exp_mpc.settle_time(TOL, tol_mode, 1);
+fprintf('Total AFM mpc FXP settle-time = %.3f [ms]\n', sum(Ts_vec_afm_mpc)*1000);
+
+
+H_mpcexp = plot(afm_exp_mpc, F1, 'umode', 'both');
+
 legend([h1(1), h2(1), h3(1),  H_mpcexp(1) ]);
 subplot(3,1,1)
 plot(y_exp.Time, yy, ':k')
+
+H_mpcexp2 = afm_exp_mpc.ploty(F11);
+legend([h12, h22, h32, H_mpcexp2])
 
 figure(1000); %clf
 plot(Ipow_exp.Time, (Ipow_exp.Data/15)*1000)
@@ -451,8 +489,7 @@ fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
-save(fullfile(save_root, 'many_steps_mpc_invHyst_invDrift.mat'), 'y_exp', 'u_exp',...
-  'du_exp', 'Ipow_exp')
+save(fullfile(save_root, 'many_steps_mpc_invHyst_invDrift.mat'), 'afm_exp_mpc');
 
 %
 %--------------------------------------------------------------------------
@@ -522,11 +559,17 @@ xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
 expOpts = stepExpOpts(linOpts, 'pstyle', '--r', 'name',  'AFM Stage (Linear)');
 
-afm_exp = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
-H_linexp = plot(afm_exp, F1, 'umode', 'both');
+afm_exp_lin = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
+Ts_vec_afm_lin = afm_exp_lin.settle_time(TOL, tol_mode, 1);
+fprintf('Total AFM lin FXP settle-time = %.3f [ms]\n', sum(Ts_vec_afm_lin)*1000);
+
+H_linexp = plot(afm_exp_lin, F1, 'umode', 'both');
 subplot(3,1,1)
 legend([h1(1), h2(1), h3(1), H_mpcexp(1), H_linexp(1)]);
 plot(y_exp.Time, yy, ':k')
+
+H_linexp2 = afm_exp_lin.ploty(F11);
+legend([h12, h22, h32, H_mpcexp2])
 
 figure(1000); clf
 plot(Ipow_exp.Time, (Ipow_exp.Data/15)*1000)
@@ -540,8 +583,7 @@ fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
-save(fullfile(save_root, 'many_steps_linfxp_invHyst_invDrift.mat'), 'y_exp', 'u_exp',...
-  'du_exp', 'Ipow_exp')
+save(fullfile(save_root, 'many_steps_linfxp_invHyst_invDrift.mat'), 'afm_exp_lin')
 
 
 
