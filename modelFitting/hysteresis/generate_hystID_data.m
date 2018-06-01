@@ -4,52 +4,55 @@ dry_run = false;
 saveon = false;
 
 Ts = 40e-6;
-if 0
-u_max = 9;
-n_space = 8000;
-n_up = 5;
-step_sz = u_max/n_up;
-
-imps = [0;step_sz*ones(n_up, 1); -step_sz*ones(2*n_up-1,1)];
-
-
-for k = 2*n_up-2:-1:1
-  if mod(k,2) == 1
-    sgn = -1;
-  else
-    sgn = 1;
-  end
-  imps = [imps; sgn * step_sz * ones(k, 1)];
+if 1
+  u_max = 8;
+  n_space = 8000;
+  n_up = 9;
+  step_sz = u_max/n_up;
   
-end
-% imps = [imps; -sum(imps)]
-% ref_s = cumsum(imps)
-N_imp = length(imps)
-
-
-impulse_idx= (1:n_space:N_imp*n_space)';
-u_vec = zeros((N_imp)*(n_space), 1);
-u_vec(impulse_idx) = imps;
-u_vec = cumsum(u_vec);
-% u_vec(u_vec <=-8) = -7.0;
-% u_vec = repmat(cumsum(u_vec), 3,1);
-
-t_vec = (0:length(u_vec)-1)'*Ts;
-figure(1); clf
-plot(t_vec, u_vec);
-grid on
-
-save('hyst_input_data_5-4-2018.mat', 't_vec', 'u_vec')
+  imps = [0;step_sz*ones(n_up, 1); -step_sz*ones(2*n_up-1,1)];
+  
+  
+  for k = 2*n_up-2:-1:1
+    if mod(k,2) == 1
+      sgn = -1;
+    else
+      sgn = 1;
+    end
+    imps = [imps; sgn * step_sz * ones(k, 1)];
+    
+  end
+  % imps = [imps; -sum(imps)]
+  % ref_s = cumsum(imps)
+  N_imp = length(imps)
+  
+  
+  impulse_idx= (1:n_space:N_imp*n_space)';
+  u_vec = zeros((N_imp)*(n_space), 1);
+  u_vec(impulse_idx) = imps;
+  u_vec = cumsum(u_vec);
+  u_vec = rate_limit(u_vec, 0.1);
+  
+  % u_vec(u_vec <=-8) = -7.0;
+  % u_vec = repmat(cumsum(u_vec), 3,1);
+  
+  t_vec = (0:length(u_vec)-1)'*Ts;
+  figure(1); clf
+  plot(t_vec, u_vec);
+  grid on
+  
+  save('hyst_input_data_6-1-2018.mat', 't_vec', 'u_vec')
 else
   load('hyst_input_data_5-4-2018.mat')
+  whos
+  figure;
+  plot(t_vec, u_vec)
+  hold on, grid on
+  plot(U_full)
+  t_vec = U_full.Time;
+  u_vec = U_full.Data;
 end
-whos
-figure;
-plot(t_vec, u_vec)
-hold on, grid on
-plot(U_full)
-t_vec = U_full.Time;
-u_vec = U_full.Data;
+
 
 %%
 
@@ -73,13 +76,14 @@ if ~dry_run
   hold on
   plot(t_exp, yx_exp - yx_exp(1))
   grid on
-  if saveon
+ 
+  if saveon +1 
     hystData.t_exp = t_exp;
     hystData.u_exp = u_exp;
     hystData.y_exp = yx_exp;
     hystData.umax = umax;
     % hystData.u_reset = u_reset;
-    save('hystID_data_5-4-2018_01.mat', 'hystData')
+    save(fullfile(PATHS.sysid, 'hysteresis/hystID_data_6-1-2018_01.mat'), 'hystData')
   end
 end
 

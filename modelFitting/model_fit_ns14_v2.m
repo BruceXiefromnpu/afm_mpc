@@ -116,15 +116,15 @@ ss_opts = frf2ss_opts('Ts', Ts);
 f2ss = frf2ss(G_deluz2powI_frf, omegas, Nd1, ss_opts); % 12
 sys = f2ss.realize(8); 
 % Remove NMP zeros
-Z = zero(sys);
-Z_eject = zpk([], Z(find(abs(Z) > 1)), 1, Ts);
-Z_eject = Z_eject/dcgain(Z_eject);
-sys = minreal(Z_eject*sys)
+% Z = zero(sys);
+% Z_eject = zpk([], Z(find(abs(Z) > 1)), 1, Ts);
+% Z_eject = Z_eject/dcgain(Z_eject);
+% sys = minreal(Z_eject*sys)
 
 
 g_der = zpk([1], [], 1, Ts); % 
 frfBode(sys, freqs, F20, '--k', 'Hz');
-sys.InputDelay = 3;
+sys.InputDelay = 4;
 frfBode(sys*g_der, freqs, F10, '--k', 'Hz');
 
 sos_fos = SosFos(sys, 'iodelay', sys.InputDelay);
@@ -214,8 +214,9 @@ ax = gca;
 %%
 % ------------------- Fit Hysteresis + Sat -------------------------------------
 
-
-hyst_file = 'hystID_data_5-4-2018_01.mat';
+fprintf('============================================\n')
+% hyst_file = 'hystID_data_5-4-2018_01.mat';
+hyst_file = 'hystID_data_6-1-2018_01.mat';
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
 load(hyst_path)
 
@@ -227,13 +228,10 @@ tvec = hystData.t_exp(1:kk);
 umax = (abs(ux));
 ymax = abs(min(yx));
 
-figure(500); clf
-plot(ux)
-grid on
 
-Nhyst = 7;
+Nhyst = 20;
 nw = Nhyst;
-Nsat = 5;
+Nsat = 27;
 
 yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
 [r, w, d, ws] = PIHyst.fit_hyst_sat_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst, Nsat);
@@ -264,11 +262,12 @@ plot(tvec, yx)
 hold on
 plot(tvec, y_hyst_sat)
 plot(tvec, y_hyst, '--')
+legend('y-exp', 'y-hyst-sat', 'y-hyst')
 grid on
 
-[rp2, wp2] = PIHyst.invert_hyst_PI(r2, w2)
+[rp2, wp2] = PIHyst.invert_hyst_PI(r2, w2);
 
-hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2)
+hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2);
 
 
 % modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
@@ -284,7 +283,7 @@ modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift = gdrift;
 modelFit.models.hyst = hyst;
 modelFit.models.hyst_sat = hyst_sat;
-if 1
+if 0
     save(modelFit_file, 'modelFit');
 end
 
