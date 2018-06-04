@@ -5,9 +5,9 @@ saveon = false;
 
 Ts = 40e-6;
 if 1
-  u_max = 8;
-  n_space = 8000;
-  n_up = 9;
+  u_max = 7;
+  n_space = 12000;
+  n_up = 14;
   step_sz = u_max/n_up;
   
   imps = [0;step_sz*ones(n_up, 1); -step_sz*ones(2*n_up-1,1)];
@@ -82,6 +82,7 @@ if ~dry_run
     hystData.u_exp = u_exp;
     hystData.y_exp = yx_exp;
     hystData.umax = umax;
+    hystData.impulse_idx = impulse_idx;
     % hystData.u_reset = u_reset;
     save(fullfile(PATHS.sysid, 'hysteresis/hystID_data_6-1-2018_01.mat'), 'hystData')
   end
