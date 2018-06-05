@@ -18,9 +18,11 @@ function [Ts_mat, name_s] = pretty_print_ts_data(TOL, tol_mode, varargin)
   fprintf('%s\n', repmat('-', 1, length(s_header)-length(name_pad)) );
   
   Ts_mat = Ts_mat*time_scale;
-
+if size(Ts_mat,1) > 1
   max_s = floor(max(Ts_mat)); % max of each column.
-
+else
+  max_s = floor(Ts_mat); % max of each column.
+end
   for k=1:size(Ts_mat, 1)
     for j = 1:length(name_s)
       s_max = sprintf('%.3f', max_s(j));

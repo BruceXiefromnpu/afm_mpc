@@ -20,7 +20,7 @@ classdef CanonPlants
       plants = modelFit.models;
       
       SYS = ss(modelFit.models.Gvib);
-      SYS.InputDelay = 10;
+      SYS.InputDelay = 9;
       plants.gdrift = modelFit.models.gdrift;
       plants.gdrift_inv = 1/plants.gdrift;
       
