@@ -53,8 +53,9 @@ if md == 2
   plants.gdrift = zpk([], [], 1, Ts);
   plants.gdrift_inv = zpk([], [], 1, Ts);
 end
-
-%%
+plants.gdrift = plants.gdrift_1p0;
+plants.gdrift_inv = 1/plants.gdrift;
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
 %                  Design reference "trajectory"                          %
@@ -63,7 +64,7 @@ end
 
 % Get a ref trajectory to track.
 N    = 800;
-r1 = 0.65;
+r1 = 0.7;
 r2 = -6;
 trajstyle =1;
 if trajstyle == 1
@@ -94,12 +95,12 @@ rng(1);
 thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*1, yref.Time);
 
 
-F1 = figure(60); clf
+F1 = figure(60); %clf
 subplot(3,1,1)
 hold on, grid on;
 step_ref.plot(F1, '-k', 'LineWidth', 0.5)
 
-F11 = figure(61); clf
+F11 = figure(61); %clf
 step_ref.plot(F11);
 step_ref.plot_settle_boundary(F11, TOL, tol_mode);
 % legend([h1(1)])
@@ -129,7 +130,7 @@ end
 can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
 gam_lin = 3;
-gam_mpc = .5;
+gam_mpc = .1;
 R1 = R0 + gam_mpc;
 
 K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
@@ -251,7 +252,7 @@ figure(70); clf
 hold on
 % plot(U_full_fp_sim.Time, du_full, '--g')
 % plot(dU_fp_sim.Time, dU_fp_sim.Data, 'r')
-xlm = xlim();
+% xlm = xlim();
 % plot(xlm, [du_max_orig, du_max_orig], ':k')
 % plot(xlm, -[du_max_orig, du_max_orig], ':k')
 % legend('du (actual)', 'du (nominal)')
@@ -403,10 +404,10 @@ traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
 sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
 
 
-return
+%return
 
 
-%%
+%
 %--------------------------------------------------------------------------
 % -------------- MPC Experiment -------------------------------------------
 
@@ -493,13 +494,13 @@ title('Current')
 [~, F_state] = plotState(xhat_exp, F_state);
 fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp, sim_exp_fxpl, sim_exp_fxpm, afm_exp_mpc);
-%%
+%
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
-save(fullfile(save_root, 'many_steps_mpc_invHyst_invDrift.mat'), 'afm_exp_mpc');
+% save(fullfile(save_root, 'many_steps_mpc_invHyst_invDrift.mat'), 'afm_exp_mpc');
 
-%%
+%
 %--------------------------------------------------------------------------
 % --------------------------- LINEAR Experiment ---------------------------
 
@@ -590,6 +591,9 @@ title('Current')
 
 [~, F_state] = plotState(xhat_exp, F_state);
 fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
+[ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp, sim_exp_fxpl,...
+  sim_exp_fxpm, afm_exp_mpc, afm_exp_lin);
+%
 %%
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
