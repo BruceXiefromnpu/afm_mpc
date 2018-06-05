@@ -54,7 +54,7 @@ if md == 2
   plants.gdrift_inv = zpk([], [], 1, Ts);
 end
 
-
+%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
 %                  Design reference "trajectory"                          %
@@ -63,7 +63,7 @@ end
 
 % Get a ref trajectory to track.
 N    = 800;
-r1 = .65;
+r1 = 0.65;
 r2 = -6;
 trajstyle =1;
 if trajstyle == 1
@@ -99,7 +99,7 @@ subplot(3,1,1)
 hold on, grid on;
 step_ref.plot(F1, '-k', 'LineWidth', 0.5)
 
-F11 = figure(61); %clf
+F11 = figure(61); clf
 step_ref.plot(F11);
 step_ref.plot_settle_boundary(F11, TOL, tol_mode);
 % legend([h1(1)])
@@ -129,7 +129,7 @@ end
 can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
 gam_lin = 3;
-gam_mpc = .1;
+gam_mpc = .5;
 R1 = R0 + gam_mpc;
 
 K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
@@ -167,7 +167,9 @@ fgm_fp = FGMprob_1(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1, du_max, maxIter);
 I_H_mpc = fgm_fp.I_HL;
 ML_x0  = fgm_fp.ML;
 beta    = fgm_fp.beta;
-
+fprintf('Mx0 needs n_int = %d\n', ceil(log2(double(max(abs(ML_x0(:))))))+1);
+fprintf('IHL needs n_int = %d\n', ceil(log2(double(max(abs(I_H_mpc(:))))))+1);
+%
 % ------------------------- Observer Gain ---------------------------------
 can_obs_params = CanonObsParams_01();
 [sys_obsDist, L_dist] = build_obs(plants.SYS, can_obs_params);
@@ -254,8 +256,8 @@ xlm = xlim();
 % plot(xlm, -[du_max_orig, du_max_orig], ':k')
 % legend('du (actual)', 'du (nominal)')
 % grid on
-F71 = figure(71); clf
-% plotState(Xhat_fp, F71);
+F_state = figure(71); clf
+% plotState(Xhat_fp, F_state);
 
 % -------------------- Setup Fixed stuff -----------------------------
 
@@ -315,7 +317,7 @@ figure(F11)
 h22 = sim_exp_fxpl.ploty(F11);
 legend([h12, h22]);
 
-[~, F71] = plotState(Xhat_fxpl, F71, [], [], '--r');
+[~, F_state] = plotState(Xhat_fxpl, F_state, [], [], '--r');
 fprintf('max of Xhat = %.2f\n', max(abs(Xhat_fxpl.Data(:))));
 fprintf('max of M*Xhat = %.2f\n', max(max(abs(ML_x0*Xhat_fxpl.Data'))));
 
@@ -359,21 +361,21 @@ sims_fxpm.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
 sims_fxpm.gdrift_inv = plants.gdrift_inv;
 sims_fxpm.gdrift = plants.gdrift;
 
-if 1
-  [y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref);
-  fxpm_Opts = stepExpDuOpts('pstyle', '--g', 'TOL', TOL, 'step_ref', step_ref,...
-                          'controller', K_lqr, 'name',  'FXP MPC Simulation');
 
-  sim_exp_fxpm = stepExpDu(y_fxpm, U_full_fxpm, dU_fxpm, fxpm_Opts);
-  h3 = plot(sim_exp_fxpm, F1, 'umode', 'both');
-  legend([h1(1), h2(1), h3(1)]);
-  
-  h32 = sim_exp_fxpm.ploty(F11);
-  legend([h12, h22, h32]);
+[y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref);
+fxpm_Opts = stepExpDuOpts('pstyle', '--g', 'TOL', TOL, 'step_ref', step_ref,...
+  'controller', K_lqr, 'name',  'FXP MPC Simulation');
+
+sim_exp_fxpm = stepExpDu(y_fxpm, U_full_fxpm, dU_fxpm, fxpm_Opts);
+h3 = plot(sim_exp_fxpm, F1, 'umode', 'both');
+legend([h1(1), h2(1), h3(1)]);
+
+h32 = sim_exp_fxpm.ploty(F11);
+legend([h12, h22, h32]);
 
 
-  Ts_vec_fxpm = sim_exp_fxpm.settle_time(TOL, tol_mode, 1);
-  fprintf('Total MPC FXP settle-time = %.3f [ms]\n', sum(Ts_vec_fxpm)*1000);
+Ts_vec_fxpm = sim_exp_fxpm.settle_time(TOL, tol_mode, 1);
+fprintf('Total MPC FXP settle-time = %.3f [ms]\n', sum(Ts_vec_fxpm)*1000);
 
 figure(1000);
 hold on
@@ -381,7 +383,7 @@ Ipow = lsim(plants.G_uz2powI, U_full_fxpm.Data, U_full_fxpm.Time);
 hmpc_Ipow = plot(U_full_fxpl.Time, Ipow, '--g');
 hmpc_Ipow.DisplayName = 'MPC Current';
 
-end
+
 
 
 [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp, sim_exp_fxpl, sim_exp_fxpm);
@@ -392,7 +394,7 @@ if saveon
   save(fullfile(save_root, 'many_steps_mpcfxp_sim.mat'), 'sim_exp_fxpm');
        
 end
-
+%
 sims_fxpm.sys_obs_fp = sys_obsDist;
 sims_fxpm.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 
@@ -415,10 +417,10 @@ if 1
             'verbose', true, 'dry_run', dry_run)
 end
 
-%%
+%
 SettleTicks = 20000;
-% Iters = 2500;
-Iters = length(yref.Data)-1;
+Iters = 500;
+% Iters = length(yref.Data)-1;
 % create and pack data. Then save it.
 
 [num, den] = tfdata(plants.gdrift_inv);
@@ -435,8 +437,8 @@ vipath =['C:\Users\arnold\Documents\MATLAB\afm_mpc_journal',...
 if 1
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
    'num', num, 'den', den, 'TF Order', 1*(length(den)-1),...
-   'r_s', plants.hyst_sat.rp, 'w_s', plants.hyst_sat.wp, 'N_hyst', 1*length(plants.hyst_sat.rp),...
-   'sat_ds', plants.hyst_sat.dp, 'sat_ws', plants.hyst_sat.wsp, 'N_sat', 1*length(plants.hyst_sat.dp),...
+   'r_s', plants.hyst_sat.rp, 'w_s', plants.hyst_sat.wp, 'N_hyst', 0*length(plants.hyst_sat.rp),...
+   'sat_ds', plants.hyst_sat.dp, 'sat_ws', plants.hyst_sat.wsp, 'N_sat', 0*length(plants.hyst_sat.dp),...
    'du_max', du_max,'dry_run', false,...
    'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
    'traj_path', traj_path, 'control_data_path', mpc_dat_path);
@@ -465,7 +467,7 @@ Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
 expOpts = stepExpDuOpts(linOpts, 'pstyle', '--m', 'name',...
-          sprintf('AFM Stage (MPC), gamma=%.1f', gam_mpc);
+          sprintf('AFM Stage (MPC), gamma=%.1f', gam_mpc));
 
 afm_exp_mpc = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
 
@@ -488,7 +490,7 @@ ylabel('current [mA]')
 grid on
 title('Current')
 
-[~, F61] = plotState(xhat_exp, F61);
+[~, F_state] = plotState(xhat_exp, F_state);
 fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp, sim_exp_fxpl, sim_exp_fxpm, afm_exp_mpc);
 %%
@@ -563,7 +565,8 @@ ufull_exp = timeseries(AFMdata(:,4), t_exp);
 Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
-expOpts = stepExpDuOpts(linOpts, 'pstyle', '-b', 'name',  'AFM Stage (Linear)');
+expOpts = stepExpDuOpts(linOpts, 'pstyle', '-b', 'name',...
+   sprintf('AFM Stage (Linear) gamma=%.1f', gam_lin));
 
 afm_exp_lin = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
 Ts_vec_afm_lin = afm_exp_lin.settle_time(TOL, tol_mode, 1);
@@ -577,7 +580,7 @@ plot(y_exp.Time, yy, ':k')
 
 H_linexp2 = afm_exp_lin.ploty(F11);
 % legend([h12, h22, h32, H_mpcexp2])
-legend([h12, h22, h32, H_linexp2])
+legend([h12, h22, h32,  H_mpcexp2, H_linexp2])
 
 figure(1000); clf
 plot(Ipow_exp.Time, (Ipow_exp.Data/15)*1000)
@@ -585,7 +588,7 @@ ylabel('current [mA]')
 grid on
 title('Current')
 
-[~, F61] = plotState(xhat_exp, F61);
+[~, F_state] = plotState(xhat_exp, F_state);
 fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 %%
 
