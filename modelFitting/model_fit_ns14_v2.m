@@ -154,9 +154,10 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % ----------------------------------------------------------------
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-30-2018_01_amp_1.mat'))
-% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_4-30-2018_01.mat'))
-% load(fullfile(PATHS.sysid, 'hysteresis', 'drift_data.mat'))
+% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-30-2018_01_amp_1p4.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
+
+
 Ts = modelFit.frf.Ts;
 G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
 
@@ -211,12 +212,12 @@ ax = gca;
 % set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
 
 
-%%
+%
 % ------------------- Fit Hysteresis + Sat -------------------------------------
 
 fprintf('============================================\n')
-% hyst_file = 'hystID_data_5-4-2018_01.mat';
-hyst_file = 'hystID_data_6-1-2018_01.mat';
+hyst_file = 'hystID_data_5-4-2018_01.mat';
+% hyst_file = 'hystID_data_6-1-2018_01.mat';
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
 load(hyst_path)
 
@@ -229,9 +230,9 @@ umax = (abs(ux));
 ymax = abs(min(yx));
 
 
-Nhyst = 20;
+Nhyst = 7;
 nw = Nhyst;
-Nsat = 27;
+Nsat = 7;
 
 yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
 [r, w, d, ws] = PIHyst.fit_hyst_sat_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst, Nsat);
@@ -280,10 +281,10 @@ modelFit.models.G_deluz2powI = G_deluz2Ipow;
 modelFit.models.g_deluz2pow_1norm = nm1;
 modelFit.models.du_max_nm1 = delumax;
 modelFit.models.Gvib = Gvib;
-modelFit.models.gdrift = gdrift;
+modelFit.models.gdrift_1p0 = gdrift;
 modelFit.models.hyst = hyst;
 modelFit.models.hyst_sat = hyst_sat;
-if 0
+if 1
     save(modelFit_file, 'modelFit');
 end
 

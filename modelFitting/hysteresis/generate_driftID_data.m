@@ -42,7 +42,7 @@ if ~dry_run
     driftData.t_exp = t_exp;
     driftData.u_exp = u_exp;
     driftData.y_exp = y_exp;
-    save(fullfile(PATHS.sysid, 'hysteresis','driftID_data_5-30-2018_01_amp_1.mat'), 'driftData')
+    save(fullfile(PATHS.sysid, 'hysteresis','driftID_data_06-05-2018_01_amp_1p0.mat'), 'driftData')
   end
 end
 
