@@ -72,13 +72,13 @@
 		<Property Name="NI.ClassItem.State" Type="Int">1082143248</Property>
 	</Item>
 	<Item Name="load_FGM_result_data.vi" Type="VI" URL="../load_FGM_result_data.vi">
-		<Property Name="NI.ClassItem.ConnectorPane" Type="Bin">&amp;Q#!!!!!!!)!"1!&amp;!!!-!%!!!@````]!!!!"!!%!!!(L!!!!$1!.1!9!"WVB?%FU:8)!#5!'!!.O&gt;5Y!$5!'!!:/=V^N='-!!%*!8Q.2!")!!!!#!!%!!1!!!!,``````````Q!!!"%!!!!"!!!!!!!"``]!!!!"````]1!!!!!!!!!""3VC:82B!%2!8Q.2!")!!!!#!!%!!1!!!!,``````````Q!!!"%!!!!"!!!!!!!"``]!!!!"````]1!!!!!!!!!""G*F&gt;'%L-1!!0A$R!!!!!!!!!!%8=86B:&amp;"S&lt;W&gt;198*B&lt;8.@='FQ:3ZD&gt;'Q!(E"1!!5!!!!"!!)!!Q!%#6&amp;18X"B=G&amp;N=Q!%!!!!$5!+!!&gt;/&gt;7VF=GFD!"Z!1!!#``````````]!"QR[8WF@=W6R&gt;76O9W5!!"Z!1!!#``````````]!"QRZ8WF@=W6R&gt;76O9W5!!"J!1!!#``````````]!"QB98X.U982F=Q!!11$R!!!!!!!!!!%9:G&gt;N8X*F=X6M&gt;&amp;^U:8.U8W2B&gt;'%O9X2M!#"!5!!$!!A!#1!+$U:(46^S:8.V&lt;(2@:'&amp;U91"5!0!!$!!&amp;!!9!"A!,!!9!"A!'!!9!"A!'!!9!"A-!!(A!!!E!!!!!!!!!!!!!!!E!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"!!Q!!!!!</Property>
+		<Property Name="NI.ClassItem.ConnectorPane" Type="Bin">&amp;Q#!!!!!!!)!"1!&amp;!!!-!%!!!@````]!!!!"!!%!!!(Y!!!!$A!.1!9!"WVB?%FU:8)!#5!'!!.O&gt;5Y!$5!'!!:/=V^N='-!!%*!8Q.2!")!!!!#!!%!!1!!!!,``````````Q!!!"%!!!!"!!!!!!!"``]!!!!"````]1!!!!!!!!!""3VC:82B!%2!8Q.2!")!!!!#!!%!!1!!!!,``````````Q!!!"%!!!!"!!!!!!!"``]!!!!"````]1!!!!!!!!!""G*F&gt;'%L-1!!0A$R!!!!!!!!!!%8=86B:&amp;"S&lt;W&gt;198*B&lt;8.@='FQ:3ZD&gt;'Q!(E"1!!5!!!!"!!)!!Q!%#6&amp;18X"B=G&amp;N=Q!.1!I!"G2V8WVB?!!!"!!!!!V!#A!(4H6N:8*J9Q!?1%!!!P``````````!!A-?F^J8X.F=86F&lt;G.F!!!?1%!!!P``````````!!A-?6^J8X.F=86F&lt;G.F!!!;1%!!!P``````````!!A)7&amp;^T&gt;'&amp;U:8-!!%%!]1!!!!!!!!!"'':H&lt;6^S:8.V&lt;(2@&gt;'6T&gt;&amp;^E982B,G.U&lt;!!A1&amp;!!!Q!*!!I!#Q^'2UV@=G6T&gt;7RU8W2B&gt;'%!6!$Q!!Q!"1!'!!=!$!!(!!=!"Q!(!!=!"Q!(!!=$!!"Y!!!*!!!!#1!!!!!!!!!*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1!.!!!!!!</Property>
 		<Property Name="NI.ClassItem.ExecutionSystem" Type="Int">-1</Property>
 		<Property Name="NI.ClassItem.Flags" Type="Int">0</Property>
 		<Property Name="NI.ClassItem.IsStaticMethod" Type="Bool">true</Property>
 		<Property Name="NI.ClassItem.MethodScope" Type="UInt">1</Property>
 		<Property Name="NI.ClassItem.Priority" Type="Int">1</Property>
-		<Property Name="NI.ClassItem.State" Type="Int">1351361040</Property>
+		<Property Name="NI.ClassItem.State" Type="Int">1082143248</Property>
 	</Item>
 	<Item Name="fgm_matrix.csv" Type="Document" URL="../fgm_matrix.csv"/>
 	<Item Name="fgm_result_data.csv" Type="Document" URL="../fgm_result_data.csv"/>
