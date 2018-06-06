@@ -53,8 +53,21 @@ if md == 2
   plants.gdrift = zpk([], [], 1, Ts);
   plants.gdrift_inv = zpk([], [], 1, Ts);
 end
-plants.gdrift = plants.gdrift_1p0;
-plants.gdrift_inv = 1/plants.gdrift;
+% plants.gdrift = plants.gdrift_1p4;
+% plants.gdrift_inv = 1/plants.gdrift;
+% plants.gdrift = plants.gdrift/dcgain(plants.gdrift)
+% plants.gdrift_inv = plants.gdrift_inv/dcgain(plants.gdrift_inv)
+%  plants.gdrift_inv = zpk([], [], 1, Ts);
+
+figure(91); clf
+pzplot(plants.gdrift)
+hold on
+pzplot(plants.gdrift_inv)
+figure(92); clf; hold on; 
+
+Hbode = bodeplot(plants.gdrift*plants.gdrift_inv, plants.gdrift, plants.gdrift_inv)
+setoptions(Hbode, 'FreqUnits', 'Hz')
+grid on
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
@@ -70,6 +83,8 @@ trajstyle =1;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
   yref = step_ref.yref;
+  dist_traj = yref;
+  yref.Data = yref.Data*0;
 elseif trajstyle == 2
   step_ref = StepRef([r1, r2], N);
   yref = step_ref.yref;
@@ -92,15 +107,15 @@ end
 
 rw = 8.508757290909093e-07;
 rng(1);
-thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*1, yref.Time);
+thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 
 
-F1 = figure(60); %clf
+F1 = figure(60); clf
 subplot(3,1,1)
 hold on, grid on;
 step_ref.plot(F1, '-k', 'LineWidth', 0.5)
 
-F11 = figure(61); %clf
+F11 = figure(61); clf
 step_ref.plot(F11);
 step_ref.plot_settle_boundary(F11, TOL, tol_mode);
 % legend([h1(1)])
@@ -135,6 +150,25 @@ R1 = R0 + gam_mpc;
 
 K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
 K_lqr2 = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
+
+% % can_cntrl = CanonCntrlParams_ns14(plants.SYS);
+% % % linear control
+% % eps_gam = 1e-6;
+% % gam_lin = 0.0001;
+% % gam_mpc = .00001;
+% % pint_lin = 0.95;
+% % pint_mpc = 0.9;
+% % 
+% % [Qlin, Rlin, Slin] = build_control_fixedint(plants.sys_recyc, can_cntrl, pint_lin);
+% % K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Qlin, Rlin+eps_gam, Slin);
+% % 
+% % [Q1, R1, S1] = build_control_fixedint(plants.sys_recyc, can_cntrl, pint_mpc);
+% % K_lqr2 = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+eps_gam, S1);
+
+R1 = R0 + gam_mpc;
+
+
+
 F = figure(11); clf;
 opts.pcolor = 'b';
 opts.pstyle = 'x';
@@ -147,7 +181,7 @@ opts.pcolor = 'r';
 opts.pstyle = '*';
 opts.zcolor = 'r';
 pzplotCL(plants.sys_recyc, K_lqr2, [], F, opts);
-%
+
 sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
 N_mpc = 12;
 
@@ -228,7 +262,7 @@ if 1
   sims_fpl.wsp = plants.hyst_sat.wsp;
 end
 
-[y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref);
+[y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref, dist_traj);
 % ts_lfp = settle_time(y_lin_fp_sim.Time(1:800), y_lin_fp_sim.Data(1:800), r1, TOL*r1);
 % fprintf('linear fp settle-time = %.3f [ms]\n', ts_lfp*1000);
 % fprintf('perc increase over time-optimal: %.3f\n', (ts_lfp/ts_to)*100);
@@ -305,7 +339,7 @@ sims_fxpl.gdrift_inv = plants.gdrift_inv;
 sims_fxpl.gdrift = plants.gdrift;
 
 
-[y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref);
+[y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref, dist_traj);
 fxpl_Opts = stepExpDuOpts('pstyle', '-r', 'TOL', TOL, 'step_ref', step_ref,...
                       'controller', K_lqr, 'name',  'FXP lin Sim.');
 sim_exp_fxpl = stepExpDu(y_fxpl, U_full_fxpl, dU_fxpl, fxpl_Opts);
@@ -363,7 +397,7 @@ sims_fxpm.gdrift_inv = plants.gdrift_inv;
 sims_fxpm.gdrift = plants.gdrift;
 
 
-[y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref);
+[y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref, dist_traj);
 fxpm_Opts = stepExpDuOpts('pstyle', '--g', 'TOL', TOL, 'step_ref', step_ref,...
   'controller', K_lqr, 'name',  'FXP MPC Simulation');
 
@@ -404,7 +438,7 @@ traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
 sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
 
 
-%return
+return
 
 
 %

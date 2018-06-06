@@ -85,7 +85,7 @@ classdef SimAFM
       self.nf = p.Results.nf;
     end
     
-    function [Y, U_full, U_nominal, dU, Xhat, Xerr] = sim(sim_obj, ref_traj)
+    function [Y, U_full, U_nominal, dU, Xhat, Xerr] = sim(sim_obj, ref_traj, dist_traj)
     % NOTE: rather than self, call it sim obj so it is more
     % readable in simulink.  
     % [Y, U, dU] = sim_MPC_fp(self, ref_f)
@@ -133,7 +133,10 @@ classdef SimAFM
         VSS_CONTROL_MODE=1;
         fprintf('simulating as LINEAR\n');
       end
-      
+      if ~exist('dist_traj', 'var')
+        dist_traj = ref_traj;
+        dist_traj.Data = dist_traj.Data*0;
+      end
       PLANT = sim_obj.PLANT;
       trun = ref_traj.Time(end);
       
