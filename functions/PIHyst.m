@@ -158,7 +158,9 @@ classdef PIHyst
     %
     % y_mat is a matrix of the unweighted values, such that
     % y_mat*ws(:)' = y, where each row corresponds to u_vec(k)
-      
+      if length(d) ~= length(ws)
+        error('d and ws must of the sime size')
+      end
       y = u_vec*0;
       ws = ws(:);
       y_mat = zeros(length(u_vec), length(d));
