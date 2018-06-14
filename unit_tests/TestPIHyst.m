@@ -24,9 +24,9 @@ classdef TestPIHyst < matlab.unittest.TestCase
       
       [dp, wsp] = PIHyst.invert_sat(d, ws);
       
-      [~, usat] = PIHyst.sat_op(u, d, ws);
+      [usat] = PIHyst.sat_op(u, d, ws);
       
-      [~, u_invsat_sat] = PIHyst.sat_op(usat, dp, wsp);
+      [u_invsat_sat] = PIHyst.sat_op(usat, dp, wsp);
       
       self.verifyEqual(u, u_invsat_sat, 'AbsTol', 1e-9);
     end
@@ -34,7 +34,7 @@ classdef TestPIHyst < matlab.unittest.TestCase
     function test_invert_PI(self)
       nw = 7;
       umax = 2;
-      r = ([0:nw-1]'./(nw) )*umax
+      r = ([0:nw-1]'./(nw) )*umax;
       w = [0.0001; 0.02; .4; 0.78; 1; 0.03; 0.04];
       t = (0:250)'*0.01;
       u = sin(t);

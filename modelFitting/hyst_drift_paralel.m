@@ -14,7 +14,6 @@ function [err, y_sim] = hyst_drift_paralel(theta, u, y, t, N_hyst, Nsat, nsd, Gv
   
   gd = ss(a, b, c, theta_gd(end), Gvib.Ts);
   
-  
   u_drft = lsim(gd, u, t);
   
   u_hyst = PIHyst.hyst_play_sat_op(u, r, w_hyst, d, w_sat, w_hyst*0);

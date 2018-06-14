@@ -21,16 +21,16 @@ len = idx;
 len_fit = 8000;
 
 
-%%
+
 y = yx(idx-10:end);
 u = ux(idx-10:end);
 t = tvec(idx-10:end);
-figure(1);
+figure(10);
 N = floor(length(y)/len);
 plot(t, u);
 hold on
 plot(t, y)
-
+%%
 Y_mat = [];
 U_mat = [];
 uss = [];

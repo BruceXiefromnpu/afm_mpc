@@ -108,7 +108,7 @@ classdef PIHyst
     end
     
 
-    function [y, x_vec_k ] = inverse_hyst_play_sat_op(u, rp, wp, dp,wsp, y0)
+    function [y] = inverse_hyst_play_sat_op(u, rp, wp, dp,wsp, y0)
       % [y, y_vec_k ] = hyst_play_sat_op(u, r, w, d, ws, y0)
       %
       % Given a control vector u, PI parameters r and w and a hysteresis
@@ -120,14 +120,14 @@ classdef PIHyst
       wp = wp(:);
       dp = dp(:);
       
-      x_vec_k = zeros(length(u), length(rp));
+     % x_vec_k = zeros(length(u), length(rp));
       
       z = PIHyst.sat_op(u, dp, wsp);
       y = PIHyst.hyst_play_op(z, rp, wp, y0);
     end
 
     
-    function [y, x_mat] = hyst_play_op(u, r, w, y0)
+    function [y, x_mat, dH_dw] = hyst_play_op(u, r, w, y0)
     % [y, y_vec_k ] = hyst_play_op(u, r, w, y0)
     %
     % Given a control vector u, PI parameters r and w and a hysteresis
@@ -146,10 +146,12 @@ classdef PIHyst
       end
       
       y = x_mat * w;
-
+      if nargout == 3
+        dH_dw = x_mat;
+      end
     end
     
-    function [y, y_mat] = sat_op(u_vec, d, ws)
+    function [y, y_mat, dS_dws, dS_dx] = sat_op(u_vec, d, ws)
     % [y_mat, y] = sat_op(u_vec, d, ws)
     % Implements the (two-sided) saturation operator described in 
     % "Modeling, Identification and Compensation of complex
@@ -181,10 +183,34 @@ classdef PIHyst
       
       y = y_mat*ws;
       
+      if nargout >= 3
+        dS_dws = y_mat;
+      end
+      if nargout ==4
+        dS_dx = y_mat*0;
+        for k=1:length(d)
+          dS_dx(:,k) = PIHyst.S_prime(u_vec, d(k));
+        end
+        dS_dx = dS_dx*ws;
+      end
+      
     end
     
+    function sprime = S_prime(x, d)
+      % would be faster to not make a copy. Be explicit for now.
+      if d > 0
+        sprime = x*0+1; 
+        sprime(x - d < 0) =0;
+      elseif d < 0
+        sprime = x*0+1; 
+        sprime(x - d > 0) = 0;
+      else
+        sprime = 0*x +1;
+      end
+    end
+  
     
-    function [y, x_vec_k ] = hyst_play_sat_op(u, r, w, d,ws, y0)
+    function [y, dHS_dw_ws ] = hyst_play_sat_op(u, r, w, d,ws, y0)
       % [y, y_vec_k ] = hyst_play_sat_op(u, r, w, d, ws, y0)
       %
       % Given a control vector u, PI parameters r and w and a hysteresis
@@ -196,9 +222,10 @@ classdef PIHyst
       w = w(:);
       d = d(:);
       
-      x_vec_k = zeros(length(u), length(r));
-      z_k_vec = PIHyst.hyst_play_op(u, r, w, y0);
-      y = PIHyst.sat_op(z_k_vec, d, ws);
+      [z_k_vec,~, dH_dw] = PIHyst.hyst_play_op(u, r, w, y0);
+      [y, ~, dS_dws, dS_dx] = PIHyst.sat_op(z_k_vec, d, ws);
+      
+      dHS_dw_ws = [dS_dx.*dH_dw, dS_dws];
     end
     
     
@@ -260,7 +287,7 @@ classdef PIHyst
       opts = optimset('quadprog');
       opts.Display = 'off';
       [w_wsp, JVAL] = quadprog(H, H(:,1)*0, Ainq, binq, Aeq, beq, [], [], [], opts);
-      fprintf('Nhyst = %.0f,  Nsat = %.0f, JVAL = %g\n', Nhyst, Nsat, JVAL);
+      %fprintf('Nhyst = %.0f,  Nsat = %.0f, JVAL = %g\n', Nhyst, Nsat, JVAL);
       
       % Split apart the decision variable into w (for hyst) and
       % ws_prime (for sat).
@@ -270,6 +297,85 @@ classdef PIHyst
       % We fit d_prime, and ws_prime. Invert to get d and ws.
       [d, ws] = PIHyst.invert_sat(dp, wsp);
     end
+    
+    function [r, w, d, ws, C, D] = fit_hyst_sat_drift_weights(u, y, Nhyst, Nsat, lams, Ts, varargin)
+      if length(varargin) >1
+        eps_ = varargin{1}
+      else
+        eps_ = -0.011;
+      end
+      
+      if mod(Nsat,2) ~= 1
+        error('Requre Nsat to be odd, but Nsat=%d', Nsat)
+      end
+      Ndrift = length(lams);
+      A = diag(lams);
+      B = lams(:)*0+1;
+      C = eye(Ndrift);
+      g = ss(A, B, C, zeros(Ndrift,1), Ts);
+      t = (0:length(u)-1)'*Ts;
+      X = lsim(g, u, t);
+      One_ = ones(length(t), 1);
+      n_d = (Nsat - 1)/2;
+      
+      umax = max(abs(u));
+      ymax = max(abs(y)); %
+      
+      % Create r_s
+      r = ([0:Nhyst-1]'./(Nhyst) )*umax;
+
+      % Create d_prime
+      id_plus = (1:n_d);
+      id_neg = (-n_d:-1);
+      dplus = ((id_plus - 0.5)/n_d ) * ymax;
+      dmin = ( (id_neg + 0.5)/n_d ) *ymax; 
+      dp = [dmin, 0, dplus]';
+      
+      % To do the fit as a quadratic program, we only the input run
+      % through the hyst-op, but unweighted, and the output run
+      % through the (inverse) sat-op, but unweighted.
+      [~, HU_mat] = PIHyst.hyst_play_op(u, r, r*0, r*0);
+      [~, Syp_mat] = PIHyst.sat_op(y, dp, dp*0);
+      %keyboard
+      % Create the Hessian of the quadprog
+      
+      H = [HU_mat'; -Syp_mat'; X'; One_']*[HU_mat, -Syp_mat, X, One_];
+      H = (H+H')/2;
+      
+      % Create the inequality constraints.
+      UH = -eye(Nhyst);
+      neg1 = -ones(1, n_d);
+      N = 2*n_d+1;
+      US = zeros(N, N);
+      On = ones(n_d+1);
+      Us1 = -triu(On);
+      Us2 = -triu(On)';
+      US = blkdiag(Us1(1:n_d, 1:n_d), Us2);
+      US(1:n_d, n_d+1) = -1;
+
+      Ainq = blkdiag(UH, US, -eye(Ndrift+1));
+      %Ainq = [Ainq, zeros(size(Ainq,1), Ndrift+1)];
+      binq = [r(:)*0; dp(:)*0; zeros(Ndrift+1, 1)] + eps_;
+      
+      % Create the equality constraint.
+      Aeq = [ymax*ones(1, length(r)) - r', zeros(1, Nsat+Ndrift+1)];
+      beq = ymax;      
+      
+      % Solve the QP
+      opts = optimset('quadprog');
+      opts.Display = 'off';
+      [w_wsp_cd, JVAL] = quadprog(H, H(:,1)*0, Ainq, binq, Aeq, beq, [], [], [], opts);
+      %fprintf('Nhyst = %.0f,  Nsat = %.0f, JVAL = %g\n', Nhyst, Nsat, JVAL);
+      
+      % Split apart the decision variable into w (for hyst) and
+      % ws_prime (for sat).
+      w = w_wsp_cd(1:length(r));
+      wsp = w_wsp_cd(length(r)+1:length(r)+length(dp));
+      C = w_wsp_cd(length(r)+length(dp)+1:end-1);
+      D = w_wsp_cd(end);
+      % We fit d_prime, and ws_prime. Invert to get d and ws.
+      [d, ws] = PIHyst.invert_sat(dp, wsp);
+    end % fit_hyst_sat_drift_weights
     
     function [r, w] = fit_hyst_weights(u, y, Nhyst, varargin)
       if length(varargin) >1
@@ -289,11 +395,9 @@ classdef PIHyst
       Ainq = -eye(Nhyst);
       binq = r(:)*0  + eps_;
       [w, JVAL] = quadprog(H, f, Ainq, binq);
-      fprintf('Nhyst = %.0f,  JVAL = %g\n', Nhyst, JVAL+ 0.5*y(:)'*y(:));
+      %fprintf('Nhyst = %.0f,  JVAL = %g\n', Nhyst, JVAL+ 0.5*y(:)'*y(:));
       
-      
-      
-    end
+    end % fit_hyst_weights
     
     
     
