@@ -53,8 +53,8 @@ if md == 2
   plants.gdrift = zpk([], [], 1, Ts);
   plants.gdrift_inv = zpk([], [], 1, Ts);
 end
-% plants.gdrift = plants.gdrift_1p4;
-% plants.gdrift_inv = 1/plants.gdrift;
+plants.gdrift = plants.gdrift_1p0;
+plants.gdrift_inv = 1/plants.gdrift_1p0;
 % plants.gdrift = plants.gdrift/dcgain(plants.gdrift)
 % plants.gdrift_inv = plants.gdrift_inv/dcgain(plants.gdrift_inv)
 %  plants.gdrift_inv = zpk([], [], 1, Ts);
@@ -77,13 +77,14 @@ grid on
 
 % Get a ref trajectory to track.
 N    = 800;
-r1 = 0.7;
+r1 = 1;
 r2 = -6;
 trajstyle =1;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
   yref = step_ref.yref;
   dist_traj = yref;
+  dist_traj.Data = dist_traj.Data*0 + 1;
   yref.Data = yref.Data*0;
 elseif trajstyle == 2
   step_ref = StepRef([r1, r2], N);
@@ -110,12 +111,12 @@ rng(1);
 thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 
 
-F1 = figure(60); clf
+F1 = figure(60);% clf
 subplot(3,1,1)
 hold on, grid on;
 step_ref.plot(F1, '-k', 'LineWidth', 0.5)
 
-F11 = figure(61); clf
+F11 = figure(61); %clf
 step_ref.plot(F11);
 step_ref.plot_settle_boundary(F11, TOL, tol_mode);
 % legend([h1(1)])
@@ -140,11 +141,11 @@ if md == 1
 else
   du_max = du_max_orig;
 end
-
+% du_max = 1000;
 
 can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
-gam_lin = 3;
+gam_lin = 1000;
 gam_mpc = .1;
 R1 = R0 + gam_mpc;
 
@@ -159,10 +160,10 @@ K_lqr2 = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
 % % pint_lin = 0.95;
 % % pint_mpc = 0.9;
 % % 
-% % [Qlin, Rlin, Slin] = build_control_fixedint(plants.sys_recyc, can_cntrl, pint_lin);
+% % [Qlin, Rlin, Slin] = build_control(plants.sys_recyc, can_cntrl, pint_lin);
 % % K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Qlin, Rlin+eps_gam, Slin);
 % % 
-% % [Q1, R1, S1] = build_control_fixedint(plants.sys_recyc, can_cntrl, pint_mpc);
+% % [Q1, R1, S1] = build_control(plants.sys_recyc, can_cntrl, pint_mpc);
 % % K_lqr2 = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+eps_gam, S1);
 
 R1 = R0 + gam_mpc;
@@ -183,6 +184,7 @@ opts.zcolor = 'r';
 pzplotCL(plants.sys_recyc, K_lqr2, [], F, opts);
 
 sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
+
 N_mpc = 12;
 
 Qp = dare(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R1, S1);
@@ -190,10 +192,22 @@ nu = 1;
 mpcProb = condensedMPCprob_OA(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1);
 % mpcProb.lb = zeros(N_mpc,1)-du_max;
 % mpcProb.ub = zeros(N_mpc,1)+du_max;
+
 CON = CondenCon([], [], N_mpc);
 CON.add_input_con('box', [-du_max, du_max]);
+% GI = ss(plants.G_uz2powI);
+% CON = CondenCon(GI, GI.b*0, N_mpc);
+% CON.add_state_con('box', [0.1])
 mpcProb.CON = CON;
 
+ 
+% F = @()mpcProb.solve(Nx*10);
+% timeit(F)
+% 
+% plot(F())
+
+
+%%
 Hmpc = mpcProb.H; Mmpc = mpcProb.M;
 maxIter = 20;
 fprintf('condition of H = %.1f\n', mpcProb.kappa);
@@ -293,7 +307,7 @@ hold on
 % grid on
 F_state = figure(71); clf
 % plotState(Xhat_fp, F_state);
-
+return
 % -------------------- Setup Fixed stuff -----------------------------
 
 A_obs_cl = sys_obsDist.a - L_dist*sys_obsDist.c;
