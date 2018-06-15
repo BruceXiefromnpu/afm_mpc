@@ -1,22 +1,22 @@
 
 ts = 0.01;
 t = (0:1000)'*ts
-u = sin(2*pi*t);
+u = sin(2*pi*t)*10;
 gg = c2d(tf(100, [1, 20, 100]), ts);
 y = lsim(gg, u, t)
-
-Jfunc = @(theta) hyst_drift_paralel_der(theta, u, y, t, Nhyst, Nsat, nsd, gg, r, d);
+% has_feedthrough = false;
+Jfunc = @(theta) hyst_drift_paralel_der(theta, u, y, t, Nhyst, Nsat, nsd, gg, r, d, has_feedthrough);
 
 clc
 % u = sin(2*pi(0:0.01
-dl =0.00001;
-idx = 16;
+dl =0.0000001;
+idx = 17;
 DL = theta0*0;
 DL(idx) = DL(idx)+dl;
 
-[err, udrift1, Derr] = Jfunc(theta0);
+[err, Derr, udrift1] = Jfunc(theta0);
 
-[err_plus_dl, udrift2] = Jfunc(theta0+DL);
+[err_plus_dl, ~, udrift2] = Jfunc(theta0+DL);
 
 der_fin = (err_plus_dl - err)/dl;
 
