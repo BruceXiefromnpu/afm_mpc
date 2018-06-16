@@ -5,6 +5,7 @@ notes.html
 notes.tex
 FPGA\ Bitfiles/
 sandbox/
+temp_figs/
 manystepsdata.tex
 .directory/
 
@@ -38,6 +39,7 @@ auto/
 
 # simulink backups
 *.r2016b
+*.mexa64
 slprj/
 *.mexw64
 *.asv

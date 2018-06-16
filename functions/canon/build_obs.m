@@ -1,5 +1,5 @@
 function [sys_obsDist, L_dist] = build_obs(sys_obs, can_params)
-    
+ %  [sys_obsDist, L_dist] = build_obs(sys_obs, can_params)
   if sys_obs.InputDelay ~= 0 || sys_obs.IOdelay ~=0
     error(['All Delays of sys_obs must be part of the states, not ' ...
            'included as a property']);

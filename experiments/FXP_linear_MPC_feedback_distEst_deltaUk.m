@@ -54,7 +54,20 @@ if md == 2
   plants.gdrift_inv = zpk([], [], 1, Ts);
 end
 plants.gdrift = plants.gdrift_1p0;
-plants.gdrift_inv = 1/plants.gdrift;
+plants.gdrift_inv = 1/plants.gdrift_1p0;
+% plants.gdrift = plants.gdrift/dcgain(plants.gdrift)
+% plants.gdrift_inv = plants.gdrift_inv/dcgain(plants.gdrift_inv)
+%  plants.gdrift_inv = zpk([], [], 1, Ts);
+
+figure(91); clf
+pzplot(plants.gdrift)
+hold on
+pzplot(plants.gdrift_inv)
+figure(92); clf; hold on; 
+
+Hbode = bodeplot(plants.gdrift*plants.gdrift_inv, plants.gdrift, plants.gdrift_inv)
+setoptions(Hbode, 'FreqUnits', 'Hz')
+grid on
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
@@ -64,12 +77,15 @@ plants.gdrift_inv = 1/plants.gdrift;
 
 % Get a ref trajectory to track.
 N    = 800;
-r1 = 0.7;
+r1 = 1;
 r2 = -6;
 trajstyle =1;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
   yref = step_ref.yref;
+  dist_traj = yref;
+  dist_traj.Data = dist_traj.Data*0 + 1;
+  yref.Data = yref.Data*0;
 elseif trajstyle == 2
   step_ref = StepRef([r1, r2], N);
   yref = step_ref.yref;
@@ -92,10 +108,10 @@ end
 
 rw = 8.508757290909093e-07;
 rng(1);
-thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*1, yref.Time);
+thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 
 
-F1 = figure(60); %clf
+F1 = figure(60);% clf
 subplot(3,1,1)
 hold on, grid on;
 step_ref.plot(F1, '-k', 'LineWidth', 0.5)
@@ -125,16 +141,35 @@ if md == 1
 else
   du_max = du_max_orig;
 end
-
+% du_max = 1000;
 
 can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
-gam_lin = 3;
+gam_lin = 1000;
 gam_mpc = .1;
 R1 = R0 + gam_mpc;
 
 K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
 K_lqr2 = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
+
+% % can_cntrl = CanonCntrlParams_ns14(plants.SYS);
+% % % linear control
+% % eps_gam = 1e-6;
+% % gam_lin = 0.0001;
+% % gam_mpc = .00001;
+% % pint_lin = 0.95;
+% % pint_mpc = 0.9;
+% % 
+% % [Qlin, Rlin, Slin] = build_control(plants.sys_recyc, can_cntrl, pint_lin);
+% % K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Qlin, Rlin+eps_gam, Slin);
+% % 
+% % [Q1, R1, S1] = build_control(plants.sys_recyc, can_cntrl, pint_mpc);
+% % K_lqr2 = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+eps_gam, S1);
+
+R1 = R0 + gam_mpc;
+
+
+
 F = figure(11); clf;
 opts.pcolor = 'b';
 opts.pstyle = 'x';
@@ -147,8 +182,9 @@ opts.pcolor = 'r';
 opts.pstyle = '*';
 opts.zcolor = 'r';
 pzplotCL(plants.sys_recyc, K_lqr2, [], F, opts);
-%
+
 sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
+
 N_mpc = 12;
 
 Qp = dare(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R1, S1);
@@ -156,10 +192,22 @@ nu = 1;
 mpcProb = condensedMPCprob_OA(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1);
 % mpcProb.lb = zeros(N_mpc,1)-du_max;
 % mpcProb.ub = zeros(N_mpc,1)+du_max;
+
 CON = CondenCon([], [], N_mpc);
 CON.add_input_con('box', [-du_max, du_max]);
+% GI = ss(plants.G_uz2powI);
+% CON = CondenCon(GI, GI.b*0, N_mpc);
+% CON.add_state_con('box', [0.1])
 mpcProb.CON = CON;
 
+ 
+% F = @()mpcProb.solve(Nx*10);
+% timeit(F)
+% 
+% plot(F())
+
+
+%%
 Hmpc = mpcProb.H; Mmpc = mpcProb.M;
 maxIter = 20;
 fprintf('condition of H = %.1f\n', mpcProb.kappa);
@@ -228,7 +276,7 @@ if 1
   sims_fpl.wsp = plants.hyst_sat.wsp;
 end
 
-[y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref);
+[y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref, dist_traj);
 % ts_lfp = settle_time(y_lin_fp_sim.Time(1:800), y_lin_fp_sim.Data(1:800), r1, TOL*r1);
 % fprintf('linear fp settle-time = %.3f [ms]\n', ts_lfp*1000);
 % fprintf('perc increase over time-optimal: %.3f\n', (ts_lfp/ts_to)*100);
@@ -259,7 +307,7 @@ hold on
 % grid on
 F_state = figure(71); clf
 % plotState(Xhat_fp, F_state);
-
+return
 % -------------------- Setup Fixed stuff -----------------------------
 
 A_obs_cl = sys_obsDist.a - L_dist*sys_obsDist.c;
@@ -305,7 +353,7 @@ sims_fxpl.gdrift_inv = plants.gdrift_inv;
 sims_fxpl.gdrift = plants.gdrift;
 
 
-[y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref);
+[y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref, dist_traj);
 fxpl_Opts = stepExpDuOpts('pstyle', '-r', 'TOL', TOL, 'step_ref', step_ref,...
                       'controller', K_lqr, 'name',  'FXP lin Sim.');
 sim_exp_fxpl = stepExpDu(y_fxpl, U_full_fxpl, dU_fxpl, fxpl_Opts);
@@ -363,7 +411,7 @@ sims_fxpm.gdrift_inv = plants.gdrift_inv;
 sims_fxpm.gdrift = plants.gdrift;
 
 
-[y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref);
+[y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref, dist_traj);
 fxpm_Opts = stepExpDuOpts('pstyle', '--g', 'TOL', TOL, 'step_ref', step_ref,...
   'controller', K_lqr, 'name',  'FXP MPC Simulation');
 
@@ -404,7 +452,7 @@ traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
 sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
 
 
-%return
+return
 
 
 %%
