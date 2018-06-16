@@ -79,26 +79,27 @@ grid on
 N    = 800;
 r1 = 1;
 r2 = -6;
-trajstyle =1;
+trajstyle =3;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
   yref = step_ref.yref;
   dist_traj = yref;
-  dist_traj.Data = dist_traj.Data*0 + 1;
-  yref.Data = yref.Data*0;
+  dist_traj.Data = dist_traj.Data*0 + 0;
+%   yref.Data = yref.Data*0;
 elseif trajstyle == 2
   step_ref = StepRef([r1, r2], N);
   yref = step_ref.yref;
 elseif trajstyle == 3
-  ref_path = fullfile(save_root, 'many_steps_short.mat');
-  ref_dat = load(ref_path);
-  
-  yref = CanonRefTraj.ref_traj_load(ref_path)
+  step_root = fullfile(PATHS.exp, 'step-exps');
+  load(fullfile(step_root, 'many_steps.mat'), 'step_ref');
+  yref = step_ref.yref;  
 elseif trajstyle == 4
-  copyfile('many_steps_rand.mat', fullfile(save_root, 'many_steps_rand.mat'));
-  ref_path = fullfile(save_root, 'many_steps_rand.mat');
-  yref = CanonRefTraj.ref_traj_load(ref_path);
-  yref.Data = yref.Data/4;
+% THIS IS GARBAGE
+%   ref_path = fullfile(save_root, 'many_steps_rand.mat');
+%   
+%   load(ref_path);
+%   ref_traj = ref_traj_params.ref_traj;
+%   yref.Data = yref.Data/4;
 elseif trajstyle == 5
   step_root = fullfile(PATHS.exp, 'step-exps');
   
@@ -111,12 +112,12 @@ rng(1);
 thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 
 
-F1 = figure(60);% clf
+F1 = figure(60); clf
 subplot(3,1,1)
 hold on, grid on;
 step_ref.plot(F1, '-k', 'LineWidth', 0.5)
 
-F11 = figure(61); %clf
+F11 = figure(61); clf
 step_ref.plot(F11);
 step_ref.plot_settle_boundary(F11, TOL, tol_mode);
 % legend([h1(1)])
@@ -145,7 +146,7 @@ end
 
 can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
-gam_lin = 1000;
+gam_lin = 3;
 gam_mpc = .1;
 R1 = R0 + gam_mpc;
 
@@ -207,7 +208,7 @@ mpcProb.CON = CON;
 % plot(F())
 
 
-%%
+
 Hmpc = mpcProb.H; Mmpc = mpcProb.M;
 maxIter = 20;
 fprintf('condition of H = %.1f\n', mpcProb.kappa);
@@ -288,13 +289,13 @@ sim_exp = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
 Ts_vec_lfp = sim_exp.settle_time(TOL, tol_mode, 1);
 fprintf('Total linear fp settle-time = %.3f [ms]\n', sum(Ts_vec_lfp)*1000);
 
-F1 = figure(60);
+F1 = figure(60); clf
 h1 = sim_exp.plot(F1, 'umode', 'both');
 legend([h1(1)])
 h12 = sim_exp.ploty(F11)
 legend([h12(1)])
 %
-figure(70); clf
+% figure(70); clf
 % du_full = diff(U_full_fp_sim.Data);
 % du_full(end+1) = du_full(end);
 hold on
@@ -307,7 +308,7 @@ hold on
 % grid on
 F_state = figure(71); clf
 % plotState(Xhat_fp, F_state);
-return
+
 % -------------------- Setup Fixed stuff -----------------------------
 
 A_obs_cl = sys_obsDist.a - L_dist*sys_obsDist.c;
@@ -565,19 +566,19 @@ sims_fxpl.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 fxplin_dat_path = 'Z:\mpc-journal\step-exps\LinControls01.csv';
 traj_path = 'Z:\mpc-journal\step-exps\traj_data.csv';
 sims_fxpl.write_control_data(fxplin_dat_path, yref, traj_path)
-%%
+%
 SettleTicks = 20000;
-% Iters = length(yref.Data)-1;
-Iters = 450;
+Iters = length(yref.Data)-1;
+% Iters = 450;
 % create and pack data. Then save it.
 
 [num, den] = tfdata(plants.gdrift_inv);
 num = num{1};
 den = den{1};
 
-umax = 2;
+umax = 5;
 ymax = max(yref.Data)*1.3
-ymax = 1;
+% ymax = 1.5;
 clear e;
 clear vi;
 % -----------------------RUN THE Experiment--------------------------------
@@ -635,7 +636,7 @@ ufull_exp = timeseries(AFMdata(:,4), t_exp);
 Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
-expOpts = stepExpDuOpts(linOpts, 'pstyle', '--k', 'name',...
+expOpts = stepExpDuOpts(linOpts, 'pstyle', '-b', 'name',...
    sprintf('AFM Stage (Linear) gamma=%.1f', gam_lin));
 
 afm_exp_lin = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
