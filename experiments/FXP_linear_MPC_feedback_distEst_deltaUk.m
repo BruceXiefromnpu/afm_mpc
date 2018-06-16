@@ -407,7 +407,7 @@ sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
 %return
 
 
-%
+%%
 %--------------------------------------------------------------------------
 % -------------- MPC Experiment -------------------------------------------
 
@@ -503,7 +503,7 @@ fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 %
 %--------------------------------------------------------------------------
 % --------------------------- LINEAR Experiment ---------------------------
-
+%%
 % Build the u-reset.
 if 1
   dry_run = false;
@@ -517,18 +517,19 @@ sims_fxpl.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 fxplin_dat_path = 'Z:\mpc-journal\step-exps\LinControls01.csv';
 traj_path = 'Z:\mpc-journal\step-exps\traj_data.csv';
 sims_fxpl.write_control_data(fxplin_dat_path, yref, traj_path)
-
+%%
 SettleTicks = 20000;
 % Iters = length(yref.Data)-1;
-Iters = 850;
+Iters = 450;
 % create and pack data. Then save it.
 
 [num, den] = tfdata(plants.gdrift_inv);
 num = num{1};
 den = den{1};
 
-umax = 10.5;
+umax = 2;
 ymax = max(yref.Data)*1.3
+ymax = 1;
 clear e;
 clear vi;
 % -----------------------RUN THE Experiment--------------------------------
@@ -537,18 +538,38 @@ vipath =['C:\Users\arnold\Documents\matlab\afm_mpc_journal\',...
 if 1
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
    'num', num, 'den', den, 'TF Order', 1*(length(den)-1),...
-   'r_s', plants.hyst_sat.rp, 'w_s', plants.hyst_sat.wp, 'N_hyst', 0*length(plants.hyst_sat.rp),...
-   'sat_ds', plants.hyst_sat.dp, 'sat_ws', plants.hyst_sat.wsp, 'N_sat', 0*length(plants.hyst_sat.dp),...
+   'r_s', plants.hyst_sat.rp, 'w_s', plants.hyst_sat.wp, 'N_hyst', 1*length(plants.hyst_sat.rp),...
+   'sat_ds', plants.hyst_sat.dp, 'sat_ws', plants.hyst_sat.wsp, 'N_sat', 1*length(plants.hyst_sat.dp),...
    'du_max', du_max,'dry_run', false,...
    'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
    'traj_path', traj_path, 'control_data_path', fxplin_dat_path);
 else
-[e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
-   'num', num, 'den', den, 'TF Order', (length(den)-1),...
-   'r_s', plants.hyst.rp, 'w_s', plants.hyst.wp, 'N_hyst', length(plants.hyst.rp),...
+%   parallel version
+  rrp = plants.hyst_drift_paral.rp;
+  wwp = plants.hyst_drift_paral.wp;
+  ddp = plants.hyst_drift_paral.dp;
+  wwsp = plants.hyst_drift_paral.wsp;
+  gd_par = plants.hyst_drift_paral.gdrift;
+  [num, den] = tfdata(gd_par);
+  num = num{1}
+  den = den{1}
+  
+  [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
+   'num', num, 'den', den, 'TF Order', 1*(length(den)-1),...
+   'r_s', rrp, 'w_s', wwp, 'N_hyst', 1*length(rrp),...
+   'sat_ds', ddp, 'sat_ws', wwsp, 'N_sat', 1*length(ddp),...
+   'parallel_inv', true,...
    'du_max', du_max,'dry_run', false,...
    'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
    'traj_path', traj_path, 'control_data_path', fxplin_dat_path);
+ 
+% hysteresis only:  
+% [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
+%    'num', num, 'den', den, 'TF Order', (length(den)-1),...
+%    'r_s', plants.hyst.rp, 'w_s', plants.hyst.wp, 'N_hyst', length(plants.hyst.rp),...
+%    'du_max', du_max,'dry_run', false,...
+%    'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
+%    'traj_path', traj_path, 'control_data_path', fxplin_dat_path);
 end
 
 
@@ -566,7 +587,7 @@ ufull_exp = timeseries(AFMdata(:,4), t_exp);
 Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
-expOpts = stepExpDuOpts(linOpts, 'pstyle', '-b', 'name',...
+expOpts = stepExpDuOpts(linOpts, 'pstyle', '--k', 'name',...
    sprintf('AFM Stage (Linear) gamma=%.1f', gam_lin));
 
 afm_exp_lin = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
@@ -575,13 +596,14 @@ fprintf('Total AFM lin FXP settle-time = %.3f [ms]\n', sum(Ts_vec_afm_lin)*1000)
 
 H_linexp = plot(afm_exp_lin, F1, 'umode', 'both');
 subplot(3,1,1)
-% legend([h1(1), h2(1), h3(1), H_mpcexp(1), H_linexp(1)]);
-legend([h1(1), h2(1), h3(1), H_linexp(1)]);
+try
+  legend([h1(1), h2(1), h3(1), H_linexp(1), H_mpcexp(1)]); 
+end
 plot(y_exp.Time, yy, ':k')
 
 H_linexp2 = afm_exp_lin.ploty(F11);
 % legend([h12, h22, h32, H_mpcexp2])
-legend([h12, h22, h32,  H_mpcexp2, H_linexp2])
+try legend([h12, h22, h32,  H_mpcexp2, H_linexp2]); end
 
 figure(1000); clf
 plot(Ipow_exp.Time, (Ipow_exp.Data/15)*1000)
