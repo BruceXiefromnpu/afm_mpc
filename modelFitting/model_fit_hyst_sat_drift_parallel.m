@@ -89,7 +89,7 @@ r = ([0:Nhyst-1]'./(Nhyst) )*umax;
 % dmin = ( (id_neg + 0.5)/n_d ) *ymax; 
 % d = [dmin, 0, dplus]';
 
-nsd = 4; % drift model size.
+
 gd = canon(gdrift, 'modal');
 gd.c = gd.c.*gd.b'; % scale
 gd.b = gd.b*0 + 1;
@@ -97,7 +97,9 @@ gd.b = gd.b*0 + 1;
 has_feedthrough = false;
 
 if has_feedthrough
-  theta_gd0 = [[diag(gd.a); 0.998; 0.99]; [gd.c'; 0.0001; 0.0001]; gd.d*0.5];
+  a_ = [diag(gd.a); 0.998; 0.99];
+  nsd = length(a_);
+  theta_gd0 = [a_; [gd.c'; 0.0001; 0.0001]; gd.d*0.5];
   theta_hyst0 = [w];
   theta_sat0 = [ws];
   theta0 = [theta_hyst0; theta_sat0; theta_gd0];
@@ -108,7 +110,12 @@ if has_feedthrough
   ub = -lb;
   [lb', theta0]
 else
-  theta_gd0 = [[diag(gd.a); 0.998; 0.99]; [gd.c'; 0.0001; 0.0001]];
+  % a_ = [diag(gd.a); 0.998; 0.99];
+  % c_ = [gd.c'; 0.0001; 0.0001]
+  a_ = [diag(gd.a)];
+  c_ = gd.c';
+  nsd = length(a_);
+  theta_gd0 = [a_; c_];
   theta_hyst0 = [w]*gd.d;
   theta_sat0 = [ws];
   theta0 = [theta_hyst0; theta_sat0; theta_gd0];
