@@ -79,13 +79,13 @@ grid on
 N    = 800;
 r1 = 1;
 r2 = -6;
-trajstyle =3;
+trajstyle =1;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
   yref = step_ref.yref;
   dist_traj = yref;
-  dist_traj.Data = dist_traj.Data*0 + 0;
-%   yref.Data = yref.Data*0;
+  dist_traj.Data = dist_traj.Data*0 + 1;
+  yref.Data = yref.Data*0;
 elseif trajstyle == 2
   step_ref = StepRef([r1, r2], N);
   yref = step_ref.yref;
@@ -145,9 +145,10 @@ end
 % du_max = 1000;
 
 can_cntrl = CanonCntrlParams_ns14(plants.SYS);
+can_cntrl = can_cntrl.aggressive_params();
 [Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
 gam_lin = 3;
-gam_mpc = .1;
+gam_mpc = .2;
 R1 = R0 + gam_mpc;
 
 K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
@@ -186,7 +187,7 @@ pzplotCL(plants.sys_recyc, K_lqr2, [], F, opts);
 
 sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
 
-N_mpc = 12;
+N_mpc = 8;
 
 Qp = dare(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R1, S1);
 nu = 1;
@@ -292,7 +293,7 @@ fprintf('Total linear fp settle-time = %.3f [ms]\n', sum(Ts_vec_lfp)*1000);
 F1 = figure(60); clf
 h1 = sim_exp.plot(F1, 'umode', 'both');
 legend([h1(1)])
-h12 = sim_exp.ploty(F11)
+h12 = sim_exp.ploty(F11);
 legend([h12(1)])
 %
 % figure(70); clf
@@ -385,10 +386,11 @@ nf_fgm = 28;
 
 fgm_fxp = FGMprob_fxp_1(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1, du_max,...
            maxIter, nw_fgm, nf_fgm);
+fgm_fxp.ML = fi(fgm_fp.ML, 1, 32, 26);         
 fgm_fxp.x_nw = 32;
 fgm_fxp.x_nf = 27;
-fprintf('Mx0 needs n_int = %d\n', ceil(log2(double(max(abs(fgm_fxp.ML(:))))))+1);
-fprintf('I_HL needs n_int = %d\n', ceil(log2(double(max(abs(fgm_fxp.I_HL(:))))))+1);
+fprintf('Mx0 needs n_int = %d\n', ceil(log2(max(abs(fgm_fp.ML(:)))))+1);
+fprintf('I_HL needs n_int = %d\n', ceil(log2(max(abs(fgm_fp.I_HL(:)))))+1);
 
 sims_fxpm = SimAFM(plants.PLANT, fgm_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
                    true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
