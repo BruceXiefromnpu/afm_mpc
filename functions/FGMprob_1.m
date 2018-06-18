@@ -29,7 +29,7 @@ classdef FGMprob_1 < CondensedMPCProb
 
     methods
         function self = FGMprob_1(sys, N, Q,Qp, R, S, uMax, maxIter)
-          %obj@condensedMPCprob(mpcProb)
+          % fgm_prob = FGMprob_1(sys, N, Q,Qp, R, S, uMax, maxIter)
           self.N_mpc = N;
           self.nu = size(sys.b,2);
           [H, M] = CondensedMPCProb.build_mpc_problem(sys,N, Q, R, Qp, S);

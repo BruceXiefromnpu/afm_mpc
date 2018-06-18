@@ -1,8 +1,8 @@
 clear;
 clc;
 
-addpath('../afm_mpc_journal/functions')
-addpath('../afm_mpc_journal/functions/canon')
+addpath('../functions')
+addpath('../functions/canon')
 % ---------- Load Parametric Models  -----------
 [plants, frf_data] = CanonPlants.plants_ns14();
 sys = ss(plants.Gvib);
@@ -22,14 +22,14 @@ sys_recyc = SSTools.deltaUkSys(sys);
 % P_x  = getCharDes(sys_recyc, gam_s, pint, zeta_s, rho_s, rad);
 
 can_cntrl = CanonCntrlParams_ns14();
-zeta_s = [.77, 0.77, .7, .4, .4 .4];
-gam_s = [1., 1., 1., 1., 1., 1.]; % puts it at the extant zero
-rad = 0.251;
+zeta_s = [.7, 0.77, .7, .4, .4 .4];
+gam_s = [1., 1., 1.2, 1., 1., 1.]; % puts it at the extant zero
+rad = 0.51;
 pint = 0.8;
 rho_s = [1, 1., 1];
-cmplx_rad = 0.85;
-% P_x  = getCharDes_const_sig(sys_recyc, pint, cmplx_rad, rho_s, rad);
-P_x  = getCharDes(sys_recyc, gam_s, pint, zeta_s, rho_s, rad);
+cmplx_rad = 0.92;
+P_x  = getCharDes_const_sig(sys_recyc, pint, cmplx_rad, rho_s, rad);
+% P_x  = getCharDes(sys_recyc, gam_s, pint, zeta_s, rho_s, rad);
 [Chat, Dhat] = place_zeros(sys_recyc, P_x);
 
 Q = Chat'*Chat;
@@ -55,17 +55,26 @@ plot(real(P_x), imag(P_x), '.', 'MarkerSize', 8)
 
 
 
-F1 = figure(1); %clf
-F2 = figure(2); %clf
+F1 = figure(1); clf
+subplot(2,1,1);
+ax1 = gca();
+subplot(2,1,2)
+ax2 = gca();
 
-gam_s = [0.0001, 0.1, 3, 200];
+F2 = figure(2); clf
+ax3 = subplot(2,1,1);
+ax4 = subplot(2,1,2);
+
+gam_s = [0.1, 10, 50, 200];
 H_Sens = gobjects(1, length(gam_s));
-H_hyd = gobjects(1, length(gam_s));
+H_hyr = gobjects(1, length(gam_s));
 H_distresp = gobjects(1, length(gam_s));
 H_stepresp = gobjects(1, length(gam_s));
 
 plotstyle = {'color', 'k', 'LineStyle', ':'};
-frfBode(sys, freqs, F1, plotstyle, 'Hz');
+frfBodeMag(sys, freqs, ax1, plotstyle, 'Hz');
+
+frfBodeMag(sys, freqs, ax2, plotstyle, 'Hz');
 
 % mp = colormap(gca, 'jet');
 mp = colormap(gca, 'copper');
@@ -81,14 +90,11 @@ for k = 1:length(gam_s)
   gam = gam_s(k);
   R = R0 + gam;
 
+  Qp = dare(sys_recyc.a, sys_recyc.b, Q, R, S);
+  mpc_prob = condensedMPCprob_OA(sys_recyc, 12, Q, Qp, R, S);
+  kappa = mpc_prob.kappa;
+  
   K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q, R, S);
-  % sys_cl = sys_recyc;
-  % sys_cl.a = sys_recyc.a - sys_recyc.b*K_lqr;
-
-  % figure(10)
-  % hold on
-  % pzplot(sys, sys_cl)
-
   Kx = K_lqr(1:end-1);
   Nbar = SSTools.getNbar(sys_recyc, K_lqr);
   Nx = SSTools.getNxNu(sys_recyc);
@@ -125,13 +131,15 @@ for k = 1:length(gam_s)
   H_yr = ((sys*D2*Sens));
   H_yd = minreal( sys*Sens);
 
-  %H_hyd(k) = frfBode(H_yd, omegas, F1, ['-', CS{k}], 'Hz');
+  
+  
   clr = mp_fine(k,:);
   plot_style = {'color', clr};
-  H_Sens(k) = frfBode(Sens, freqs, F1, plot_style, 'Hz');
+  H_hyr(k) = frfBodeMag(H_yr, freqs, ax1, plot_style, 'Hz');
+  H_Sens(k) = frfBodeMag(Sens, freqs, ax2, plot_style, 'Hz');
   hold on
-  %H_hyd(k).DisplayName = sprintf('$H_{yd}=G\\mathcal{S}$, $\\gamma=%.4f$', gam);
-  H_Sens(k).DisplayName = sprintf('$\\mathcal{S}$, $\\gamma=%.4f$', gam);
+%   H_hyd(k).DisplayName = sprintf('$H_{yd}=G\\mathcal{S}$, $\\gamma=%.4f$', gam);
+  H_Sens(k).DisplayName = sprintf('$\\mathcal{S}$, $\\gamma=%.4f$, $\\kappa = %.1f$', gam, kappa);
                                   
 
   % leg = legend([H_hyd(1:k), H_Sens(1:k)]);
@@ -139,10 +147,6 @@ for k = 1:length(gam_s)
   set(leg, 'FontSize', 16, 'Location', 'SouthEast')
 
   PLANT = sys;
-
-  % figure(9)
-  % pzplot(S, H_yd)
-  % title('H_yd, Sensitivity')
 
   ref = 0;
   dist = 1;
@@ -164,22 +168,22 @@ for k = 1:length(gam_s)
 
 
   figure(F2);
-  subplot(2,1,1)
-  H_distresp(k) = plot(y_dist_sim.Time, y_dist_sim.Data, plot_style{:});
-  H_distresp(k).DisplayName = sprintf('$\\gamma=%.4g$', gam);
-  hold on
+  H_distresp(k) = plot(ax3, y_dist_sim.Time, y_dist_sim.Data, plot_style{:});
+  H_distresp(k).DisplayName = sprintf('$\\gamma=%.4g$, $\\kappa = %.1f$', gam, kappa);
+  hold(ax3, 'on')
   %plot(y_dist_sim.Time, y_dist_TF, '--')
-  title('Disturbance Response')
-  grid on
-  
-  subplot(2,1,2)
-  H_stepresp(k) = plot(y_ref_sim.Time, y_ref_sim.Data, plot_style{:});
-  H_distresp(k).DisplayName = sprintf('$\\gamma=%.4g$', gam);
-  hold on
+  title(ax3, 'Disturbance Response')
+  grid(ax3, 'on')
+
+  figure(F2)
+  H_stepresp(k) = plot(ax4, y_ref_sim.Time, y_ref_sim.Data, plot_style{:});
+  H_distresp(k).DisplayName = sprintf('$\\gamma=%.4g$, $\\kappa = %.1f$', gam, kappa);
+  hold(ax4, 'on')
+  grid(ax4, 'on')
   %plot(y_ref_sim.Time, y_ref_TF, '--')
-  title('Step Response')
+  title(ax4, 'Step Response')
   legend(H_distresp(1:k))
-  grid on
+  grid(ax4, 'on')
 end
 return
 
