@@ -1,4 +1,4 @@
-function [Q, R0, S] = build_control(sys_recyc, can_cntrl)
+function [Q, R0, S, P_x] = build_control(sys_recyc, can_cntrl)
 % [Q, R0, S] = build_control(sys_recyc, can_cntrl)
 % Construct the quadratic cost matrices using the root-locus
 % technique (fictitious zeros). 
