@@ -206,7 +206,11 @@ classdef stepExpDu
         ref_k = self.step_ref.step_amps(k);
         ref_prev = self.step_ref.step_amps(k-1);
         delta_ref = ref_k - ref_prev;
-        
+        if delta_ref == 0
+          warning('cannon compute settle-time for a zero amplitude step')
+          Ts_vec(k-1) = NaN;
+          continue
+        end
         if strcmp(TOL_mode, 'abs')
           TOL_r = TOL;
         else
