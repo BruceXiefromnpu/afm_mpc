@@ -36,6 +36,20 @@ save_root = fullfile(step_exp_root, experiment_directory);
 %%
 TOL = .01;
 tol_mode = 'abs';
+% which simulations to run
+do_simlinfp = true;
+do_simlinfxp = false;
+do_simmpcfp = true;
+do_simmpcfxp = false;
+do_simhyst = true;
+do_invhyst = false;
+do_drift = false;
+do_invdrift = false;
+
+plotstate = false;
+plotpoles = false;
+plotdriftpoles = false;
+plotdriftbode = false;
 saveon = false;
 
 md = 1;
@@ -59,15 +73,19 @@ plants.gdrift_inv = 1/plants.gdrift_1p0;
 % plants.gdrift_inv = plants.gdrift_inv/dcgain(plants.gdrift_inv)
 %  plants.gdrift_inv = zpk([], [], 1, Ts);
 
-figure(91); clf
-pzplot(plants.gdrift)
-hold on
-pzplot(plants.gdrift_inv)
-figure(92); clf; hold on; 
+if plotdriftpoles
+  figure(91); clf
+  pzplot(plants.gdrift)
+  hold on
+  pzplot(plants.gdrift_inv);
+end
 
-Hbode = bodeplot(plants.gdrift*plants.gdrift_inv, plants.gdrift, plants.gdrift_inv)
-setoptions(Hbode, 'FreqUnits', 'Hz')
-grid on
+if plotdriftbode
+  figure(92); clf; hold on;
+  Hbode = bodeplot(plants.gdrift*plants.gdrift_inv, plants.gdrift, plants.gdrift_inv);
+  setoptions(Hbode, 'FreqUnits', 'Hz')
+  grid on
+end
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
@@ -76,16 +94,16 @@ grid on
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Get a ref trajectory to track.
-N    = 800;
-r1 = 1;
-r2 = -6;
-trajstyle =1;
+N  = 800;
+r1 = 5;
+r2 = -0;
+trajstyle =2;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
   yref = step_ref.yref;
   dist_traj = yref;
-  dist_traj.Data = dist_traj.Data*0 + 1;
-  yref.Data = yref.Data*0;
+  dist_traj.Data = dist_traj.Data*0 + 0;
+  yref.Data = yref.Data*1;
 elseif trajstyle == 2
   step_ref = StepRef([r1, r2], N);
   yref = step_ref.yref;
@@ -94,35 +112,28 @@ elseif trajstyle == 3
   load(fullfile(step_root, 'many_steps.mat'), 'step_ref');
   yref = step_ref.yref;  
 elseif trajstyle == 4
-% THIS IS GARBAGE
-%   ref_path = fullfile(save_root, 'many_steps_rand.mat');
-%   
-%   load(ref_path);
-%   ref_traj = ref_traj_params.ref_traj;
-%   yref.Data = yref.Data/4;
-elseif trajstyle == 5
   step_root = fullfile(PATHS.exp, 'step-exps');
-  
   load(fullfile(step_root, 'many_steps_data_rand_ymax7.mat'), 'step_ref');
   yref = step_ref.yref;
 end
 
-rw = 8.508757290909093e-07;
+rw = 2e-07;
 rng(1);
 thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 
 
-F1 = figure(60); clf
+F_yudu = figure(60); clf
 subplot(3,1,1)
 hold on, grid on;
-step_ref.plot(F1, '-k', 'LineWidth', 0.5)
+step_ref.plot(F_yudu, '-k', 'LineWidth', 0.5)
 
-F11 = figure(61); clf
-step_ref.plot(F11);
-step_ref.plot_settle_boundary(F11, TOL, tol_mode);
-% legend([h1(1)])
-
-
+F_y = figure(61); clf
+hold on, grid on
+if max(abs(yref.Data)) > 0
+  step_ref.plot(F_y);
+  step_ref.plot_settle_boundary(F_y, TOL, tol_mode);
+  % legend([h1(1)])
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
@@ -146,13 +157,25 @@ end
 
 can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 can_cntrl = can_cntrl.aggressive_params();
-[Q1, R0, S1] = build_control(plants.sys_recyc, can_cntrl);
-gam_lin = 3;
-gam_mpc = .2;
+[Q1, R0, S1, P_x] = build_control(plants.sys_recyc, can_cntrl);
+%%
+gam_lin = 30;
+gam_mpc = 3;
 R1 = R0 + gam_mpc;
+% p_int = 0.8; cmplx_rad = 0.85; rho_s = [2, 1]; rad = 0.5;
+% Px = getCharDes_const_sig(plants.sys_recyc, p_int, cmplx_rad, rho_s, rad);
+% [Chat, Dhat] = place_zeros(plants.sys_recyc, Px);
+% Q1 = Chat'*Chat;
+% S1 = Chat'*Dhat;
+% R0 = Dhat'*Dhat;
+% 
+% gam_lin = 4000;
+% gam_mpc = 4000;
+% R1 = R0 + gam_mpc;
+
 
 K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
-K_lqr2 = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
+K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
 
 % % can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 % % % linear control
@@ -171,23 +194,21 @@ K_lqr2 = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
 R1 = R0 + gam_mpc;
 
 
+if plotpoles
+  F = figure(11); clf;
+  opts = struct('pcolor', 'b', 'pstyle', 'x', 'zcolor', 'b', 'zstyle', 'o');
 
-F = figure(11); clf;
-opts.pcolor = 'b';
-opts.pstyle = 'x';
-opts.zcolor = 'b';
-opts.zstyle = 'o';
+  opts.doZero = 1;
+  pzplotCL(plants.sys_recyc, K_lqr, [], F, opts);
+  opts.pcolor = 'r';
+  opts.pstyle = '*';
+  opts.zcolor = 'r';
+  pzplotCL(plants.sys_recyc, K_mpc, [], F, opts);
 
-opts.doZero = 1;
-pzplotCL(plants.sys_recyc, K_lqr, [], F, opts);
-opts.pcolor = 'r';
-opts.pstyle = '*';
-opts.zcolor = 'r';
-pzplotCL(plants.sys_recyc, K_lqr2, [], F, opts);
+  sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
+end
 
-sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
-
-N_mpc = 8;
+N_mpc = 12;
 
 Qp = dare(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R1, S1);
 nu = 1;
@@ -202,30 +223,31 @@ CON.add_input_con('box', [-du_max, du_max]);
 % CON.add_state_con('box', [0.1])
 mpcProb.CON = CON;
 
- 
-% F = @()mpcProb.solve(Nx*10);
-% timeit(F)
-% 
-% plot(F())
-
-
-
 Hmpc = mpcProb.H; Mmpc = mpcProb.M;
-maxIter = 20;
+maxIter = 100;
 fprintf('condition of H = %.1f\n', mpcProb.kappa);
 
-fgm_fp = FGMprob_1(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1, du_max, maxIter);
-I_H_mpc = fgm_fp.I_HL;
-ML_x0  = fgm_fp.ML;
-beta    = fgm_fp.beta;
-fprintf('Mx0 needs n_int = %d\n', ceil(log2(double(max(abs(ML_x0(:))))))+1);
-fprintf('IHL needs n_int = %d\n', ceil(log2(double(max(abs(I_H_mpc(:))))))+1);
-%
+% fgm_fp = FGMprob_1(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1, du_max, maxIter);
+% I_H_mpc = fgm_fp.I_HL;
+% ML_x0  = fgm_fp.ML;
+% beta    = fgm_fp.beta;
+% fprintf('Mx0 needs n_int = %d\n', ceil(log2(double(max(abs(ML_x0(:))))))+1);
+% fprintf('IHL needs n_int = %d\n', ceil(log2(double(max(abs(I_H_mpc(:))))))+1);
+
 % ------------------------- Observer Gain ---------------------------------
 can_obs_params = CanonObsParams_01();
+can_obs_params.beta = 100;
 [sys_obsDist, L_dist] = build_obs(plants.SYS, can_obs_params);
 
-if 1
+[Sens, Hyd, Hyr, Hyeta, Loop] = ss_loops_delta_dist(plants.SYS, plants.sys_recyc,...
+  sys_obsDist, K_lqr, L_dist);
+[Sens_mpc, Hyd_mpc, Hyr_mpc, Hyeta_mpc, Loop_mpc] = ss_loops_delta_dist(plants.SYS,...
+  plants.sys_recyc, sys_obsDist, K_mpc, L_dist);
+
+F_clbode = figure(25); hold on, grid on
+bode(Sens, Sens_mpc)
+
+if plotpoles
   
   f10 = figure(10); clf
   pzplotCL(plants.sys_recyc, K_lqr, [], f10);
@@ -251,65 +273,99 @@ if 1
   set(leg1, 'location', 'SouthWest', 'box', 'off', 'FontSize', 14);
 end
 
+
 % 2). Design FeedForward gains.
 [Nx, Nu] = SSTools.getNxNu(plants.sys_recyc);
 
-sims_fpl = SimAFM(plants.PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false, 'thenoise', thenoise);
-sims_fpm = SimAFM(plants.PLANT, mpcProb, Nx, sys_obsDist, L_dist, du_max, false, 'thenoise', thenoise);
 
-% if 1
-%   sims_fpl.r = plants.hyst.r;
-%   sims_fpl.w = plants.hyst.w;
-%   sims_fpl.rp = plants.hyst.rp;
-%   sims_fpl.wp = plants.hyst.wp;
-%   sims_fpl.gdrift_inv = plants.gdrift_inv;
-%   sims_fpl.gdrift = plants.gdrift;
-% end
-if 1
-  sims_fpl.r = plants.hyst_sat.r;
-  sims_fpl.w = plants.hyst_sat.w;
-  sims_fpl.rp = plants.hyst_sat.rp;
-  sims_fpl.wp = plants.hyst_sat.wp;
-  sims_fpl.gdrift_inv = plants.gdrift_inv;
-  sims_fpl.gdrift = plants.gdrift;
-  sims_fpl.d = plants.hyst_sat.d;
-  sims_fpl.ws = plants.hyst_sat.ws;
-  sims_fpl.dp = plants.hyst_sat.dp;
-  sims_fpl.wsp = plants.hyst_sat.wsp;
+% ------------------------ Linear floating point simulation ---------------
+if do_simlinfp
+  sims_fpl = SimAFM(plants.PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false, 'thenoise', thenoise);
+  
+  if do_simhyst
+    sims_fpl.r = plants.hyst_sat.r;
+    sims_fpl.w = plants.hyst_sat.w;
+    sims_fpl.d = plants.hyst_sat.d;
+    sims_fpl.ws = plants.hyst_sat.ws;
+  end
+  if do_drift;     sims_fpl.gdrift = plants.gdrift; end
+  if do_invhyst
+    sims_fpl.rp = plants.hyst_sat.rp;
+    sims_fpl.wp = plants.hyst_sat.wp;
+    sims_fpl.dp = plants.hyst_sat.dp;
+    sims_fpl.wsp = plants.hyst_sat.wsp;
+  end
+  if do_invdrift; sims_fpl.gdrift_inv = plants.gdrift_inv; end
+  [y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref, dist_traj);
+  
+  linOpts = stepExpDuOpts('pstyle', '-b', 'TOL', TOL, 'step_ref', step_ref,...
+    'controller', K_lqr, 'name',  'FP lin Sim.');
+  
+  sim_exp_fpl = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
+  
+  
+  Ts_vec_lfp = sim_exp_fpl.settle_time(TOL, tol_mode, 1);
+  fprintf('Total linear fp settle-time = %.3f [ms]\n', sum(Ts_vec_lfp)*1000);
+  
+  h1 = sim_exp_fpl.plot(F_yudu, 'umode', 'both');
+  legend([h1(1)])
+  
+  h12 = sim_exp_fpl.ploty(F_y);
+  % y_hry = lsim(Hyr, yref.Data, yref.Time);
+  y_hry = lsim(Hyeta, thenoise.Data, thenoise.Time);
+  % plot(U_nom_fp_sim.Time, y_hry, '--k')
+  legend([h12(1)])
+  
+  Ry_est = cov(y_lin_fp_sim.Data);
+  Pcl = dlyap(Hyeta.a, Hyeta.b*rw*Hyeta.b');
+  Ry_calc = Hyeta.c*Pcl*Hyeta.c'; %+ rw
+  
+  sixsig = 6*sqrt(Ry_calc);
+  needed_14volt_cov = 14/512;
+  fprintf('six-sigma cov: %.4g\n14v x 512 pix: %.4g\n', sixsig, needed_14volt_cov);
 end
 
-[y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref, dist_traj);
-% ts_lfp = settle_time(y_lin_fp_sim.Time(1:800), y_lin_fp_sim.Data(1:800), r1, TOL*r1);
-% fprintf('linear fp settle-time = %.3f [ms]\n', ts_lfp*1000);
-% fprintf('perc increase over time-optimal: %.3f\n', (ts_lfp/ts_to)*100);
 
-linOpts = stepExpDuOpts('pstyle', '--k', 'TOL', TOL, 'step_ref', step_ref,...
-                      'controller', K_lqr, 'name',  'FP lin Sim.');
+if do_simmpcfp
+  sims_fpm = SimAFM(plants.PLANT, mpcProb, Nx, sys_obsDist, L_dist, du_max, false, 'thenoise', thenoise);
+  if do_simhyst
+    sims_fpm.r = plants.hyst_sat.r;
+    sims_fpm.w = plants.hyst_sat.w;
+    sims_fpm.d = plants.hyst_sat.d;
+    sims_fpm.ws = plants.hyst_sat.ws;
+  end
+  if do_drift; sims_fpm.gdrift = plants.gdrift; end
+  
+  if do_invhyst
+    sims_fpm.rp = plants.hyst_sat.rp;
+    sims_fpm.wp = plants.hyst_sat.wp;
+    sims_fpm.dp = plants.hyst_sat.dp;
+    sims_fpm.wsp = plants.hyst_sat.wsp;
+  end
+  if do_invdrift; sims_fpm.gdrift_inv = plants.gdrift_inv; end
+  
+  [y_mpc_fp_sim, U_full_fpm_sim, U_nom_fpm_sim, dU_fpm_sim, Xhat_fpm] = sims_fpm.sim(yref, dist_traj);
+  mpcfpOpts = stepExpDuOpts('pstyle', '-r', 'TOL', TOL, 'step_ref', step_ref,...
+    'controller', mpcProb, 'name',  'FP mpc Sim.');
+  sim_exp_fpm = stepExpDu(y_mpc_fp_sim, U_full_fpm_sim, dU_fpm_sim, mpcfpOpts);
+  
+  h1mpc = sim_exp_fpm.plot(F_yudu, 'umode', 'both');
+  legend([h1(1), h1mpc(1)])
+  
+  h12mpc = sim_exp_fpm.ploty(F_y);
+  legend([h12(1), h12mpc(1)])
 
-sim_exp = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
-Ts_vec_lfp = sim_exp.settle_time(TOL, tol_mode, 1);
-fprintf('Total linear fp settle-time = %.3f [ms]\n', sum(Ts_vec_lfp)*1000);
+end
 
-F1 = figure(60); clf
-h1 = sim_exp.plot(F1, 'umode', 'both');
-legend([h1(1)])
-h12 = sim_exp.ploty(F11);
-legend([h12(1)])
-%
-% figure(70); clf
-% du_full = diff(U_full_fp_sim.Data);
-% du_full(end+1) = du_full(end);
-hold on
-% plot(U_full_fp_sim.Time, du_full, '--g')
-% plot(dU_fp_sim.Time, dU_fp_sim.Data, 'r')
-% xlm = xlim();
-% plot(xlm, [du_max_orig, du_max_orig], ':k')
-% plot(xlm, -[du_max_orig, du_max_orig], ':k')
-% legend('du (actual)', 'du (nominal)')
-% grid on
-F_state = figure(71); clf
-% plotState(Xhat_fp, F_state);
+if plotstate
+  F_state = figure(71); clf
+  plotState(Xhat_fp, F_state);
+end
 
+
+
+
+%%
 % -------------------- Setup Fixed stuff -----------------------------
 
 A_obs_cl = sys_obsDist.a - L_dist*sys_obsDist.c;
@@ -332,113 +388,108 @@ sys_obs_fxp.b = fi(sys_obsDist.b, 1, nw, 29);
 sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
 
 % --------------------  Fixed Linear stuff -----------------------------
-
-sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
-  true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
-% if 1
-%   sims_fxpl.r = plants.hyst.r;
-%   sims_fxpl.w = plants.hyst.w;
-%   sims_fxpl.rp = plants.hyst.rp;
-%   sims_fxpl.wp = plants.hyst.wp;
-%   sims_fxpl.gdrift_inv = plants.gdrift_inv;
-%   sims_fxpl.gdrift = plants.gdrift;
-% end
-sims_fxpl.r = plants.hyst_sat.r;
-sims_fxpl.w = plants.hyst_sat.w;
-sims_fxpl.rp = fi(plants.hyst_sat.rp, 1, 16, 11);
-sims_fxpl.wp = fi(plants.hyst_sat.wp, 1, 16, 11);
-sims_fxpl.d = plants.hyst_sat.d;
-sims_fxpl.ws = plants.hyst_sat.ws;
-sims_fxpl.dp = fi(plants.hyst_sat.dp, 1, 16, 11);
-sims_fxpl.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
-sims_fxpl.gdrift_inv = plants.gdrift_inv;
-sims_fxpl.gdrift = plants.gdrift;
-
-
-[y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref, dist_traj);
-fxpl_Opts = stepExpDuOpts('pstyle', '-r', 'TOL', TOL, 'step_ref', step_ref,...
-                      'controller', K_lqr, 'name',  'FXP lin Sim.');
-sim_exp_fxpl = stepExpDu(y_fxpl, U_full_fxpl, dU_fxpl, fxpl_Opts);
-Ts_vec_fxpl = sim_exp_fxpl.settle_time(TOL, tol_mode, 1);
-fprintf('Total linear fxp settle-time = %.3f [ms]\n', sum(Ts_vec_fxpl)*1000);
-
-h2 = plot(sim_exp_fxpl, F1, 'umode', 'both');
-legend([h2(1)])
-figure(F11)
-h22 = sim_exp_fxpl.ploty(F11);
-legend([h12, h22]);
-
-[~, F_state] = plotState(Xhat_fxpl, F_state, [], [], '--r');
-fprintf('max of Xhat = %.2f\n', max(abs(Xhat_fxpl.Data(:))));
-fprintf('max of M*Xhat = %.2f\n', max(max(abs(ML_x0*Xhat_fxpl.Data'))));
-
-% Simulate current 
-figure(1000); clf
-Ipow = lsim(plants.G_uz2powI, U_full_fxpl.Data, U_full_fxpl.Time);
-hlin_Ipow = plot(U_full_fxpl.Time, Ipow, '--k');
-hlin_Ipow.DisplayName = 'Linear Current';
-hold on, grid on;
-
+if do_simlinfxp
+  sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
+    true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
+  % if 1
+  %   sims_fxpl.r = plants.hyst.r;
+  %   sims_fxpl.w = plants.hyst.w;
+  %   sims_fxpl.rp = plants.hyst.rp;
+  %   sims_fxpl.wp = plants.hyst.wp;
+  %   sims_fxpl.gdrift_inv = plants.gdrift_inv;
+  %   sims_fxpl.gdrift = plants.gdrift;
+  % end
+  sims_fxpl.r = plants.hyst_sat.r;
+  sims_fxpl.w = plants.hyst_sat.w;
+  sims_fxpl.rp = fi(plants.hyst_sat.rp, 1, 16, 11);
+  sims_fxpl.wp = fi(plants.hyst_sat.wp, 1, 16, 11);
+  sims_fxpl.d = plants.hyst_sat.d;
+  sims_fxpl.ws = plants.hyst_sat.ws;
+  sims_fxpl.dp = fi(plants.hyst_sat.dp, 1, 16, 11);
+  sims_fxpl.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
+  sims_fxpl.gdrift_inv = plants.gdrift_inv;
+  sims_fxpl.gdrift = plants.gdrift;
+  
+  
+  [y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref, dist_traj);
+  fxpl_Opts = stepExpDuOpts('pstyle', '-r', 'TOL', TOL, 'step_ref', step_ref,...
+    'controller', K_lqr, 'name',  'FXP lin Sim.');
+  sim_exp_fxpl = stepExpDu(y_fxpl, U_full_fxpl, dU_fxpl, fxpl_Opts);
+  Ts_vec_fxpl = sim_exp_fxpl.settle_time(TOL, tol_mode, 1);
+  fprintf('Total linear fxp settle-time = %.3f [ms]\n', sum(Ts_vec_fxpl)*1000);
+  
+  h2 = plot(sim_exp_fxpl, F_yudu, 'umode', 'both');
+  legend([h2(1)])
+  figure(F_y)
+  h22 = sim_exp_fxpl.ploty(F_y);
+  legend([h12, h22]);
+  
+  [~, F_state] = plotState(Xhat_fxpl, F_state, [], [], '--r');
+  fprintf('max of Xhat = %.2f\n', max(abs(Xhat_fxpl.Data(:))));
+  fprintf('max of M*Xhat = %.2f\n', max(max(abs(ML_x0*Xhat_fxpl.Data'))));
+  
+  % Simulate current
+  figure(1000); clf
+  Ipow = lsim(plants.G_uz2powI, U_full_fxpl.Data, U_full_fxpl.Time);
+  hlin_Ipow = plot(U_full_fxpl.Time, Ipow, '--k');
+  hlin_Ipow.DisplayName = 'Linear Current';
+  hold on, grid on;
+end
 % ----------------------------------------------------------------------- %
 % --------------------- MPC, fgm fixed-point ---------------------------- %
-nw_fgm = 32;
-nf_fgm = 28;
+if do_simmpcfxp
+  nw_fgm = 32;
+  nf_fgm = 28;
+  
+  fgm_fxp = FGMprob_fxp_1(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1, du_max,...
+    maxIter, nw_fgm, nf_fgm);
+  fgm_fxp.ML = fi(fgm_fp.ML, 1, 32, 26);
+  fgm_fxp.x_nw = 32;
+  fgm_fxp.x_nf = 27;
+  fprintf('Mx0 needs n_int = %d\n', ceil(log2(max(abs(fgm_fp.ML(:)))))+1);
+  fprintf('I_HL needs n_int = %d\n', ceil(log2(max(abs(fgm_fp.I_HL(:)))))+1);
+  
+  sims_fxpm = SimAFM(plants.PLANT, fgm_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
+    true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
+  
+  if do_simhyst
+    sims_fxpm.r = plants.hyst_sat.r;
+    sims_fxpm.w = plants.hyst_sat.w;
+    sims_fxpm.rp = fi(plants.hyst_sat.rp, 1, 16, 11);
+    sims_fxpm.wp = fi(plants.hyst_sat.wp, 1, 16, 11);
+    sims_fxpm.d = plants.hyst_sat.d;
+    sims_fxpm.ws = plants.hyst_sat.ws;
+    sims_fxpm.dp = fi(plants.hyst_sat.dp, 1, 16, 11);
+    sims_fxpm.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
+    sims_fxpm.gdrift_inv = plants.gdrift_inv;
+    sims_fxpm.gdrift = plants.gdrift;
+  end
+  
+  [y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref, dist_traj);
+  fxpm_Opts = stepExpDuOpts('pstyle', '--g', 'TOL', TOL, 'step_ref', step_ref,...
+    'controller', K_lqr, 'name',  'FXP MPC Simulation');
+  
+  sim_exp_fxpm = stepExpDu(y_fxpm, U_full_fxpm, dU_fxpm, fxpm_Opts);
+  h3 = plot(sim_exp_fxpm, F_yudu, 'umode', 'both');
+  legend([h1(1), h2(1), h3(1)]);
+  
+  h32 = sim_exp_fxpm.ploty(F_y);
+  legend([h12, h22, h32]);
+  
+  
+  Ts_vec_fxpm = sim_exp_fxpm.settle_time(TOL, tol_mode, 1);
+  fprintf('Total MPC FXP settle-time = %.3f [ms]\n', sum(Ts_vec_fxpm)*1000);
+  
+  figure(1000);
+  hold on
+  Ipow = lsim(plants.G_uz2powI, U_full_fxpm.Data, U_full_fxpm.Time);
+  hmpc_Ipow = plot(U_full_fxpl.Time, Ipow, '--g');
+  hmpc_Ipow.DisplayName = 'MPC Current';
+  
+  
+  [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp_fpl, sim_exp_fxpl, sim_exp_fxpm);
 
-fgm_fxp = FGMprob_fxp_1(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1, du_max,...
-           maxIter, nw_fgm, nf_fgm);
-fgm_fxp.ML = fi(fgm_fp.ML, 1, 32, 26);         
-fgm_fxp.x_nw = 32;
-fgm_fxp.x_nf = 27;
-fprintf('Mx0 needs n_int = %d\n', ceil(log2(max(abs(fgm_fp.ML(:)))))+1);
-fprintf('I_HL needs n_int = %d\n', ceil(log2(max(abs(fgm_fp.I_HL(:)))))+1);
-
-sims_fxpm = SimAFM(plants.PLANT, fgm_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
-                   true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
-% if 1
-%   sims_fxpm.r = plants.hyst.r;
-%   sims_fxpm.w = plants.hyst.w;
-%   sims_fxpm.rp = plants.hyst.rp;
-%   sims_fxpm.wp = plants.hyst.wp;
-%   sims_fxpm.gdrift_inv = plants.gdrift_inv;
-%   sims_fxpm.gdrift = plants.gdrift;
-% end
-sims_fxpm.r = plants.hyst_sat.r;
-sims_fxpm.w = plants.hyst_sat.w;
-sims_fxpm.rp = fi(plants.hyst_sat.rp, 1, 16, 11);
-sims_fxpm.wp = fi(plants.hyst_sat.wp, 1, 16, 11);
-sims_fxpm.d = plants.hyst_sat.d;
-sims_fxpm.ws = plants.hyst_sat.ws;
-sims_fxpm.dp = fi(plants.hyst_sat.dp, 1, 16, 11);
-sims_fxpm.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
-sims_fxpm.gdrift_inv = plants.gdrift_inv;
-sims_fxpm.gdrift = plants.gdrift;
-
-
-[y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref, dist_traj);
-fxpm_Opts = stepExpDuOpts('pstyle', '--g', 'TOL', TOL, 'step_ref', step_ref,...
-  'controller', K_lqr, 'name',  'FXP MPC Simulation');
-
-sim_exp_fxpm = stepExpDu(y_fxpm, U_full_fxpm, dU_fxpm, fxpm_Opts);
-h3 = plot(sim_exp_fxpm, F1, 'umode', 'both');
-legend([h1(1), h2(1), h3(1)]);
-
-h32 = sim_exp_fxpm.ploty(F11);
-legend([h12, h22, h32]);
-
-
-Ts_vec_fxpm = sim_exp_fxpm.settle_time(TOL, tol_mode, 1);
-fprintf('Total MPC FXP settle-time = %.3f [ms]\n', sum(Ts_vec_fxpm)*1000);
-
-figure(1000);
-hold on
-Ipow = lsim(plants.G_uz2powI, U_full_fxpm.Data, U_full_fxpm.Time);
-hmpc_Ipow = plot(U_full_fxpl.Time, Ipow, '--g');
-hmpc_Ipow.DisplayName = 'MPC Current';
-
-
-
-
-[ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp, sim_exp_fxpl, sim_exp_fxpm);
+end
 
 if saveon
   save(fullfile(save_root, 'many_steps_linfxp_sim.mat'), 'sim_exp_fxpl');
@@ -452,8 +503,9 @@ sims_fxpm.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 
 mpc_dat_path = 'Z:\mpc-journal\step-exps\MPCControls01.csv';
 traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
-sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
-
+if ispc
+  sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
+end
 
 return
 
