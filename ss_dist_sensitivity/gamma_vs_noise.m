@@ -45,7 +45,7 @@ rw = 2e-07;
 rng(1);
 thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*1, yref.Time);
 
-
+%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
 % Design control/estimator gains. This gains are what we actually         %
@@ -74,12 +74,12 @@ gam_mpc = .2;
 
 R1 = R0 + gam_mpc;
 % gams = linspace(0.0001, 200, 200);
-gams = logspace(log10(0.1), log10(100), 50);
+gams = logspace(log10(0.1), log10(4000), 50);
 % gams = .1;
 sixsigs = gams*0;
 kappas = gams*0;
 
-p_int = 0.8; cmplx_rad = 0.9; rho_s = [2, 1]; rad = 0.5;
+p_int = 0.8; cmplx_rad = 0.85; rho_s = [2, 1]; rad = 0.5;
 Px = getCharDes_const_sig(plants.sys_recyc, p_int, cmplx_rad, rho_s, rad);
 [Chat, Dhat] = place_zeros(plants.sys_recyc, Px);
 Q1 = Chat'*Chat;
@@ -103,13 +103,13 @@ kappas(k) = mpcProb.kappa;
 
 % ------------------------- Observer Gain ---------------------------------
 can_obs_params = CanonObsParams_01();
-can_obs_params.beta = 100;
+can_obs_params.beta = 150;
 [sys_obsDist, L_dist] = build_obs(plants.SYS, can_obs_params);
 
 
 [Sens, Hyd, Hyr, Hyeta] = ss_loops_delta_dist(plants.SYS, plants.sys_recyc, sys_obsDist, K_lqr, L_dist);
 
-Ry_est = cov(y_lin_fp_sim.Data);
+% Ry_est = cov(y_lin_fp_sim.Data);
 Pcl = dlyap(Hyeta.a, Hyeta.b*rw*Hyeta.b');
 Ry_calc = Hyeta.c*Pcl*Hyeta.c' + 0*rw;
 
@@ -132,12 +132,12 @@ sixsigpix_mu = sixsigs*512*5;
 figure(22); clf
 yyaxis left
 plot(gams, sixsigpix_mu)
-ylim([0, max(sixsigpix_mu)])
+ylim([0, min(max(sixsigpix_mu), 100)])
 plotshaded(gams, [sixsigpix_mu; gams*0+max(sixsigpix_mu)], 'b', .2);
 xlabel('$\gamma$')
 ylabel('range [$\mu$m] (512 pixels)')
 ax = gca();
-
+%%
 % ax.YTick = [0:2.5:20]
 grid on
 yyaxis right
