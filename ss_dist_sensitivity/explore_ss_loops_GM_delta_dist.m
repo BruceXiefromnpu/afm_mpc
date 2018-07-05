@@ -39,7 +39,8 @@ saveon = false;
 
 % ------- Load Plants -----
 
-[plants, frf_data] = CanonPlants.plants_drift_inv_hyst_sat(0);
+% [plants, frf_data] = CanonPlants.plants_drift_inv_hyst_sat();
+[plants, frf_data] = CanonPlants.plants_ns14();
 
 Ts  = plants.SYS.Ts;
 
@@ -80,45 +81,45 @@ thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 du_max_orig = StageParams.du_max;
 G_recyc = plants.sys_recyc;
 G = plants.SYS;
+if 0
+  can_cntrl = CanonCntrlParams_ns14(G);
+  % can_cntrl = can_cntrl.aggressive_params();
+  [Q1, R0, S1, P_x] = build_control(G_recyc, can_cntrl);
+  gam_lin = 3;
+  R1 = R0 + gam_lin;
+  [K_lqr, Pz] = dlqr(G_recyc.a, G_recyc.b, Q1, R1, S1);
+else
+  p_int = 0.8; cmplx_rad = 0.9; rho_s = [1., 1]; rad = 0.25;
+  Px = getCharDes_const_sig(G_recyc, p_int, cmplx_rad, rho_s, rad).';
+  % Px = getCharDes_const_sig(G, p_int, cmplx_rad, rho_s, rad).'
+  z = tzero(G_recyc);
+  z = sort_by_w(z(imag(z)~=0));
+  Px(2:5) = z(1:4);
+  Px(1) = [];
+  [Chat, Dhat] = place_zeros(G_recyc, Px);
+  Q1 = Chat'*Chat;
+  
+  S1 = Chat'*Dhat;
+  R0 = Dhat'*Dhat;
+  R1 = 50;
+  [K_lqr, Pz] = dlqr(G_recyc.a, G_recyc.b, Q1, R1, S1);
+end
 
-% can_cntrl = CanonCntrlParams_ns14(plants.SYS);
-% can_cntrl = CanonCntrlParams_01(G);
-% % can_cntrl = can_cntrl.aggressive_params();
-% [Q1, R0, S1, P_x] = build_control(G, can_cntrl);
-% %
-% gam_lin = .1;
-% R1 = R0 + gam_lin;
-p_int = 0.95; cmplx_rad = 0.85; rho_s = [1.5, 1]; rad = 0.5;
-Px = getCharDes_const_sig(G_recyc, p_int, cmplx_rad, rho_s, rad).'
-% Px = getCharDes_const_sig(G, p_int, cmplx_rad, rho_s, rad).'
-z = tzero(G_recyc);
-z = sort_by_w(z(imag(z)~=0))
-Px(end-1:end) = z(end-1:end);
-Px(1) = []
-[Chat, Dhat] = place_zeros(G_recyc, Px)
-% [Chat, Dhat] = place_zeros(G, Px)
-% Qw = Chat'*Chat;
-Q1 = Chat'*Chat;
-% Q1 = G_recyc.c'*G_recyc.c;
-S1 = Chat'*Dhat;
-R0 = Dhat'*Dhat;
-gam_lin = 2000;
-R1 = 1;
-% R1 = R0+gam_lin;
-
-[K_lqr, Pz] = dlqr(G_recyc.a, G_recyc.b, Q1, R1);
-
+pzplotCL(G_recyc, K_lqr)
 Qp = dare(G_recyc.a, G_recyc.b, Q1, R1);
 
 % Estimator
-Qw = G.b*G.b';
-% Rw = 1*beta;
-Lx = G.a*dlqr(G.a', G.c', Qw, 0.001)';
-[Sens, Hyd, Hyr, Hyeta, Loop] = ss_loops_delta(plants.SYS, G_recyc, K_lqr, Lx);
+Qw = G.b*G.b'*50;
+Lx = G.a*dlqr(G.a', G.c', Qw, 1)';
+p_int_d = 0.7;
+[LxLd, G_obsDist, Ident_obs, C_ydist] = DistEst.output_dist_est(plants.SYS, Lx, p_int_d);
+[Sens, Hyd, Hyr, Hyeta, Loop] = ss_loops_delta_dist(plants.SYS, G_recyc, G_obsDist, K_lqr, LxLd);
 
-figure(1)
-step(Hyr)
-%
+
+figure(15)
+t = (0:400)'*Ts;
+step(Hyr, Hyd, t)
+
 
 g_direct = ss(G_recyc.a, G_recyc.b, K_lqr, 0, Ts);
 figure(1)
@@ -157,7 +158,13 @@ nyquist(Loop, '--b')
 
 [gm, pm] = margin(Loop);
 fprintf(['Margins with observer:\nGM:%f [dB]\nPM: %f [deg]\n'], 20*log10(gm), pm);
-
+fprintf('Closed loop BW: %f [Hz]\n', bandwidth(minreal(Hyr))/2/pi);
+F1 = figure(10); clf
+[~, ~, omegas] = bode(G);
+frfBode(G, omegas/2/pi, F1, '-b', 'Hz');
+frfBode(Loop, omegas/2/pi, F1, '-g', 'Hz');
+frfBode(Hyr, omegas/2/pi, F1, '-r', 'Hz');
+frfBode(Sens, omegas/2/pi, F1, '--k', 'Hz');
 
 
 %%

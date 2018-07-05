@@ -88,13 +88,13 @@ G = plants.SYS;
 % %
 % gam_lin = .1;
 % R1 = R0 + gam_lin;
-p_int = 0.95; cmplx_rad = 0.85; rho_s = [1.5, 1]; rad = 0.5;
-Px = getCharDes_const_sig(G_recyc, p_int, cmplx_rad, rho_s, rad).'
+p_int = 0.65; cmplx_rad = 0.85; rho_s = [1.5, 1]; rad = 0.5;
+Px = getCharDes_const_sig(G_recyc, p_int, cmplx_rad, rho_s, rad).';
 % Px = getCharDes_const_sig(G, p_int, cmplx_rad, rho_s, rad).'
 z = tzero(G_recyc);
 z = sort_by_w(z(imag(z)~=0))
 Px(end-1:end) = z(end-1:end);
-Px(1) = []
+% Px(1) = []
 [Chat, Dhat] = place_zeros(G_recyc, Px)
 % [Chat, Dhat] = place_zeros(G, Px)
 % Qw = Chat'*Chat;
@@ -158,7 +158,9 @@ nyquist(Loop, '--b')
 [gm, pm] = margin(Loop);
 fprintf(['Margins with observer:\nGM:%f [dB]\nPM: %f [deg]\n'], 20*log10(gm), pm);
 
-
+figure(10)
+bode(Loop)
+hold on
 
 %%
 figure(2)
