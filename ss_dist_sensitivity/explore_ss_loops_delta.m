@@ -46,6 +46,7 @@ H_yr = (sys*D2/( 1 + loop));
 D3 = ss(AA_, LL_+BB_, K_c, -Nbar, Ts);
 H_err = (1 + sys*D3)/(1 + loop);
 
+%[Sens, H_yd, H_yr, ~, loop] = ss_loops_delta(sys, sys_recyc, K_lqr, L);
 
 
 PLANT = sys;

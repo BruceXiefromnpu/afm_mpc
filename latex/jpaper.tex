@@ -79,6 +79,12 @@ BOILER PLATE ABOUT MINIMUM TIME STUFF
 Reference \cite{broeck_time_2009} uses a quadratic cost with a terminal constraint combined with an exhaustive search over the control horizon length to formulate a Time Optimal MPC problem. However, the implementation only runs at 100~Hz, which is about 250 times too slow for our application. 
 \newline
 
+
+
+One of the typically cited reasons for using MPC is that (state or input) constraints can be handled explicitly as part of the optimization. On the other hand, for a linear MPC problem with a quadratic cost with the terminal cost $Q_p$ set equal to the discrete algebraic Ricatti equation solution, the resulting control is equivalent to linear feedback control when the solution to REF is within the constraint set. For problems with input constraints only, acceptable closed-loop trajectories can often be obtained with pure linear feedback by relaxing the performance criteria, e.g., by increasing $\gamma$. Because MPC is both more difficult to implement and more resource intensive than linear feedback, an important question to answer is \emph{how much performance is gained with?}. While many papers have begun to appear which demonstrate MPC on mechatronc systems, few consider this aspect.
+
+
+
 One of the primary constraints in setpoint is tracking is the power amplifiers current which roughly translates to a slew rate limitation on the control signal. In earlier work, we considered the use of model predictive control to directly address the rate of change limitation and showed that the range of stabilizable setpoints was increased as compared to a simple saturated linear feedback \cite{braker_application_2017}. The question which naturally arises from that study, and which is one of the main topics of this paper, is "how much \emph{time} is actually saved with MPC?" In essence, the stabilizable set of setpoints using saturated linear feedback can be expanded by relaxing the performance criteria. While we might expect this to result in a slower settling time, the question we seek to answer is \emph{how much slower}? In other words, given a range of setpoints we wish to be able to visit, to what extent does MPC reduce the settling time and is this reduction significant enough to warrant the additional complexity?
 
 The second limitation of \cite{braker_application_2017} is that we did not consider the affects of drift and hysteresis and only considered tracking a single setpoint with the stage starting at rest. When tracking a sequence of setpoints, the affects of hysteresis become much more prominent. Thus, in this paper, we employ inverse drift and hysteresis compensation. Those inversions have the potential to violate the slew-rate limit our MPC controller has worked so hard to respect. To counteract this, in Section REF, we derive bounds on the rate of change of the output of the inverse compensators such that the slew rate limit can be guaranteed.
@@ -330,7 +336,7 @@ TKTKTKTKT FINISH THIS
 
 \section{Control Setup}
 \subsection{The Incremental Form}\label{sec:incremental}
-The constraint \eqref{eqn:du_limit} can be remodeled as a pure saturating constraint if we work with an incremental form of \(G_{X,u_x}\) which has as its input \({\Delta u(k)\coloneqq u(k)-u(k-1)}\), rather than \(u\). This is attractive because it not only allows us to directly penalize the rate of change in the optimal control problem but also renders the constraint a box constraint on $\Delta u$, enabling the use of the computationally attractive Fast Gradient Method. Putting a hard limit on $\Delta u$ in the linear feedback case is also somewhat simplified.
+The constraint \eqref{eqn:du_limit} can be remodeled as a pure saturating constraint if we work with an incremental form of \(G_{X,u_x}\) which has as its input \({\Delta u(k)\coloneqq u(k)-u(k-1)}\), rather than \(u\). This is attractive because it not only allows us to directly penalize the rate of change in the optimal control problem but also renders the constraint a box constraint on $\Delta u$, enabling the use of the computationally attractive Fast Gradient Method. Putting a hard limit on $\Delta u$ in the linear feedback case is also simplified.
 
 To this end, we augment \(G_{vib}\) with a state \(\x_{\text{u}}(k)\) such that
 \begin{equation*}
@@ -339,19 +345,20 @@ To this end, we augment \(G_{vib}\) with a state \(\x_{\text{u}}(k)\) such that
 It follows that
 \begin{subequations}
 \begin{align}
-  \xd(k+1)
+  \begin{bmatrix}\x(k+1)\\\x_u(k+1)\end{bmatrix}
   &=
     \begin{bmatrix}
-      A & B\\ 0 & I
+      A & B\\ 0 & 1
     \end{bmatrix}
-    \xd(k)
+    \begin{bmatrix}\x(k)\\\x_u(k)\end{bmatrix}
     +
     \begin{bmatrix}
-      B\\I
+      B\\1
     \end{bmatrix}
-  \Delta u(k) \\
-  \y(k) & = \begin{bmatrix}C & 0\end{bmatrix}\xd(k)\\
-  \xd(k)& \coloneqq \begin{bmatrix}\x(k)\\\x_u(k) \end{bmatrix}\\
+  \Delta u(k) \label{eqn:deltadyn} \\
+  \y(k) & = \begin{bmatrix}C & 0\end{bmatrix}\begin{bmatrix}\x(k)\\\x_u(k)\end{bmatrix}\\
+    \xd(k)& \coloneqq
+    \begin{bmatrix}\x(k)\\\x_u(k) \end{bmatrix}\\
   \xd(0) & = \begin{bmatrix}\x(0)\\u(-1)\end{bmatrix}. \label{eqn:x0_aug}
 \end{align}\label{eqn:ssdelta}%
 \end{subequations}
@@ -369,10 +376,82 @@ The error state, \({\xde(k)=\xd(k) - \xdss}\) has dynamics
   \xde(k+1) & = \Ad\xd(k) + \Bd\dd u(k) - \xdss \nonumber\\
             & = \Ad \xde(k)   + \Bd \dd u(k)\nonumber
 \end{align}
-because $\xdss$ is in the nullspace of $(I - \Ad)$.
+              because $\xdss$ is in the nullspace of $(I - \Ad)$.
+              
+\subsection{Observer Design}\label{sec:dist_est}
+To achieve zero-offset tracking (to constant disturbances), we employ the disturbance estimator outlined in \cite{maeder_offset-free_2007}. The disturbance dynamics are modeled as a pure integrating output disturbance. The estimator dynamics are given by
+\begin{align}
+  \begin{bmatrix} \hat{\x}(k+1)\\ \hat{\x}_d(k+1) \end{bmatrix}
+  &= A_m
+  \begin{bmatrix} \hat{\x}(k)\\ \hat{\x}_d(k)\end{bmatrix}
+    + B_m u(k) + L_m(y(k) - \hat y(k)) \label{eqn:obsdyn}\\
+  \hat y(k) &= C_m\begin{bmatrix} \hat{\x}(k)\\
+    \hat{\x}_d(k) \end{bmatrix}
+\end{align}
+              where
+              
+\begin{equation}
+  A_m = \begin{bmatrix}
+    A & B_d \\ 0 & I
+  \end{bmatrix}\quad
+  B_m =
+  \begin{bmatrix}
+    B \\ 0
+  \end{bmatrix}
+  C_m = 
+    \begin{bmatrix}
+    C \\ C_d
+  \end{bmatrix}
+  L_m = \begin{bmatrix} L_x\\L_d \end{bmatrix}
+\end{equation}
+It is shown in \cite{maeder_offset-free_2007} that the gains $L_x$ and $L_d$ may be designed separately and then transformed such that the closed loop poles $A_m - L_mC_m$ are the same as those of $A-L_xC\cup A_d-L_dC_d$.
+To design $L$, we use the method outlined in \cite{doyle_robustness_1979}, which sets $L$ is the steady state solution of the discrete LQR problem applied to the dual of $G$, where $Q = Q_w + BB^T$ and $R$ is a turning parameter. We design $L_m$ such that the disturbance pole is placed at $z=0.8$.
 
-% \section{The Optimal Control formulations}
-We want to look at a few different ways of driving the stage from point to point as rapidly as possible, yet still be practical. Inspired by our past work, we focus on the experimental comparison of two methods:
+To achieve zero offset tracking, disturbance estimators re-compute the steady-state target at each time-step. For an output disturbance ($B_d=0$ model with $C_d=I$, this simply means that the reference is adjusted by subtracting $\hat d_k$. In other words, at each time step, we need to compute
+\begin{equation}
+  x_{e} = \hat{x}(k) - N_x(r_k - \hat{d}_k).
+\end{equation}
+This is slightly simpler than the case for an input disturbance model ($C_d=0$), which involves an additional vector-scalar multiplication and an additional vector-vector addition (see (21) in \cite{maeder_offset-free_2007}). It is shown in \cite{maeder_offset-free_2007} that output disturbance and input disturbance models are equivalent provided 1 is not an eigenvalue of $A$, which is the case here, because we do not estimate the state $x_u$. Thus, due to the computational savings, we use the output disturbance formulation. 
+\subsection{Closed Loop Equations}
+Given a nominal feedback gain $K=[K_x\:K_u]$ and feedforward gain $\bar N$, we now derive the closed loop equations. 
+Let $\tilde\x \triangleq [\hat \x^T\; \x_u^T\: \hat \x_d^T]^T$. 
+
+Combining \eqref{eqn:deltadyn} and \eqref{eqn:obsdyn}, we have
+\begin{align}
+\tilde{\x}(k+1) = \tilde{A}\tilde{\x}(k) + \tilde{L}y(k) + \tilde{B}\bar{N}r(k)\label{eqn:cntrldyn}\\
+u(k) = -\tilde{K}\tilde{\x}(k) + \bar{N} r(k) \label{eqn:ukx}
+\end{align}
+where
+\begin{align}
+  \tilde{A} &= \begin{bmatrix}
+    A-BK_x-L_xC & B(1-K_u) & -B\bar{N} - L_xC_d\\
+    -Kx        & 1-K_u    & -\bar{N} \\
+    -LdC      & 0        & 1-L_dC_d
+  \end{bmatrix}\\
+  \tilde{L} &= \begin{bmatrix} L_x^T & 0 & L_d^T  \end{bmatrix}^T\\
+  \tilde{B} &= \begin{bmatrix} B^T\bar{N} & \bar{N} &0\end{bmatrix}^T\\
+  \tilde{K} &= \begin{bmatrix}K_x & K_u-1 & \bar{N}\end{bmatrix} \nonumber\\
+\end{align}
+Taking the $z$ transform of \eqref{eqn:cntrldyn}, \eqref{eqn:ukx}, and the plant dynamics, the closed loop transfer function is given by
+\begin{align}
+  y(z) &= \frac{G(z)\bar{N}(1-D_2(z))}{1 + G(z)D_1(z)} r(z) + \frac{G{z}}{1 + G(z)D_1(z)}d(z)\label{eqn:cltf}\\
+  D_1(z) &= \tilde{K}(zI -\tilde{A})^{-1}\tilde{L}\\
+  D_2(z) &= \tilde{K}(zI -\tilde{A})^{-1}\tilde{B}.
+\end{align}
+Thus, the loop gain is given by $L(z) = G(z)D_1(z)$ and we define the sensitivity function $S(z)\triangleq (1_L(z))^{-1}$. The closed loop poles are the transmission zeros of $1+L(z)$ and which are the union of the controller poles and observer poles, which can be seen through the separation principle or manipulation of the matrix pencils describing the transmission zeros. Moreover, the observer poles are canceled by the transmission zeros of $(1-D2(z))$. It should be emphasized that these properties only hold when the observer is a perfect model of the plant.
+
+The advantage the representing the closed-loop dynamics as \eqref{eqn:cltf} is that it exposes cleanly how to analyze the robustness of our designs. Due to hysteresis, the gain margin is of particular importance. 
+
+
+\begin{figure}
+  \includesvg[width=1\linewidth]{figures/obs_cl.svg}
+  \caption{(black) Open loop plant pole (x) and zero(circle) locations. (red x) Closed loop observer pole locations.}
+  \label{fig:obs_cl}
+\end{figure}
+
+
+\section{Control Designs}
+We consider two methods, Model Predictive Control(MPC) and Saturated Linear Feedback (SLF).
 \begin{itemize}
 \item\emph{Saturated Linear state feedback (SLF)} The basic idea here to use standard linear state feedback which is saturated (on $\Delta u$) but to de-rate the design such that the closed-loop system is demonstrably stable up to a certain reference size. 
 \item\emph{Constrained Model Predictive Control (MPC)} The goal with MPC is that, instead of fully de-rating the design to account for the slew rate constraint, to directly account for the constraint as part of the control law itself. Do to limitations on the implementation, MPC must still be de-rated to some extent to be implementable, since the length of control horizon needed to achieve stabilty over the full range of the stage becomes large for an aggressive design.
@@ -380,7 +459,7 @@ We want to look at a few different ways of driving the stage from point to point
 
 The state feedback controllers, MPC and linear state feedback, can both be described by the optimization
 \begin{align}
-V(v) &= \min_{v} z_{N}Q_{p}z_{N} + \sum_{i=0}^{N-1}z_{i}^{T}Qz_{i} + z^T_iSu_i + v^{T}_{i}Rv_{i} \label{eqn:optcost}\\
+V(v) &= \min_{v} z_{N}Pz_{N} + \sum_{i=0}^{N-1}z_{i}^{T}Qz_{i} + z^T_iSu_i + v^{T}_{i}Rv_{i} \label{eqn:optcost}\\
  \text{s.t.} & \nonumber\\
 z_{i+1} &= Az_{i} + Bv_{i}\\
 z_{0} &= x_{k}\\
@@ -392,9 +471,14 @@ where $Q$ and $R$ are symmetric matrices and the matrices $Q,R,S$ satisfy
     Q & S\\S^T &R
   \end{bmatrix} > 0
 \end{equation}
-Here, $Q_p$ is the solution of the discrete algebraic Ricattii equation. The solution of \eqref{eqn:optcost} results in a sequence of length $N$ of optimal controls, $\{v_i\}_{i=0}^{N-1}$. In the case of MPC, one sets $\Delta u(k) = v_0$ and discards the remaining elements. The process is repeated at the next time step. Note that in the case of MPC, the saturator in Fig. \ref{fig:ss_bd} is superfluous because the optimal control is guarnteed to satisfy the constraints.
+Here, $P$ is the solution of the discrete algebraic Ricattii equation. The solution of \eqref{eqn:optcost} results in a sequence of length $N$ of optimal controls, $\{v_i\}_{i=0}^{N-1}$. In the case of MPC, one sets $\Delta u(k) = v_0$ and discards the remaining elements. The process is repeated at the next time step. Note that in the case of MPC, the saturator in Fig. \ref{fig:ss_bd} is superfluous because the optimal control is guarnteed to satisfy the constraints.
 
 In the case of linear feedback, $N=1$ and we eliminate the constraint on the control \eqref{eqn:cntrl_constraint} and thus the optimal control is simply $Kx_k$, where $K$ is LQR feedback gain associated with $Q, R,S$. Here, 
+
+The motivation for MPC here is that we hope that by directly accounting for the constraints, additional performance can be obtained. There are two perspectives one might take here. First, by directly accounting for the constraints, we should be able to use a more aggressive control (smaller $\gamma$) while maintaining stability compared to SLF.
+We will show that in simulation, this idea does indeed lead to a significantly decreased settling time. However, the desire to decrease $\gamma$ must be tempered its affect on both robustness and disturbance rejection, because these things are metric for how the control will perform in practice. Unfortunately, we will see that decreasing $\gamma$ tends to degrade both properties. 
+
+Alternatively, one could use the same $\gamma$ for both the MPC design and SLF design (which implies, roughly,  the same set of disturbance rejection and robustness properties) and hope that the direct handling of constraints significantly improves performance. This is the perspective taken, e.g., in \cite{Wills_CDC_2005}. While this will indeed be the case for certain sizes of setpoints, we will see that the difference between MPC and SLF is marginal of that the majority of the movement range.
 
 \subsection{Control Weight Selection}
 To design the weighting matrices $Q$, $R$ and $S$, we design fictitious output matrices $\hat C$ and $\hat D$ such that zeros of $\{A, B, \hat C, \hat D\}$ are at the desired pole locations. Then, the fictitious output is $\hat y = \hat C x + \hat D u$. If we write the cost function of REF as
@@ -423,35 +507,10 @@ Thus, we choose $\hat D = 1$ and find $\hat C$ via standard pole placement techn
 Certainly, in the case of the LQR state feedback controller, one could simply use a pole-placement design to start with. However, the method here has two advantages: (1) it permits a straightforward comparison to the MPC design (which requires weighting matrices, not simple pole locations) and (2) the design becomes paramtrized by the single parameter $\gamma$ which makes de-rating the design easy. In contrast, with standard pole-placement it is not clear how to ``back-off'' the design if the slew rate constraint is violated to the extent that instability results. 
 
 
-\subsection{Observer Design}\label{sec:dist_est}
-To achieve zero-offset tracking (to constant disturbances), we employ the disturbance estimator outlined in \cite{maeder_offset-free_2007}. The disturbance dynamics are modeled as a pure integrator and the system matrices are augmented as
-\begin{equation}
-  A_m = \begin{bmatrix}
-    A & B_d \\ 0 & I
-  \end{bmatrix}\quad
-  B_m =
-  \begin{bmatrix}
-    B \\ 0
-  \end{bmatrix}
-  C_m = 
-    \begin{bmatrix}
-    C \\ C_d
-  \end{bmatrix}
-\end{equation}
-The observer gain is given by $\begin{bmatrix}L & L_d\end{bmatrix}$. It is shown in \cite{maeder_offset-free_2007} that the gains $L$ and $L_d$ may be designed separately and then transformed such that the closed loop poles $A_m - L_mC_m$ are the same as those of $A-LC\cup A_d-L_dC_d$.
+In discussing stability, we recall that, in contrast to the continuous time case, the full-state feedback LQR controller does not have infinite gain margin. For both continuous time and discrete time, the robustness properties can be arbitrarily bad when an LQG observer is used. In the continuous time case, the full state feedback robustness may be recovered asymptotically using, e.g., the loop transfer recover (LTR) of \cite{doyle_guaranteed_1978}. In general, this result does not translate to discrete. Most efforts at obtaining LTR like results for discrete time assume that (1) a current estimator is used and (2) $CB\neq 0$. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. For our system model model, $CB=0$, because the relative degree is TK. 
 
-To design $L$, we use the method outlined in \cite{doyle_robustness_1979}, which sets $L$ is the steady state solution of the discrete LQR problem applied to the dual of $G$, where $Q = Q_w + BB^T$ and $R$ is a turning parameter. We design $L_m$ such that the disturbance pole is placed at $z=0.8$.
 
-To achieve zero offset tracking, disturbance estimators re-compute the steady-state target at each time-step. For an output disturbance ($B_d=0$ model with $C_d=I$, this simply means that the reference is adjusted by subtracting $\hat d_k$. In other words, at each time step, we need to compute
-\begin{equation}
-  x_{e} = \hat{x}(k) - N_x(r_k - \hat{d}_k).
-\end{equation}
-This is slightly simpler than the case for an input disturbance model ($C_d=0$), which involves an additional vector-scalar multiplication and an additional vector-vector addition (see (21) in \cite{maeder_offset-free_2007}). It is shown in \cite{maeder_offset-free_2007} that output disturbance and input disturbance models are equivalent provided 1 is not an eigenvalue of $A$, which is the case here, because we do not estimate the state $x_u$. Thus, due to the computational savings, we use the output disturbance formulation. 
-\begin{figure}
-  \includesvg[width=1\linewidth]{figures/obs_cl.svg}
-  \caption{(black) Open loop plant pole (x) and zero(circle) locations. (red x) Closed loop observer pole locations.}
-  \label{fig:obs_cl}
-\end{figure}
+
 
 \section{Quantifying the time savings (if any) of MPC and de-rated linear feedback}
 \label{sec:org7edf36d}

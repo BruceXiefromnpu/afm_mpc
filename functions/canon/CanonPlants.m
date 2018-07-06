@@ -7,7 +7,8 @@ classdef CanonPlants
   
   
   methods (Static)
-    function [plants, frf_data] = plants_ns14()
+    function [plants, frf_data] = plants_ns14(nd)
+      
 %       load(fullfile(PATHS.sysid, ['hysteresis/steps_hyst_model.mat']));
 %       hyst.rp = rp;
 %       hyst.wp = wp;
@@ -20,7 +21,11 @@ classdef CanonPlants
       plants = modelFit.models;
       
       SYS = ss(modelFit.models.Gvib);
-      SYS.InputDelay = 9;
+      if exist('nd', 'var')
+        SYS.InputDelay = nd;
+      else
+        SYS.InputDelay = 9;
+      end
       plants.gdrift = modelFit.models.gdrift;
       plants.gdrift_inv = 1/plants.gdrift;
       
@@ -134,7 +139,7 @@ classdef CanonPlants
       plants.Nd = Nd;
       
     end
-function [plants, frf_data] = plants_drift_inv_hyst_sat()
+function [plants, frf_data] = plants_drift_inv_hyst_sat(Nd)
     % plants = plants_with_drift_inv(with_hyst)
     % Builds the standard versions of the plants. plants is a
     % structure with the following fields
@@ -173,8 +178,10 @@ function [plants, frf_data] = plants_drift_inv_hyst_sat()
       T = diag(1./Nx)/10;
       SYS = ss2ss(SYS, T);
       PLANT = SYS;
-      
-      Nd = 9;
+      if ~exist('Nd', 'var')
+        Nd = 9;
+      end
+  
       SYS.iodelay = 0;
       SYS.InputDelay = Nd;
       

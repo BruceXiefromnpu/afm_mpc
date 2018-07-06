@@ -37,14 +37,15 @@ save_root = fullfile(step_exp_root, experiment_directory);
 TOL = .01;
 tol_mode = 'abs';
 % which simulations to run
-do_simlinfp = true;
-do_simlinfxp = false;
-do_simmpcfp = true;
-do_simmpcfxp = false;
-do_simhyst = true;
-do_invhyst = false;
-do_drift = false;
-do_invdrift = false;
+do_siml_infp = true;
+do_sim_mpcfp = true;
+do_sim_linfxp = false;
+
+do_sim_mpcfxp = false;
+do_sim_hyst = true;
+do_inv_hyst = true;
+do_drift = true;
+do_invdrift = true;
 
 plotstate = false;
 plotpoles = false;
@@ -67,8 +68,9 @@ if md == 2
   plants.gdrift = zpk([], [], 1, Ts);
   plants.gdrift_inv = zpk([], [], 1, Ts);
 end
-plants.gdrift = plants.gdrift_1p0;
 plants.gdrift_inv = 1/plants.gdrift_1p0;
+plants.gdrift = plants.gdrift_1p0*1.;
+
 % plants.gdrift = plants.gdrift/dcgain(plants.gdrift)
 % plants.gdrift_inv = plants.gdrift_inv/dcgain(plants.gdrift_inv)
 %  plants.gdrift_inv = zpk([], [], 1, Ts);
@@ -101,8 +103,6 @@ trajstyle =2;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
   yref = step_ref.yref;
-  dist_traj = yref;
-  dist_traj.Data = dist_traj.Data*0 + 0;
   yref.Data = yref.Data*1;
 elseif trajstyle == 2
   step_ref = StepRef([r1, r2], N);
@@ -116,6 +116,9 @@ elseif trajstyle == 4
   load(fullfile(step_root, 'many_steps_data_rand_ymax7.mat'), 'step_ref');
   yref = step_ref.yref;
 end
+
+dist_traj = yref;
+dist_traj.Data = dist_traj.Data*0 + 0;
 
 rw = 2e-07;
 rng(1);
@@ -155,27 +158,32 @@ else
 end
 % du_max = 1000;
 
-can_cntrl = CanonCntrlParams_ns14(plants.SYS);
-can_cntrl = can_cntrl.aggressive_params();
-[Q1, R0, S1, P_x] = build_control(plants.sys_recyc, can_cntrl);
-%%
-gam_lin = 30;
-gam_mpc = 3;
-R1 = R0 + gam_mpc;
-% p_int = 0.8; cmplx_rad = 0.85; rho_s = [2, 1]; rad = 0.5;
-% Px = getCharDes_const_sig(plants.sys_recyc, p_int, cmplx_rad, rho_s, rad);
-% [Chat, Dhat] = place_zeros(plants.sys_recyc, Px);
-% Q1 = Chat'*Chat;
-% S1 = Chat'*Dhat;
-% R0 = Dhat'*Dhat;
-% 
-% gam_lin = 4000;
-% gam_mpc = 4000;
-% R1 = R0 + gam_mpc;
+% % % can_cntrl = CanonCntrlParams_ns14(plants.SYS);
+% % % % can_cntrl = can_cntrl.aggressive_params();
+% % % [Q1, R0, S1, P_x] = build_control(plants.sys_recyc, can_cntrl);
+% % % %
+% % % gam_lin = 1;
+% % % gam_mpc = 3;
+% % % % R1 = R0 + gam_mpc;
+% % % % K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
+% % % K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1)*1;
+% % % R1 = R0 + gam_mpc;
 
 
-K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
-K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
+p_int = 0.8; cmplx_rad = 0.85; rho_s = [2, 1]; rad = 0.5;
+Px = getCharDes_const_sig(plants.sys_recyc, p_int, cmplx_rad, rho_s, rad);
+[Chat, Dhat] = place_zeros(plants.sys_recyc, Px);
+Q2 = Chat'*Chat; Q1 = Q2;
+S2 = Chat'*Dhat; S1 = S2;
+R2 = Dhat'*Dhat; 
+
+gam_lin = 4000;
+gam_mpc = 400;
+R1 = R 0 + gam_mpc;
+K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q2, R2+gam_lin, S2);
+K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q2, R0+gam_mpc, S2)*1;
+
+
 
 % % can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 % % % linear control
@@ -191,7 +199,6 @@ K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
 % % [Q1, R1, S1] = build_control(plants.sys_recyc, can_cntrl, pint_mpc);
 % % K_lqr2 = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+eps_gam, S1);
 
-R1 = R0 + gam_mpc;
 
 
 if plotpoles
@@ -208,7 +215,7 @@ if plotpoles
   sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
 end
 
-N_mpc = 12;
+N_mpc = 40;
 
 Qp = dare(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R1, S1);
 nu = 1;
@@ -244,8 +251,38 @@ can_obs_params.beta = 100;
 [Sens_mpc, Hyd_mpc, Hyr_mpc, Hyeta_mpc, Loop_mpc] = ss_loops_delta_dist(plants.SYS,...
   plants.sys_recyc, sys_obsDist, K_mpc, L_dist);
 
-F_clbode = figure(25); hold on, grid on
-bode(Sens, Sens_mpc)
+F_clbode = figure(25);clf; hold on, grid on
+Hbode_sens = bodeplot(Sens, Sens_mpc);
+setoptions(Hbode_sens, 'FreqUnits', 'Hz')
+legend('S: linear', 'S: mpc')
+
+
+%
+[Gm_lin, Pm_lin] = margin(Loop);
+[Gm_mpc, Pm_mpc] = margin(Loop_mpc);
+fprintf('-------- MARGINS ------------------\n')
+fprintf('Linear: GM = %.2f [], PM = %.2f [deg]\n', Gm_lin, Pm_lin)
+fprintf('MPC: GM = %.2f [], PM = %.2f [deg]\n', Gm_mpc, Pm_mpc)
+figure(101)
+rlocus(Loop);
+title('Klin')
+
+figure(102);
+rlocus(Loop_mpc);
+title('Kmpc')
+
+figure(103)
+nyquist(Loop_mpc)
+title('Kmpc')
+xlim([-2, .1])
+ylim([-1, 1])
+
+figure(104)
+nyquist(Loop)
+title('Klin')
+xlim([-2, 0.1])
+ylim([-1, 1])
+
 
 if plotpoles
   
@@ -279,17 +316,17 @@ end
 
 
 % ------------------------ Linear floating point simulation ---------------
-if do_simlinfp
+if do_siml_infp
   sims_fpl = SimAFM(plants.PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false, 'thenoise', thenoise);
   
-  if do_simhyst
+  if do_sim_hyst
     sims_fpl.r = plants.hyst_sat.r;
     sims_fpl.w = plants.hyst_sat.w;
     sims_fpl.d = plants.hyst_sat.d;
     sims_fpl.ws = plants.hyst_sat.ws;
   end
   if do_drift;     sims_fpl.gdrift = plants.gdrift; end
-  if do_invhyst
+  if do_inv_hyst
     sims_fpl.rp = plants.hyst_sat.rp;
     sims_fpl.wp = plants.hyst_sat.wp;
     sims_fpl.dp = plants.hyst_sat.dp;
@@ -326,9 +363,9 @@ if do_simlinfp
 end
 
 
-if do_simmpcfp
+if do_sim_mpcfp
   sims_fpm = SimAFM(plants.PLANT, mpcProb, Nx, sys_obsDist, L_dist, du_max, false, 'thenoise', thenoise);
-  if do_simhyst
+  if do_sim_hyst
     sims_fpm.r = plants.hyst_sat.r;
     sims_fpm.w = plants.hyst_sat.w;
     sims_fpm.d = plants.hyst_sat.d;
@@ -336,7 +373,7 @@ if do_simmpcfp
   end
   if do_drift; sims_fpm.gdrift = plants.gdrift; end
   
-  if do_invhyst
+  if do_inv_hyst
     sims_fpm.rp = plants.hyst_sat.rp;
     sims_fpm.wp = plants.hyst_sat.wp;
     sims_fpm.dp = plants.hyst_sat.dp;
@@ -388,7 +425,7 @@ sys_obs_fxp.b = fi(sys_obsDist.b, 1, nw, 29);
 sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
 
 % --------------------  Fixed Linear stuff -----------------------------
-if do_simlinfxp
+if do_sim_linfxp
   sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
     true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
   % if 1
@@ -437,7 +474,7 @@ if do_simlinfxp
 end
 % ----------------------------------------------------------------------- %
 % --------------------- MPC, fgm fixed-point ---------------------------- %
-if do_simmpcfxp
+if do_sim_mpcfxp
   nw_fgm = 32;
   nf_fgm = 28;
   
@@ -452,7 +489,7 @@ if do_simmpcfxp
   sims_fxpm = SimAFM(plants.PLANT, fgm_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
     true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
   
-  if do_simhyst
+  if do_sim_hyst
     sims_fxpm.r = plants.hyst_sat.r;
     sims_fxpm.w = plants.hyst_sat.w;
     sims_fxpm.rp = fi(plants.hyst_sat.rp, 1, 16, 11);
