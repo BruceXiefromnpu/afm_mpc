@@ -149,10 +149,11 @@ else
   c = theta_gd(nsd+1:end)';
   b = c'*0+1;
   D = 0;
-end  
+end 
+%%
 gd_fit = ss(a, b, c, D, Gvib.Ts);
 
-[rp, wp] = PIHyst.invert_hyst_PI(r, w);
+[rp, wp] = PIHyst.invert_hyst_PI(r, w_hyst);
 [dp, wsp] = PIHyst.invert_sat(d, w_sat);
 
 
