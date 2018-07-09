@@ -117,18 +117,22 @@ classdef TestHystDriftParallel < matlab.unittest.TestCase
      d = self.d;
      ws = self.ws;
      gdrift = self.gdrift;
+     [num, den] = tfdata(gdrift, 'v');
+     rp = fi(rp, 1, 16, 11);
+     wp = fi(wp, 1, 16, 11);
+     dp = fi(dp, 1, 16, 11);
+     wsp = fi(wsp, 1, 16, 11);
      
-        
      trun = t(end);
      options = simset('SrcWorkspace','current');
      sim('test_hyst_drift_parallel', [], options)
      
      self.verifyEqual(U_des.Data, Y.Data, 'AbsTol', 1e-9);
-     % figure(1); clf
-     % plot(U_des.Time, U_des.Data)
-     % hold on, grid on
-     % plot(U_full.Time, U_full.Data);
-     % plot(Y.Time, Y.Data, '--')
+     figure(1); clf
+     plot(U_des.Time, U_des.Data)
+     hold on, grid on
+     plot(U_full.Time, U_full.Data);
+     plot(Y.Time, Y.Data, '--')
 
    end
  end
