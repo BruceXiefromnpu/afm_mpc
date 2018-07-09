@@ -480,6 +480,10 @@ We will show that in simulation, this idea does indeed lead to a significantly d
 
 Alternatively, one could use the same $\gamma$ for both the MPC design and SLF design (which implies, roughly,  the same set of disturbance rejection and robustness properties) and hope that the direct handling of constraints significantly improves performance. This is the perspective taken, e.g., in \cite{Wills_CDC_2005}. While this will indeed be the case for certain sizes of setpoints, we will see that the difference between MPC and SLF is marginal of that the majority of the movement range.
 
+\subsection{The ``it doesn't work'' argument}
+This needs to essentially say: we consider three methods (1) pz-cancell, (2) constant zeta (3) constant sigma. None of these three provide enough motivation for MPC.
+
+
 \subsection{Control Weight Selection}
 To design the weighting matrices $Q$, $R$ and $S$, we design fictitious output matrices $\hat C$ and $\hat D$ such that zeros of $\{A, B, \hat C, \hat D\}$ are at the desired pole locations. Then, the fictitious output is $\hat y = \hat C x + \hat D u$. If we write the cost function of REF as
 \begin{align}
@@ -496,10 +500,10 @@ $\{A, B, \hat C, \hat D\}$ are the same as the generalized eigenvalues of
     0 & \hat{D}
   \end{bmatrix}
 \end{equation}
-Thus, we choose $\hat D = 1$ and find $\hat C$ via standard pole placement techniques.
+Thus, we choose $\hat D = 1$ and can find $\hat C$ via standard pole placement techniques.
 
 \begin{figure}
-  \includesvg[width=.5\textwidth]{figures/lqr_locus.svg}
+  \includesvg[width=.5\textwidth]{figures/lqr_locus_constsig_0p9.svg}
   \caption{Root locus for $R_o + \gamma$. Note that for clarity, the plant zeros are not shown. The black 'x's indicate the poles of the open-loop plant. The blue circles indicate the fictitious zeros, which are at the location of the desired poles. }
   \label{fig:lqr_locus}
 \end{figure}
@@ -507,8 +511,28 @@ Thus, we choose $\hat D = 1$ and find $\hat C$ via standard pole placement techn
 Certainly, in the case of the LQR state feedback controller, one could simply use a pole-placement design to start with. However, the method here has two advantages: (1) it permits a straightforward comparison to the MPC design (which requires weighting matrices, not simple pole locations) and (2) the design becomes paramtrized by the single parameter $\gamma$ which makes de-rating the design easy. In contrast, with standard pole-placement it is not clear how to ``back-off'' the design if the slew rate constraint is violated to the extent that instability results. 
 
 
+\subsection{Selecting Desired Poles}
+We consider two methods to choose a set of desired pole locations. The first method we call ``constant $\sigma$''. The idea is to move all complex poles such that they lie on a circle with a specified radius, which endows them all with the same time constant. Here, we select that radius as $r=0.9$, which 
+
+
+
 In discussing stability, we recall that, in contrast to the continuous time case, the full-state feedback LQR controller does not have infinite gain margin. For both continuous time and discrete time, the robustness properties can be arbitrarily bad when an LQG observer is used. In the continuous time case, the full state feedback robustness may be recovered asymptotically using, e.g., the loop transfer recover (LTR) of \cite{doyle_guaranteed_1978}. In general, this result does not translate to discrete. Most efforts at obtaining LTR like results for discrete time assume that (1) a current estimator is used and (2) $CB\neq 0$. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. For our system model model, $CB=0$, because the relative degree is TK. 
 
+
+
+
+\begin{figure*}
+  \begin{minipage}{0.48\textwidth}
+    \includesvg[scale=0.65]{figures/PMGM_vs_gamma_constsig_0p9.svg}
+    \caption{Phase and Gain Margins as $\gamma$ is increased.}
+  \end{minipage}
+  \hfil
+  \begin{minipage}{0.48\textwidth}
+    \includesvg[scale=0.65]{figures/GainS_TS_vs_gamma_constsig_0p9.svg}
+    \caption{Gain of $S(z)$ and (unconstrained) settling times as $\gamma$ is increased}
+  \end{minipage}
+  
+\end{figure*}
 
 
 
@@ -539,108 +563,7 @@ To be able to make this comparison, we need a way to decide when a trajectory is
 % \end{itemize}
 % These schemes are used as benchmarks against which to judge the performance of SLF and MPC. Certainly, one could apply the control trajectories either CLQR or DTMT in a feedforward manner and track the optimal state sequences, as we have considered before in past work \cite{braker_fast_2017}. However, such a technique has several disadvantages: (1) the entire sequence of setpoints must be known before hand, eliminating the possibility of adjusting them in real time. (2) Computing each optimal trajectory requires defining an initial condition, which becomes problematic when, for example, performing short $\mu$-path scans and (3) transferring the data defining each trajectory in real-time increases the burden on the I/O bus.
 
-\subsection{Rejection Metrics}\label{sec:metrics}
-There are several ways we might think about doing this. 
-For a given $\gamma$, we need a way to decide if the trajectory which results from either SLF or MPC is acceptable for a given setpoint size.
 
-Ultimately, we have decided to do is to compare the trajectory resulting from MPC or SLF with the one from CLQR: if the settling time is greater than 20\% of the CLQR trajectory, we decide that the current setpoint was too large.
-
-
-\begin{enumerate}
-\item We start with a set of nominal weights \((Q,R, S)\) pair which, when used in the discrete (unconstrained) LQR will put the closed loop eigenvalues of $(sI - A + BK_{lqr})$ at the nominal desired locations. 
-\item We determine how large we must make \(\gamma R\) to visit a certain size of setpoint. In general, the larger \(\gamma\) is, the larger the maximum setpoint we can visit is. This is what I mean by "de-rating" the feedback gain and is illustrated below in Figure. REF
-\end{enumerate}
-
-
-Note that each point in that plot was generated by simulated the linear feedback law with saturation starting from a very small setpoint and incrementing larger (by 0.1 I think) until the output becomes unstable. 
-
-So the questions I want to answer are:
-\begin{enumerate}
-\item Given a maximum setpoint \(ref_{max}\), how much time do we \textbf{loose} by making \(\gamma\) large? Said another way, what is the time penalalty for needing to visit larger setpoints (since this implies that \(K\) must be "smaller")?
-\item How does this time compare to what we can acheive with MPC?
-\end{enumerate}
-
-
-The way I think it makes sense to think about these questions is to compare the settling times to the optimal, constrained finite horizon (CLQR) open-loop settling time. At least for a given quadratic cost, that is typically the best settling time we can hope to achieve, and we won't run into the problems with MPC where need a larger control horizon to get stability. 
-
-\begin{figure}
-  \includesvg[width=1\linewidth]{figures/maxref_vs_gamma_dumaxp6.svg}
-  \caption{The increase in maximum achievable setpoint as the control weight $\gamma$ increases for both saturated linear feedback different MPC control horizons.}
-  \label{fig:maxsp_by_gam}
-% \hfill
-% \subfigure[Comparison of settling time the minimum-time solution and the CLQR solution.
-% \label{fig:ts_clqr_to}]
-% {\includesvg[width=3in]{figures/clqrTimeOpt_sp_vs_ts_CCTA_dumaxp6.svg}}
-% \caption{both}
-\end{figure}
-
-The result of running a parameter sweep this way is shown in Fig.~\ref{fig:maxsp_by_gam}. What the figure shows is, for SLF, and several values of the MPC control horizon, the maximum setpoint that can be tracked for a given control weight $\gamma$. In the figure $\gamma$ ranges from 10 to 5000 in XX increments. For each value of $\gamma$, we performed successively larger step-input simulations between and 12 v. The $y$-axis value indicates that that value of reference resulted in a deteriorated or unstable trajectory, and is thus the largest track-able setpoint for the given gamma.
-
-\section{Time Savings Analysis}\label{sec:time_save_analysis}
-The goal of doing this is to essentially look at several cross sections Fig.~\ref{fig:maxsp_by_gam} and look at how the settling time changes between SLF and different MPC control horizons \emph{for a given desired maximum setpoint.}
-
-Here, we choose several desired $r_{max}$ values and consider how much time is saved over the time optimal solution for the different strategies. We choose $r_{max}$ as 2.5, 5.0 and 10. These values are illustrated in Fig.~\ref{fig:maxsp_by_gam} by the dotted black lines. Where those dotted black lines cross the various curves indicates the $\gamma$ that is required.
-
-\begin{figure*}
-  \begin{minipage}{0.45\textwidth}
-    \includesvg[width=1.2\textwidth]{figures/perc_increase_Ipow_lowgain_rmax2p5.svg}
-  \end{minipage}
-  % \begin{minipage}{0.32\textwidth}
-  %   \includesvg[width=1.2\textwidth]{figures/perc_increase_Ipow_lowgain_rmax5.svg}
-  % \end{minipage}
-  \begin{minipage}{0.45\textwidth}
-    \includesvg[width=1.2\textwidth]{figures/perc_increase_Ipow_lowgain_rmax10.svg}
-  \end{minipage}
-  \caption{The percentage increase over the time-optimal solution for SLF (orange), the CLQR solution (blue) and the MPC strategy for control horizons ranging from $N=4$ to $N=20$. }
-  \label{fig:perc_inc}
-\end{figure*}
-Our takeaway from this study is that there appears to very little benefit in terms of time saved for implemented the CLQR or MPC control strategies. The largest difference in the percent increase is only in the range of 10\%, and for the smaller $r_{max}=2.5$, this difference is even smaller. 
-
-\section{Experimental Comparison}\label{sec:exp_comp}
-Our simulation results indicate that we may as well use SLF or track the time-optimal trajectory, if we can get away with it. But what about the real world?
-
-
-
-\begin{table*}
-  % \begin{tabular}{cccccc}
-    \input{manystepsdata.tex}
-  % \end{tabular}
-\end{table*}
-
-
-\begin{table*}
-  % \begin{tabular}{cccccc}
-    \input{manystepsdata_rand.tex}
-  % \end{tabular}
-\end{table*}
-
-
-Table ~\ref{tab:resource} compares the FPGA resource utilization of the different control schemes.
-\begin{table*}
-  \caption{Resource utilization of the different control schemes. Each column shows the total amount of the resource used as well as the percent of the total available.}
-  \begin{tabular}{cccccc}
-    implementation & DSP48 & BRAM & LUT   & Reg & Total Slices \\
-    \toprule
-    MPC            & 75 (41.7\%)   & 24 (9.0\%)  & 46860 (50.9\%) & 56489 (30.6\% &   18133  (78.7\%)\\
-    Lin FXP        & 31 (17.2\%)   & 13 (4.9\%)  & 29094  (31.6\%)& 30154  (16.4\%)& 10871  (47.2\%)\\
-    PI             & 5  (2.8\%)    & 4  (1.5\%)  & 9722   (10.5\%)& 7546   (4.1\%) & 3485  (15.1\%)\\
-    Lin FP         & 34 (18.9\%)   & 10 (3.7\%)  & 34864  (37.8\%)& 26412  (14.3\%)& 11431 (49.6\%)\\
-  \end{tabular}
-  \label{tab:resource}
-\end{table*}
-
-\newpage
-
-% \FloatBarrier
-\section{Imaging Results}\label{sec:imaging_results}
-% In these section, we demonstrate using the time-optimal tracking method to actually acquire images via $\mu$-path based CS.
-% \begin{figure}
-%   \centering
-% \includegraphics[scale=1]{figures/5micron_rasterscans_v2.eps}
-% \includegraphics[scale=1]{figures/5micron_csscans_v2.pdf}
-% \caption{RESULT!}
-% \label{fig:imaging}
-% \end{figure}
 
 \bibliographystyle{IEEEtran}
 \bibliography{/home/arnold/bib_pdf/main_bibliography.bib}
@@ -649,29 +572,5 @@ Table ~\ref{tab:resource} compares the FPGA resource utilization of the differen
 % redefine the command that creates the equation no.
 \setcounter{equation}{0}  % reset counter 
 \setcounter{section}{0}
-\section*{Appendix: The minimum-time control problem in discrete-time}\label{sec:mintime}
-In discrete-time, the minimum-time control problem can be stated as \cite{chen_minimumtime_cca}
-\begin{align}
-\min_{u(0), u(1),\dots,u(N-1)} & N\\
-\text{s.t.}\quad
-x_{k+1} & = Ax_{k} + Bu_{k}\\
-x_{N} & = x_{f}\\
-u_{k}&\in \mathds{K},~k=0,\dots,N-1\\
-x_{k} &\neq x_{f},~k=0,\dots,N-1.
-\end{align}
-where $x_f$ is the desired final target state. 
-For a given control sequence $\{u_0,\dots, u_{N-1}\}$, and an initial condition $x_0$, the state $x_N$ at the final time is given by
-\begin{equation}
-x_N = A^Nx_0 + \sum_{i=0}^{N-1}A^{N-1-i}Bu_i.
-\end{equation}
-Practically, the problem can be solved using a bisection method which searches for the smallest feasible \(N\). In these cases, the bisection search solves sub-problem given by
-\begin{align}
-\min_{U}& || x_{f} - x_{N}||\\
-\text{s.t.} &\\
-x_{k+1} & = Ax_{k} + Bu_{k}\\
-u_{k}&\in \mathds{K},~k=0,\dots,N-1\\
-\end{align}
-For a given \(N\), if \(||x_{f} - x_{N}|| < \text{TOL}\), the sub-problem returns successful, otherwise it fails. The goal then is to find a the smallest \(N\) that succeeds. 
 
-It is also worth pointing out that the solution to this problem, in contrast to continuous time systems is not in general bang-bang CITE.
 \end{document}

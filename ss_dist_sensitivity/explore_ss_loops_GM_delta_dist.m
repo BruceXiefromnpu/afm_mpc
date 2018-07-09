@@ -3,7 +3,7 @@
 
 
 clear all
-
+clc
 
 % Options
 figbase  = 50;
@@ -12,10 +12,10 @@ controlParamName = 'exp01Controls.csv';
 refTrajName      = 'ref_traj_track.csv';
 outputDataName = 'exp01outputBOTH.csv';
 % Build data paths
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'));
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions' , 'canon'));
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', '/models'));
 
-addpath('../functions')
-addpath('../functions/canon')
-addpath('../models')
 % PATH_sim_model       = pwd;  % for simulink simulations
 
 % ---- Paths for shuffling data to labview and back. ------
@@ -89,19 +89,22 @@ if 0
   R1 = R0 + gam_lin;
   [K_lqr, Pz] = dlqr(G_recyc.a, G_recyc.b, Q1, R1, S1);
 else
-  p_int = 0.8; cmplx_rad = 0.9; rho_s = [1., 1]; rad = 0.25;
-  Px = getCharDes_const_sig(G_recyc, p_int, cmplx_rad, rho_s, rad).';
-  % Px = getCharDes_const_sig(G, p_int, cmplx_rad, rho_s, rad).'
-  z = tzero(G_recyc);
-  z = sort_by_w(z(imag(z)~=0));
-  Px(2:5) = z(1:4);
-  Px(1) = [];
-  [Chat, Dhat] = place_zeros(G_recyc, Px);
-  Q1 = Chat'*Chat;
-  
-  S1 = Chat'*Dhat;
-  R0 = Dhat'*Dhat;
-  R1 = 50;
+%   p_int = 0.8; cmplx_rad = 0.9; rho_s = [1., 1]; rad = 0.25;
+%   Px = getCharDes_const_sig(G_recyc, p_int, cmplx_rad, rho_s, rad).';
+%   % Px = getCharDes_const_sig(G, p_int, cmplx_rad, rho_s, rad).'
+%   z = tzero(G_recyc);
+%   z = sort_by_w(z(imag(z)~=0));
+%   Px(2:5) = z(1:4);
+%   Px(1) = [];
+%   [Chat, Dhat] = place_zeros(G_recyc, Px);
+%   Q1 = Chat'*Chat;
+%   
+%   S1 = Chat'*Dhat;
+%   R0 = Dhat'*Dhat;
+  cmplx_rad = 0.9;
+  [Q1, R0, S1, Px] = build_control_constsigma(G_recyc, cmplx_rad);
+
+  R1 = 10;
   [K_lqr, Pz] = dlqr(G_recyc.a, G_recyc.b, Q1, R1, S1);
 end
 
@@ -110,7 +113,8 @@ Qp = dare(G_recyc.a, G_recyc.b, Q1, R1);
 
 % Estimator
 Qw = G.b*G.b'*50;
-Lx = G.a*dlqr(G.a', G.c', Qw, 1)';
+% Lx = G.a^5*dlqr(G.a', G.c', Qw, 1)';
+Lx = dlqr(G.a', G.c', Qw, 1)';
 p_int_d = 0.7;
 [LxLd, G_obsDist, Ident_obs, C_ydist] = DistEst.output_dist_est(plants.SYS, Lx, p_int_d);
 [Sens, Hyd, Hyr, Hyeta, Loop] = ss_loops_delta_dist(plants.SYS, G_recyc, G_obsDist, K_lqr, LxLd);

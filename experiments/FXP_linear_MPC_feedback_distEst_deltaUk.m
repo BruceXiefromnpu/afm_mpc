@@ -13,9 +13,9 @@ refTrajName      = 'ref_traj_track.csv';
 outputDataName = 'exp01outputBOTH.csv';
 % Build data paths
 
-addpath('../functions')
-addpath('../functions/canon')
-addpath('../models')
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'));
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions' , 'canon'));
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', '/models'));
 % PATH_sim_model       = pwd;  % for simulink simulations
 
 % ---- Paths for shuffling data to labview and back. ------
@@ -34,7 +34,9 @@ step_exp_root = fullfile(PATHS.exp, 'step-exps');
 [status, message ] = mkdir(step_exp_root, experiment_directory);
 save_root = fullfile(step_exp_root, experiment_directory);
 %%
-TOL = .01;
+fprintf('\n\n\n\n')
+TOL = 14/512; % max volts by pixels
+% TOL = .01;
 tol_mode = 'abs';
 % which simulations to run
 do_siml_infp = true;
@@ -97,8 +99,8 @@ end
 
 % Get a ref trajectory to track.
 N  = 800;
-r1 = 5;
-r2 = -0;
+r1 =1;
+r2 = -r1;
 trajstyle =2;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
@@ -118,7 +120,7 @@ elseif trajstyle == 4
 end
 
 dist_traj = yref;
-dist_traj.Data = dist_traj.Data*0 + 0;
+dist_traj.Data = dist_traj.Data*0 + .25*0;
 
 rw = 2e-07;
 rng(1);
@@ -170,17 +172,26 @@ end
 % % % R1 = R0 + gam_mpc;
 
 
-p_int = 0.8; cmplx_rad = 0.85; rho_s = [2, 1]; rad = 0.5;
-Px = getCharDes_const_sig(plants.sys_recyc, p_int, cmplx_rad, rho_s, rad);
-[Chat, Dhat] = place_zeros(plants.sys_recyc, Px);
-Q2 = Chat'*Chat; Q1 = Q2;
-S2 = Chat'*Dhat; S1 = S2;
-R2 = Dhat'*Dhat; 
-
-gam_lin = 4000;
-gam_mpc = 400;
-R1 = R 0 + gam_mpc;
-K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q2, R2+gam_lin, S2);
+% p_int = 0.8; cmplx_rad = 0.9; rho_s = [1, 1]; rad = 0.25;
+% Px = getCharDes_const_sig(plants.sys_recyc, p_int, cmplx_rad, rho_s, rad);
+%   z = tzero(plants.sys_recyc);
+%   z = sort_by_w(z(imag(z)~=0));
+%   Px(2:5) = z(1:4);
+% %   Px(1) = [];
+%   
+% [Chat, Dhat] = place_zeros(plants.sys_recyc, Px);
+% Q2 = Chat'*Chat; Q1 = Q2;
+% S2 = Chat'*Dhat; S1 = S2;
+% R2 = Dhat'*Dhat; 
+% R0 = R2;
+cmplx_rad = 0.9;
+[Q2, R0, S2, P_x] = build_control_constsigma(plants.sys_recyc, cmplx_rad);
+Q1 = Q2;
+S1 = S2;
+gam_lin = 100;
+gam_mpc = 130;
+R1 = R0 + gam_mpc;
+K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q2, R0+gam_lin, S2);
 K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q2, R0+gam_mpc, S2)*1;
 
 
@@ -215,7 +226,7 @@ if plotpoles
   sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
 end
 
-N_mpc = 40;
+N_mpc = 120;
 
 Qp = dare(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R1, S1);
 nu = 1;
@@ -243,7 +254,7 @@ fprintf('condition of H = %.1f\n', mpcProb.kappa);
 
 % ------------------------- Observer Gain ---------------------------------
 can_obs_params = CanonObsParams_01();
-can_obs_params.beta = 100;
+can_obs_params.beta = 50;
 [sys_obsDist, L_dist] = build_obs(plants.SYS, can_obs_params);
 
 [Sens, Hyd, Hyr, Hyeta, Loop] = ss_loops_delta_dist(plants.SYS, plants.sys_recyc,...
@@ -334,14 +345,13 @@ if do_siml_infp
   end
   if do_invdrift; sims_fpl.gdrift_inv = plants.gdrift_inv; end
   [y_lin_fp_sim, U_full_fp_sim, U_nom_fp_sim, dU_fp_sim, Xhat_fp] = sims_fpl.sim(yref, dist_traj);
-  
+
   linOpts = stepExpDuOpts('pstyle', '-b', 'TOL', TOL, 'step_ref', step_ref,...
     'controller', K_lqr, 'name',  'FP lin Sim.');
   
   sim_exp_fpl = stepExpDu(y_lin_fp_sim, U_full_fp_sim, dU_fp_sim, linOpts);
-  
-  
   Ts_vec_lfp = sim_exp_fpl.settle_time(TOL, tol_mode, 1);
+  
   fprintf('Total linear fp settle-time = %.3f [ms]\n', sum(Ts_vec_lfp)*1000);
   
   h1 = sim_exp_fpl.plot(F_yudu, 'umode', 'both');
@@ -385,7 +395,7 @@ if do_sim_mpcfp
   mpcfpOpts = stepExpDuOpts('pstyle', '-r', 'TOL', TOL, 'step_ref', step_ref,...
     'controller', mpcProb, 'name',  'FP mpc Sim.');
   sim_exp_fpm = stepExpDu(y_mpc_fp_sim, U_full_fpm_sim, dU_fpm_sim, mpcfpOpts);
-  
+  Ts_vec_fpm = sim_exp_fpm.settle_time(TOL, tol_mode, 1);
   h1mpc = sim_exp_fpm.plot(F_yudu, 'umode', 'both');
   legend([h1(1), h1mpc(1)])
   
