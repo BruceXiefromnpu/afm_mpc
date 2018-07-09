@@ -175,11 +175,10 @@ classdef StepDataMPC < StepDataQuad
             parfor mpc_iter = 1:length(N_mpc_s)
                 warning('OFF', 'MATLAB:mir_warning_maybe_uninitialized_temporary');
                 N_mpc_iter = N_mpc_s(mpc_iter);
-                if verbose > 0
-                    start_str = sprintf('MPC, N=%.0f', N_mpc_iter);
-                    PB = ProgBar(length(gam_s), 'start_str', ...
-                                 start_str);
-                end
+                start_str = sprintf('MPC, N=%.0f', N_mpc_iter);
+                PB = ProgBar(length(gam_s), 'start_str', ...
+                  start_str);
+
 %                 self.params.sim_struct.N_mpc = N_mpc_iter;
                 result_s_iter = self.build_max_sp_local(PB, verbose, ...
                                                    N_mpc_iter);
