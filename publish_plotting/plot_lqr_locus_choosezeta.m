@@ -3,11 +3,12 @@
 
 
 saveon = true;
-plants = CanonPlants.plants_with_drift_inv(false);
+plants = CanonPlants.plants_ns14();
 sys_recyc = plants.sys_recyc;
 Ts = sys_recyc.Ts;
 
-can_cntrl = CanonCntrlParams_01(plants.SYS);
+% can_cntrl = CanonCntrlParams_01(plants.SYS);
+can_cntrl = CanonCntrlParams_ns14();
 [Q1, R0, S1] = build_control(sys_recyc, can_cntrl);
 
 
