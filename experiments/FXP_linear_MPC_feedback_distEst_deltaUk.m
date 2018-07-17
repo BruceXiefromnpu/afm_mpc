@@ -39,11 +39,11 @@ TOL = 14/512; % max volts by pixels
 % TOL = .01;
 tol_mode = 'abs';
 % which simulations to run
-do_siml_infp = true;
-do_sim_mpcfp = true;
+do_siml_infp = false;
+do_sim_mpcfp = false;
 do_sim_linfxp = true;
 
-do_sim_mpcfxp = true;
+do_sim_mpcfxp = false;
 do_sim_hyst = true;
 do_inv_hyst = true;
 do_drift = true;
@@ -434,12 +434,12 @@ L_fxp = fi(L_dist, 1, 32, 30);
 sys_obs_fxp.a = fi(sys_obsDist.a -L_dist*sys_obsDist.c, 1, nw, nw-7);
 sys_obs_fxp.b = fi(sys_obsDist.b, 1, nw, 29);
 sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
-
+%%
 % --------------------  Fixed Linear stuff -----------------------------
 if do_sim_linfxp
   sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
     true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
-
+  
   sims_fxpl.r = plants.hyst_sat.r;
   sims_fxpl.w = plants.hyst_sat.w;
   sims_fxpl.rp = fi(plants.hyst_sat.rp, 1, 16, 11);
@@ -463,7 +463,7 @@ if do_sim_linfxp
   legend([h2(1)])
   figure(F_y)
   h22 = sim_exp_fxpl.ploty(F_y);
-  legend([h12, h22]);
+  try; legend([h12, h22]);end;
   
   try; [~, F_state] = plotState(Xhat_fxpl, F_state, [], [], '--r'); end
   fprintf('max of Xhat = %.2f\n', max(abs(Xhat_fxpl.Data(:))));
@@ -476,6 +476,7 @@ if do_sim_linfxp
   hlin_Ipow.DisplayName = 'Linear Current';
   hold on, grid on;
 end
+%%
 % ----------------------------------------------------------------------- %
 % --------------------- MPC, fgm fixed-point ---------------------------- %
 if do_sim_mpcfxp

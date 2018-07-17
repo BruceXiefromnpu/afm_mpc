@@ -4,6 +4,7 @@ classdef SimAFM
     PLANT;
     controller;
     Nx;
+    Nbar;
     sys_obs;
     L;
     du_max;
@@ -41,6 +42,9 @@ classdef SimAFM
       self.PLANT = PLANT;
       self.controller = controller;
       self.Nx = Nx;
+      if isnumeric(controller)
+        self.Nbar = controller*Nx;
+      end
       self.sys_obs = sys_obs;
       self.L = L;
       self.du_max = du_max;
@@ -209,6 +213,7 @@ classdef SimAFM
           nf_fgm = sim_obj.controller.nf;
           Ns = size(ML_x0_fxp,2);
         end
+        %keyboard
         sim('FXP_AFMss_obshas_uk', [], options)
       end
       % provides Y, U, dU, Xhat, U_nominal      
