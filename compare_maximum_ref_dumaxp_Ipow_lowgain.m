@@ -76,7 +76,8 @@ grid on
 % provides the basiline for comparison of the other methods.
 % ref_s = [1.5];
 
-gamma = 1.00001;
+R0 = 1;
+gamma = 0.00001;
 % gam_s = linspace(gamma, 5, 10)
 gam_s = logspace(log10(gamma), log10(20), 30)
 %%
@@ -99,18 +100,18 @@ ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', 
 
 % warning('ON', 'MATLAB:mir_warning_maybe_uninitialized_temporary');
 
-step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, plants.PLANT, trun, 'S', S1);
+step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, R0, gam_s, plants.PLANT, trun, 'S', S1);
 
 figs(1) = figure(10);
 figs(2) = figure(11);
-step_params_lin.sim(2, gam_s(2), figs);
+step_params_lin.sim(2, R0+gam_s(2), figs);
 
 
 step_data_lin = StepDataLin(step_params_lin, 'savedata', true,...
     'file', fname_lin', 'logger', logger,...
     'Progbar', ProgBar);
 
-step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, plants.PLANT,...
+step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, R0, gam_s, plants.PLANT,...
                     trun, N_mpc_s,'condensed', 'S', S1);
 step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', true,...
     'file', fname_mpc', 'logger', logger,...
@@ -118,7 +119,7 @@ step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', true,...
 
 
 % step_params_timeopt = StepParamsTimeOpt(sys, ref_s, du_max, sys_nodelay, 10);
-step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, gamma,...
+step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, R0, gamma,...
   plants.PLANT, N_traj, 'condensed', 'S', S1);
 step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
     'file', fname_clqr);
@@ -153,7 +154,7 @@ catch ME
 end
 
 % ------------- Generate LIN max setpoints ------------------------------ %
-threshold = 125; % percent
+threshold = 120; % percent
 Judge = MaxSpJudgeCLQR(step_data_clqr, threshold);
 
 try

@@ -5,6 +5,7 @@ classdef StepParamsMPC
         ref_s;
         du_max;
         Q;
+        R0;
         S;
         gam_s;
         plant;
@@ -16,7 +17,7 @@ classdef StepParamsMPC
     end
         
     methods
-        function self = StepParamsMPC(sys, ref_s, du_max, Q, gam_s, ...
+        function self = StepParamsMPC(sys, ref_s, du_max, Q, R0, gam_s, ...
                                       plant, trun, N_mpc_s, mpc_mode,...
                                       varargin)
 
@@ -32,6 +33,7 @@ classdef StepParamsMPC
             self.du_max = du_max;
             self.Q = Q;
             self.S = p.Results.S;
+            self.R0 = R0;
             self.gam_s = gam_s;
             self.plant = plant;
             self.N_mpc_s = N_mpc_s;

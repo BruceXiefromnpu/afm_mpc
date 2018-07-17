@@ -195,7 +195,7 @@ classdef StepDataCLQR < StepData
             self.logger(['Data has changed or force=true: re-building ' ...
                           'CLQR trajectories.\n']);
             
-            gam_s = self.params.gam_s;
+            gam_s = self.params.R0 + self.params.gam_s;
             % Pre-allocate
             settle_times_opt_cell = cell(1, length(gam_s));
             opt_trajs_cell = cell(1, length(gam_s)); 

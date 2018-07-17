@@ -51,7 +51,7 @@ classdef StepDataQuad < StepData
             
             data = cell(1, length(gam_s));
             for gam_iter = 1:length(gam_s)
-                gamma = gam_s(gam_iter);
+                gamma = self.params.R0 + gam_s(gam_iter);
                 % Update either K or the mpcProb.
                 sim_struct = self.update_sim_struct(sim_struct, gamma);
 

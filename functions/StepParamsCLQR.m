@@ -4,6 +4,7 @@ classdef StepParamsCLQR
     ref_s;
     du_max;
     Q;
+    R0;
     S;
     gam_s;
     plant;
@@ -13,7 +14,7 @@ classdef StepParamsCLQR
   end
   
   methods
-    function self = StepParamsCLQR(sys, ref_s, du_max, Q, gam_s, ...
+    function self = StepParamsCLQR(sys, ref_s, du_max, Q, R0, gam_s, ...
         plant, N_traj, mpc_mode, varargin)
       
       if ~strcmp(mpc_mode, 'sparse') && ~strcmp(mpc_mode, 'condensed')
@@ -27,6 +28,7 @@ classdef StepParamsCLQR
       self.du_max = du_max;
       self.Q = Q;
       self.S = p.Results.S;
+      self.R0 = R0;
       self.gam_s = gam_s;
       self.plant = plant;
       self.N_traj = N_traj;
