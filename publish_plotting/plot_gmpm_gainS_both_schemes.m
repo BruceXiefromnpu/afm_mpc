@@ -28,7 +28,7 @@ cmplx_rad = 0.9;
    
 
 gams = logspace(log10(0.1), log10(1000), 100);
-gams = unique([gams, 1.0, 3.0])
+gams = unique([gams, 1.0, 3.0, 3.1, 3.8, 12, 2])
 [GM_s1, PM_s1, Sens_gain1, TS_s1] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obsDist, Q1, R0, S1, LxLd, gams);
 
 [GM_s1_pure, PM_s1_pure] = gmpm_vs_gam_recyc(G, G_recyc, Q1, R0, S1, gams);
@@ -100,7 +100,7 @@ if saveon
    saveas(f5, fullfile(PATHS.jfig, sens_ts_figfile))
 end
 
-%%
+%
 clc
 % Its rediculous to enter the data in a table by hand.
 min_gam_labels = {'const-$\sigma$ (lin, min-$\gamma$)',  'const-$\sigma$ (MPC, min-$\gamma$)',...
@@ -119,17 +119,17 @@ lin_zet__rob_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
 mpc_zet_rob_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
 data = [lin_sig__rob_data; mpc_sig_rob_data; lin_zet__rob_data; mpc_zet_rob_data];
 
-% minimum-gamma scheme.  No data yet for const-sigma. So I will arbitrarily
-% choose idx = 10 here.
-idx = 10;
-
+% minimum-gamma scheme.  For const-sigma, and rmax=14, we get gam=12 for
+% linear, and gam=2 for Nmpc=12.
+idx = find(gams == 12, 1, 'first');
 lin_sig_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
+idx = find(gams == 2, 1, 'first');
 mpc_sig_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
 
-% We have, I think, gam=1 for MPC and gam=3 for linear, in the choose zeta scheme.
-idx = find(gams == 3, 1, 'first');
+% We have, I think, gam=3.8 for MPC and gam=3.1 for linear, in the choose zeta scheme.
+idx = find(gams == 3.8, 1, 'first');
 lin_zet_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
-idx = find(gams == 1, 1, 'first');
+idx = find(gams == 3.1, 1, 'first');
 mpc_zet_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
 
 data = [data; lin_sig_ming_data; mpc_sig_ming_data; lin_zet_ming_data; mpc_zet_ming_data];

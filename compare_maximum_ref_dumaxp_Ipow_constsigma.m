@@ -21,7 +21,7 @@ dataroot          = fullfile(matpath, 'afm_mpc_journal', 'modelFitting', 'pow_am
 
 % volts2mu = 1;
 TOL = 0.01;
-umax = 5;
+% umax = 5;
 
 % 3). LQR generation gain.
 % -------------------------------------------------------------------------
@@ -231,7 +231,7 @@ end
 % ======================================================================= %
 
 % ---------------------------- For MPC ---------------------------------- %
-rmax_s = [1, 2.5, 5.0, 10];
+rmax_s = [1, 2.5, 5.0, 14];
 for jj = 1:length(N_mpc_s)
     N_mpc = N_mpc_s(jj);
     F=figure(300 + jj);clf; hold on;
