@@ -45,6 +45,7 @@ slprj/
 *.asv
 *.csv
 *.autosave
+*.slxc
 
 # Gtags ignores
 GPATH
