@@ -13,6 +13,10 @@ classdef StepRef
   
   methods
     function self = StepRef(step_amps, n_space);
+      % self = StepRef(step_amps, n_space);
+      % step_amps is a vector of amplitueds.
+      % n_space is an integer, number of samples for each ref. Should be
+      % scalar. 
       step_amps = step_amps(:);
       Ts = StageParams.Ts;
       
