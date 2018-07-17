@@ -26,13 +26,23 @@ umax = 5;
 % 3). LQR generation gain.
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
-du_max   = StageParams.du_max_vib;
-plants = CanonPlants.plants_with_drift_inv(false);
+% du_max   = StageParams.du_max_vib;
+% plants = CanonPlants.plants_with_drift_inv(false);
+% sys_recyc = plants.sys_recyc;
+% Ts = sys_recyc.Ts;
+% sys_recyc_nodelay = plants.sys_recyc_nodelay;
+% 
+
+plants = CanonPlants.plants_ns14();
+du_max_orig = StageParams.du_max;
+du_max = du_max_orig/norm(plants.gdrift_inv, Inf);
+
+
 sys_recyc = plants.sys_recyc;
 Ts = sys_recyc.Ts;
 sys_recyc_nodelay = plants.sys_recyc_nodelay;
 
-can_cntrl = CanonCntrlParams_01(plants.SYS);
+can_cntrl = CanonCntrlParams_ns14()
 [Q1, R0, S1] = build_control(sys_recyc, can_cntrl);
 
 gam_lin = 3;
@@ -74,7 +84,7 @@ gam_s = logspace(log10(gamma), log10(20), 30)
 ref_s = 0.1:0.5:15.5;
 
 
-N_mpc_s = [4, 8, 12, 16, 20]; % original
+N_mpc_s = [8, 12, 20]; % original
 % N_mpc_s = [12, 18, 24];
 N_traj =800;
 trun = Ts*N_traj;
@@ -192,7 +202,7 @@ saveon = 0;
 if saveon
     saveas(F200, 'latex/figures/clqrTimeOpt_sp_vs_ts_CCTA_dumaxp6.svg')
 end
-%
+
 % ----------------- Plot maximum reference vs gamma -----------------------
 F10 = figure(10); clf; hold on;
 colrs =  get(gca, 'colororder');
@@ -227,7 +237,7 @@ end
 % ======================================================================= %
 
 % ---------------------------- For MPC ---------------------------------- %
-rmax_s = [1, 2.5, 5.0, 10];
+rmax_s = [1, 2.5, 5.0, 14];
 for jj = 1:length(N_mpc_s)
     N_mpc = N_mpc_s(jj);
     F=figure(300 + jj);clf; hold on;
@@ -330,7 +340,7 @@ title('Linear')
 % %     grid on; zoom on;
 % % end
 
-%%
+%
 ts_timeopt = step_data_timeopt.results.settle_times_opt_cell{1};
 for kk = 1:length(rmax_s)
     
@@ -348,7 +358,7 @@ for kk = 1:length(rmax_s)
    step_data_lin = step_data_lin.ts_by_ref_max(rmax_s(kk), 1);
    [~, h] = step_data_lin.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
                    1, ts_timeopt, ax, 'LineWidth', 1.5, 'Color', colrs(2, :));
-   h.DisplayName = sprintf('Linear ($\\gamma = %.0f$)', step_data_lin.ts_by_rmax_results{1}.gamma);
+   h.DisplayName = sprintf('Linear ($\\gamma = %.1f$)', step_data_lin.ts_by_rmax_results{1}.gamma);
    hands = [hands;h];
    
    step_data_mpc.ts_by_rmax_results = {};
@@ -357,7 +367,7 @@ for kk = 1:length(rmax_s)
         figure(F);
         [~, h] = step_data_mpc.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
                        jj, ts_timeopt, ax, 'LineWidth', 1.5, 'Color', colrs(jj + 2,:));
-        h.DisplayName = sprintf('MPC ($N=%.0f$ $\\gamma = %.0f$', N_mpc_s(jj),...
+        h.DisplayName = sprintf('MPC ($N=%.0f$ $\\gamma = %.1f$', N_mpc_s(jj),...
                         step_data_mpc.ts_by_rmax_results{jj}.gamma);
         hands = [hands; h];
     end
