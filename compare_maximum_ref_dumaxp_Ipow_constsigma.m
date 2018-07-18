@@ -40,7 +40,7 @@ cmplx_rad = 0.9;
 
 gam_lin = 3;
 gam_mpc = 0.00001;
-R1 = R0 + gam_mpc;
+
 K_lqr = dlqr(sys_recyc.a, sys_recyc.b, Q1, R0+gam_lin, S1);
 sys_cl = SSTools.close_loop(sys_recyc, K_lqr);
 
@@ -69,15 +69,16 @@ grid on
 % provides the basiline for comparison of the other methods.
 % ref_s = [1.5];
 
-gamma = 1.00001;
-% gam_s = linspace(gamma, 5, 10)
-gam_s = logspace(log10(gamma), log10(20), 30)
+R0 = 1;
+gamma = 0.001;
+gam_s = linspace(gamma, 15, 30)
+% gam_s = logspace(log10(gamma), log10(20), 30)
 
 % gam_s = [1, 100, 1000, 2500, 5000, 10000];
 ref_s = 0.1:0.5:15;
 
 
-N_mpc_s = [4, 8, 12, 16, 20]; % original
+N_mpc_s = [8, 12, 16, 20]; % original
 % N_mpc_s = [12, 18, 24];
 N_traj =800;
 trun = Ts*N_traj;
@@ -92,18 +93,18 @@ ProgBar = @(max_iter, varargin)ProgressBarFile(max_iter, varargin{:}, 'logger', 
 
 % warning('ON', 'MATLAB:mir_warning_maybe_uninitialized_temporary');
 
-step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, gam_s, plants.PLANT, trun, 'S', S1);
+step_params_lin = StepParamsLin(sys_recyc, ref_s, du_max,Q1, R0, gam_s, plants.PLANT, trun, 'S', S1);
 
 figs(1) = figure(10);
 figs(2) = figure(11);
-step_params_lin.sim(2, gam_s(2), figs);
+step_params_lin.sim(2, R0+gam_s(2), figs);
 
 
 step_data_lin = StepDataLin(step_params_lin, 'savedata', true,...
     'file', fname_lin', 'logger', logger,...
     'Progbar', ProgBar);
 
-step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1, gam_s, plants.PLANT,...
+step_params_mpc = StepParamsMPC(sys_recyc, ref_s, du_max,Q1,R0, gam_s, plants.PLANT,...
                     trun, N_mpc_s,'condensed', 'S', S1);
 step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', true,...
     'file', fname_mpc', 'logger', logger,...
@@ -111,7 +112,7 @@ step_data_mpc = StepDataMPC(step_params_mpc, 'savedata', true,...
 
 
 % step_params_timeopt = StepParamsTimeOpt(sys, ref_s, du_max, sys_nodelay, 10);
-step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, gamma,...
+step_params_clqr  = StepParamsCLQR(sys_recyc, ref_s, du_max,Q1, R0, gamma,...
   plants.PLANT, N_traj, 'condensed', 'S', S1);
 step_data_clqr = StepDataCLQR(step_params_clqr, 'savedata', true,...
     'file', fname_clqr);
@@ -177,9 +178,9 @@ end
 
 %%
 % expose variables for plotting.
-rmpath(genpath('~/matlab/solvers/cvx'));
+% rmpath(genpath('~/matlab/solvers/cvx'));
 ref_s = step_data_clqr.params.ref_s;
-gam_s = step_data_clqr.params.gam_s;
+gam_s = step_data_mpc.params.gam_s;
 ref_s_to = step_data_timeopt.params.ref_s;
 
 
@@ -258,7 +259,7 @@ for jj = 1:length(N_mpc_s)
 end
 
 % ------------------------- For LINEAR ---------------------------------- %
-clc
+
 F=figure(300);clf; hold on;
 colrs =  get(gca, 'colororder');
 ax = gca;
@@ -334,7 +335,7 @@ title('Linear')
 % %     grid on; zoom on;
 % % end
 
-%%
+%
 ts_timeopt = step_data_timeopt.results.settle_times_opt_cell{1};
 for kk = 1:length(rmax_s)
     
@@ -361,7 +362,7 @@ for kk = 1:length(rmax_s)
         figure(F);
         [~, h] = step_data_mpc.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
                        jj, ts_timeopt, ax, 'LineWidth', 1.5, 'Color', colrs(jj + 2,:));
-        h.DisplayName = sprintf('MPC ($N=%.0f$ $\\gamma = %.0f$', N_mpc_s(jj),...
+        h.DisplayName = sprintf('MPC ($N=%.0f$ $\\gamma = %.g$', N_mpc_s(jj),...
                         step_data_mpc.ts_by_rmax_results{jj}.gamma);
         hands = [hands; h];
     end
@@ -376,6 +377,24 @@ end
 % % MPP1 = condensedMPCprob_OA(sys_recyc, N, Q1, Qp, gam, S1);
 % % fprintf('kappa_fast = %.2f\n', MPP1.kappa)
 %%
+
+
+figure(504)
+grid on
+% xlim([0, 10])
+saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax14_constsig.svg'))
+
+% 
+% figure(503)
+% grid on
+% % xlim([0, 5])
+% saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax5.svg'))
+% 
+% figure(502)
+% grid on
+% % xlim([0, 2.5])
+% saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax2p5.svg'))
+%%
 tilefigs(1)
 
 figure(10)
@@ -384,25 +403,6 @@ h1 = plot(xlm, [rmax_s', rmax_s'], ':k', 'LineWidth', 2)
 if saveon
     saveas(F10, 'latex/figures/maxref_vs_gamma_dumax_Ipow_lowgain.svg')
 end
-
-
-%%
-
-figure(504)
-grid on
-% xlim([0, 10])
-saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax10.svg'))
-
-
-figure(503)
-grid on
-% xlim([0, 5])
-saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax5.svg'))
-
-figure(502)
-grid on
-% xlim([0, 2.5])
-saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax2p5.svg'))
 
 
 

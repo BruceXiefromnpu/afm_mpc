@@ -78,8 +78,8 @@ grid on
 
 R0 = 1;
 gamma = 0.00001;
-% gam_s = linspace(gamma, 5, 10)
-gam_s = logspace(log10(gamma), log10(20), 30)
+gam_s = linspace(gamma, 6, 30)
+% gam_s = logspace(log10(gamma), log10(20), 30)
 %%
 % gam_s = [1, 100, 1000, 2500, 5000, 10000];
 ref_s = 0.1:0.5:15.5;
@@ -398,18 +398,18 @@ end
 figure(504)
 grid on
 % xlim([0, 10])
-saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax10.svg'))
+saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax14.svg'))
 
-
-figure(503)
-grid on
-% xlim([0, 5])
-saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax5.svg'))
-
-figure(502)
-grid on
-% xlim([0, 2.5])
-saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax2p5.svg'))
+% 
+% figure(503)
+% grid on
+% % xlim([0, 5])
+% saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax5.svg'))
+% 
+% figure(502)
+% grid on
+% % xlim([0, 2.5])
+% saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax2p5.svg'))
 
 
 

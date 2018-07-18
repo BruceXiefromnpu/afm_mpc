@@ -43,10 +43,11 @@ classdef MaxSpJudgeCLQR
             N_traj = params.N_traj;
             mpc_mode = params.mpc_mode;
             Q = params.Q;
+            R0 = params.R0;
             S = params.S;
-            Qp = dare(sys.a, sys.b, Q, gam_current, S);
+            Qp = dare(sys.a, sys.b, Q, R0+gam_current, S);
             
-            NLQR_prob = condensedMPCprob_OA(sys, N_traj, Q, Qp, gam_current, S);
+            NLQR_prob = condensedMPCprob_OA(sys, N_traj, Q, Qp, R0+gam_current, S);
 
             CON = CondenCon([], [], NLQR_prob.N_mpc);
             CON.add_input_con('box', du_max);

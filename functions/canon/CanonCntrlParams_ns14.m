@@ -21,7 +21,7 @@ classdef CanonCntrlParams_ns14
       
     % if we make the last one 0.4, the high freq poles with
     % zeta ~=0.5 actually lose damping.
-      self.zeta_s = [.8, 0.7, .7, .4, .4 .504];
+      self.zeta_s = [.85, 0.85, .7, .4, .4 .4];
       self.gam_s = [1., 1., 1., 1., 1., 1.]; % puts it at the extant zero
       self.rad = 0.25;
       self.pint = 0.8;
@@ -29,7 +29,7 @@ classdef CanonCntrlParams_ns14
       %[wp_real_x, wz_real_x] = w_zp_real(sys);
 %       rho_1 = wz_real_x(1)/wp_real_x(1);
       % self.rho_s = [rho_1, 1., 1];
-      self.rho_s = [1.0, 1., 1];
+      self.rho_s = [1.2, 1., 1];
       
     end
     

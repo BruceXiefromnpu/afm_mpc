@@ -41,13 +41,13 @@ classdef StepRef
       
     end
     
-    function plot(self, Fig, varargin)
+    function [Fig, h] =  plot(self, Fig, varargin)
     % plot(self, Fig, varargin)
       if ~exist('Fig', 'var') || ~isvalid(Fig)
         Fig = figure();
       end
       figure(Fig); 
-      plot(self.yref.Time, self.yref.Data, varargin{:});
+      h = plot(self.yref.Time, self.yref.Data, varargin{:});
       hold on; grid on;
       
     end

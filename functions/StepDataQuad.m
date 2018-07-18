@@ -50,10 +50,11 @@ classdef StepDataQuad < StepData
             PB.upd(0);
             
             data = cell(1, length(gam_s));
+            R0 = self.params.R0;
             for gam_iter = 1:length(gam_s)
-                gamma = self.params.R0 + gam_s(gam_iter);
+                gamma = gam_s(gam_iter);
                 % Update either K or the mpcProb.
-                sim_struct = self.update_sim_struct(sim_struct, gamma);
+                sim_struct = self.update_sim_struct(sim_struct, gamma+R0);
 
                 % Warm starting
                 % rmax_ind = find(ref_s == ref_max_prior, 1);
