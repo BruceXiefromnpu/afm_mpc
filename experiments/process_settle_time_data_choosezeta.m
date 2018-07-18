@@ -36,34 +36,6 @@ Fig = figure(1000); clf
 step_ref.plot(Fig)
 step_ref.plot_settle_boundary(Fig, TOL, tol_mode);
 %%
-% plot(ref_traj_params.ref_traj.Time, ref_traj_params.ref_traj.Data)
-% hold on, grid on;
-% 
-% r = ref_traj_params.ref_traj;
-% for k=2:length(ref_s)
-%     idx_start = step_idx(k);
-%     if k == length(ref_s)
-%       idx_end = length(r.Time);
-%     else
-%       idx_end = step_idx(k+1)-1;
-%     end
-% 
-%     ref = ref_s(k);
-% 
-%     t0 = r.Time(idx_start);
-%     t1 = r.Time(idx_end);
-% 
-%     if strcmp(tol_mode, 'abs')
-%       TOL_k = TOL;
-%     else
-%       TOL_k = TOL*(ref - ref_s(k-1));
-%     end
-%     
-%     plot([t0, t1], [ref+TOL_k, ref+TOL_k], ':k');
-%     plot([t0, t1], [ref-TOL_k, ref-TOL_k], ':k');
-% end
-
-
 
 % load(fullfile(root, 'many_steps_hyst_withsat.mat'))
 % TS_hystsat = get_many_steps_ts(y_exp, ref_s, step_idx, TOL, 1);
@@ -97,21 +69,22 @@ TS_s_cell = {};
 % ----------------------------------------------------------------
 % --------- Constant sigma, rob-opt -------------------
 files_const_sig_rob_opt = {
-'many_steps_ymax7_linfxp_sim_const-sig-rob-opt_07-17-2018.mat',...  
-'many_steps_ymax7_mpcfxp_sim_const-sig-rob-opt_07-17-2018.mat',...
-'many_steps_ymax7_lin_EXP_const-sig-rob-opt_07-17-2018.mat',...
-'many_steps_ymax7_mpc_EXP_const-sig-rob-opt_07-17-2018.mat',...
-'many_steps_ymax7_linfxp_sim_const-sig-min-gam_07-17-2018.mat',...
-'many_steps_ymax7_mpcfxp_sim_const-sig-min-gam_07-17-2018.mat',...
-'many_steps_ymax7_lin_EXP_const-sig-min-gam_07-17-2018.mat',...
-'many_steps_ymax7_mpc_EXP_const-sig-min-gam_07-17-2018.mat'
+'many_steps_ymax7_linfxp_sim_choose-zet-rob-opt_07-17-2018.mat',...
+'many_steps_ymax7_mpcfxp_sim_choose-zet-rob-opt_07-17-2018.mat',...
+'many_steps_ymax7_lin_EXP_choose-zet-rob-opt_07-17-2018.mat',...
+'many_steps_ymax7_mpc_EXP_choose-zet-rob-opt_07-17-2018.mat',...
+'many_steps_ymax7_mpcfxp_sim_choose-zet-min-gam_07-17-2018.mat',...
+'many_steps_ymax7_linfxp_sim_choose-zet-min-gam_07-17-2018.mat',...
+'many_steps_ymax7_lin_EXP_choose-zet-min-gam_07-17-2018.mat',...
+'many_steps_ymax7_mpc_EXP_choose-zet-min-gam_07-17-2018.mat',...
 };
 
 
-names_const_sig_rob_opt = {'LS (CSRO)','MPCS (CSRO)',...
-                    'LE (CSRO)', 'MPCE (CSRO)',...
-                   'LS (CSMG)','MPCS (CSMG)',...
-                    'LE (CSMGM)', 'MPCE (CSMG)'};
+names_const_sig_rob_opt = {'LS (CZMG)','MPCS (CZMG)',...
+                   'LE (CZRO)', 'MPCE (CZRO)',...
+                   'LS (CZMG)','MPCS (CZMG)',...
+                    'LE (CZMG)', 'MPCE (CZMG)'};
+
 
 
 clrs = {'b', 'r', 'g', 'm', 'k',  [0    0.4470    0.7410],...
@@ -217,7 +190,7 @@ S = sprintf('%s\\end{tabular}\n', S)
 
 
 if saveon
-    fid = fopen(fullfile(PATHS.MPCJ_root, 'latex', 'manystepsdata.tex'), 'w+');
+    fid = fopen(fullfile(PATHS.MPCJ_root, 'latex', 'manystepsdata_choosesig.tex'), 'w+');
     fprintf(fid, '%s', S);
     fclose(fid);
 end
