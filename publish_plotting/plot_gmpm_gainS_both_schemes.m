@@ -9,8 +9,6 @@ G_recyc = plants.sys_recyc;
 Ts = G_recyc.Ts;
 
 
-
-
 pmgm_figfile = 'PMGM_vs_gamma_both.svg';
 sens_ts_figfile = 'GainS_TS_vs_gamma_both.svg';
 lqr_locus_figfile = 'lqr_locus_both.svg';
@@ -28,7 +26,7 @@ cmplx_rad = 0.9;
    
 
 gams = logspace(log10(0.1), log10(1000), 100);
-gams = unique([gams, 1.0, 3.0, 3.1, 3.8, 12, 2])
+gams = unique([gams, 1.0, 3.0, 3.1, 3.8, 12,10, 2, 0.001, 0.5, 0.2, 2.9]);
 [GM_s1, PM_s1, Sens_gain1, TS_s1] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obsDist, Q1, R0, S1, LxLd, gams);
 
 [GM_s1_pure, PM_s1_pure] = gmpm_vs_gam_recyc(G, G_recyc, Q1, R0, S1, gams);
@@ -109,6 +107,8 @@ min_gam_labels = {'const-$\sigma$ (lin, min-$\gamma$)',  'const-$\sigma$ (MPC, m
 rob_labels = {'const-$\sigma$ (lin, rob) ', 'const-$\sigma$ (MPC, rob)',...
   'choose-$\zeta$ (lin, rob) ', 'choose-$\zeta$ (MPC, rob)',   };
 labels = {rob_labels{:}, min_gam_labels{:}};
+
+
 %
 [~, idx] = min(Sens_gain1);
 % for rob-optimal, mpc and linear take the same gamma
@@ -119,22 +119,22 @@ lin_zet__rob_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
 mpc_zet_rob_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
 data = [lin_sig__rob_data; mpc_sig_rob_data; lin_zet__rob_data; mpc_zet_rob_data];
 
-% minimum-gamma scheme.  For const-sigma, and rmax=14, we get gam=12 for
-% linear, and gam=2 for Nmpc=12.
-idx = find(gams == 12, 1, 'first');
+% minimum-gamma scheme.  For const-sigma, and rmax=14, we get gam=10 for
+% linear, and gam=0.5 for Nmpc=12.
+idx = find(gams == 10, 1, 'first');
 lin_sig_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
-idx = find(gams == 2, 1, 'first');
+idx = find(gams == 0.5, 1, 'first');
 mpc_sig_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
 
-% We have, I think, gam=3.8 for MPC and gam=3.1 for linear, in the choose zeta scheme.
-idx = find(gams == 3.8, 1, 'first');
+% We have, I think, gam=2.9 for MPC and gam=3.1 for linear, in the choose zeta scheme.
+idx = find(gams == 2.9, 1, 'first');
 lin_zet_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
-idx = find(gams == 3.1, 1, 'first');
+idx = find(gams == 0.2, 1, 'first');
 mpc_zet_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
 
 data = [data; lin_sig_ming_data; mpc_sig_ming_data; lin_zet_ming_data; mpc_zet_ming_data];
 
-
+%%
 body = sprintf('%s\n\\hline\n', 'scheme           & $\gamma$ &GM [dB]& PM [deg] & $|\mathcal{S}|$ [dB]\\');
 
 

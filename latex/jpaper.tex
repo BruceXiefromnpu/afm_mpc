@@ -612,7 +612,7 @@ Alternatively, we consider selecting $\gamma$ to balance the trade-off between n
 In discussing stability, recall that, in contrast to the continuous time case, the full-state feedback LQR controller does not have a guaranteed infinite gain margin nor a guaranteed phase margin greater than $60^{\circ}$ \cite{andersson_moore}. For both continuous time and discrete time, the robustness properties can be arbitrarily bad when an observer is used in lieu of state feedback. In the continuous time case, the full state feedback robustness may be recovered asymptotically using, e.g., the loop transfer recover (LTR) of \cite{doyle_guaranteed_1978}. In general, this result does not translate to discrete-time. Most efforts at obtaining LTR like results for discrete-time assume that (1) a current estimator is used and (2) $CB\neq 0$. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. For our system model model, $CB=0$, because the relative degree is TK. 
 
 
-For both the constant-$sigma$ and choose-$\zeta$ scenarios, Fig.~\ref{fig:gmpm} shows the GM and PM plotted as $\gamma$ increases. It is clear that taking the \emph{minimum $\gamma$} approach will yield very small stability margins. Fig.~\ref{fig:GainS} shows how the low-frequency gain of $\mathcal{S}(z)$ changes with increasing $\gamma$ as well as how the nominal (i.e., unconstrained) settling-time to a unit step increases. As one might expect, the settling time increases monotonically with $\gamma$. Interestingly, for both the constant-$\sigma$ and choose-$\zeta$ scenarios, the low frequency gain of $\mathcal{S}(z)$ achieves a minimum at $\gamma=129$ and $\gamma=42$, respectively. Both of these control weights are large enough that there will be no stability problems due to saturation, i.e., we can track any setpoint across the stage.
+For both the constant-$\sigma$ and choose-$\zeta$ scenarios, Fig.~\ref{fig:gmpm} shows the GM and PM plotted as $\gamma$ increases. It is clear that taking the \emph{minimum $\gamma$} approach will yield very small stability margins. Fig.~\ref{fig:GainS} shows how the low-frequency gain of $\mathcal{S}(z)$ changes with increasing $\gamma$ as well as how the nominal (i.e., unconstrained) settling-time to a unit step increases. As one might expect, the settling time increases monotonically with $\gamma$. Interestingly, for both the constant-$\sigma$ and choose-$\zeta$ scenarios, the low frequency gain of $\mathcal{S}(z)$ achieves a minimum at $\gamma=129$ and $\gamma=42$, respectively. Both of these control weights are large enough that there will be no stability problems due to saturation, i.e., we can track any setpoint across the stage.
 
 To consider the minimum-$\gamma$ approach, we need to determine the smallest $\gamma$ that will still yield a stable trajectory (for the nominal plant) under our slew rate saturating constraint. To determine this, we run a series of simulations across a grid of $\gamma$'s. For a specific $\gamma$ in the grid, simulations are run from a reference of $r=0.5$ up to $r=14$ in increments of $0.5$. If instability occurs, we move up to the next $\gamma$ in the grid. The smallest $\gamma$ which is stable for all setpoints in the range $0.5, 15$ is what we consider the minimum $\gamma$. This set of simulations is run for both the SLF case as well as the several control horizons in the MPC case. Table~\ref{tab:gmpms} summarizes all of this for a control horizon of $N=12$. The values of $\gamma$ for longer control horizons do not vary appreciably. 
 
@@ -627,6 +627,20 @@ To consider the minimum-$\gamma$ approach, we need to determine the smallest $\g
 
 \section{Quantifying the time savings (if any) of MPC and de-rated linear feedback}
 \label{sec:org7edf36d}
+
+\begin{figure*}
+  \begin{minipage}{0.48\textwidth}
+    \includesvg[width=1\textwidth]{figures/perc_increase_Ipow_lowgain_rmax14.svg}
+    \caption{For the choose-$\zeta$ method, percentage increase over the discrete minimum time trajectory.}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.48\textwidth}
+    \includesvg[width=1\textwidth]{figures/perc_increase_Ipow_lowgain_rmax14_constsig.svg}
+    \caption{For the constant-$\sigma$ method, percentage increase over the discrete minimum time trajectory.}
+  \end{minipage}
+\end{figure*}
+
+
 The goal of this section is to quantify the time savings (if any) of using MPC vs SLF. To make things definite, throughout this section, we consider $Q, R_o, S$ to be fixed and consider $\gamma$ as the tuning parameter.
 
 We make the following observations
@@ -643,7 +657,19 @@ As we will see (and as one might expect), SLF requires more de-rating than MPC a
 
 To be able to make this comparison, we need a way to decide when a trajectory is unstable, or more generally, unacceptable. There are a number of ways one might approach this. The most naive way to this would be to look at the settling time over a sufficiently long simulation: if the trajectory never settles into the settle boundary, we decide the system was unstable for that setpoint size. The trouble with this is that there is a middle ground, where the trajectory will actually settle, but spends a lot of time oscillating (in some non-linear fashion) before it gets there. This is illustrated in Fig. REF. 
 
- 
+\begin{table*}
+  \caption{Columns from left to right: Linear simulation, constant-$\sigma$, robust-optimal (LS-CSRO); MPC simulation, constant-$\sigma$, robust-optimal (MPC-CSRO); Linear Experiment, constant-$\sigma$, robust-optimal (LE-CSRO);
+    MPC Experiment, constant-$\sigma$, robust-optimal (MPCE-CSRO);
+    Linear simulation, constant-$\sigma$, minimum-$\gamma$ (LS-CSMG);
+    MPC simulation, constant-$\sigma$, minimum-$\gamma$ (MPCS-CSMG);
+    Linear Experiment, constant-$\sigma$, minimum-$\gamma$ (LE-CSMG);
+    MPC Experiment, constant-$\sigma$, minimum-$\gamma$ (MPCE-CSMG);
+  }
+   % \begin{tabular}{cccccc}
+   \input{manystepsdata.tex}
+  % \end{tabular}
+\end{table*}
+
 
 % Additionally, in simulation we consider two additional techniques:
 % \begin{itemize}
