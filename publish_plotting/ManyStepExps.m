@@ -1,8 +1,41 @@
-classdef ProcessTsData
+classdef ManyStepExps
+  properties
+    TOL;
+    tol_mode;
+    step_ref;
+    step_exps;
+    TS_mat;
+  end
+  methods
+    function self = ManyStepExps(TOL, tol_mode, step_ref, varargin)
+    % ProcessTsData(TOL, tol_mode, step_ref, varargin)
+    % varargin should be:
+    %  step_exp1, step_exp2,...
+      self.TOL = TOL;
+      self.tol_mode = tol_mode;
+      self.step_ref = step_ref;
+      
+      for k=1:length(varargin)
+        self.step_exps{k} = varargin{k};
+        Ts_vec_k = self.step_exps{k}.settle_time(TOL, tol_mode, 0);
+        self.TS_mat(:,k) = Ts_vec_k;
+      end
+    end
 
-  methods (Static)
-    
-    function S = TS_dat2tex(TS_dat_cell, step_ref, varargin)
+    function [hands] = ploty_all(self, ax)
+      idx = 1:length(self.step_exps);
+      hands = self.ploty_selected(idx, ax);
+    end
+    function [hands] = ploty_selected(self, idx, ax)
+      hands = gobjects(1, length(idx));
+      for k=1:length(idx)
+        hands(k) = self.step_exps{idx(k)}.ploty(ax);
+        hold on
+      end
+      
+      
+    end
+    function S = TS_dat2tex(self, varargin)
       % S = TS_dat2tex(TS_dat_cell, step_ref, varargin)
       % S = TS_dat2tex(TS_dat_cell, step_ref, 'do_color', (true|false))
       % S = TS_dat2tex(TS_dat_cell, step_ref, 'do_color', (true|false), ts_vec)
@@ -48,6 +81,7 @@ classdef ProcessTsData
       do_color = p.Results.do_color;
       ts_vec   = p.Results.ts_vec;
       
+      
       % ------------------------------------------------------
       % ------------ Build the LaTex table -------------------
       
@@ -71,41 +105,39 @@ classdef ProcessTsData
       % -- First, we programmatically construct \tabular{ccc},
       %    since the 'ccc' depends on how many columns we need.
       %    the number of columns in the table
-      c_fmt = repmat('c', 1, 3+length(TS_dat_cell));
+      [n_steps, n_exps] = size(self.TS_mat);
+      
+      c_fmt = repmat('c', 1, 3+n_steps);
       S = sprintf('\\begin{tabular}{%s}\n', c_fmt);
       
       % -- Form the table header:
       str_ref_cols = sprintf('&ref & delta');
       str_dat_cols = '';
-      for k=1:length(TS_dat_cell)
-        str_dat_cols = sprintf(' %s & %s', str_dat_cols, TS_dat_cell{k}.name);
+      for k=1:n_exps
+        str_dat_cols = sprintf(' %s & %s', str_dat_cols, self.step_exps{k}.name);
       end
       S = sprintf('%s%s%s\\\\\n\\toprule\n', S, str_ref_cols, str_dat_cols);
       %
       % -- Build up the body of the table. Outer loop is for each row.
       % Inner loop is for each experiment (columns).
-      
-      
-      for k = 2:length(step_ref.step_amps)
+      for k = 1:n_steps  %2:length(self.step_ref.step_amps)
         
-        delta_ref = step_ref.step_amps(k) - step_ref.step_amps(k-1);
-        str_ref_cols = sprintf('&%.2f & %.2f', step_ref.step_amps(k), delta_ref);
+        delta_ref = self.step_ref.step_diff_amps(k+1);
+        str_ref_cols = sprintf('&%.2f & %.2f', self.step_ref.step_amps(k+1), delta_ref);
         str_dat_cols = '';
         % across columns, each experiment
-        for j = 1:length(TS_dat_cell)
+        for j = 1:n_exps
           % settle times are stored as columns, but we have to build each row.
-          ts_kj = TS_dat_cell{j}.ts_s(k-1); % kth row, jth col.
+          ts_kj = self.TS_mat(k, j); %TS_dat_cell{j}.ts_s(k-1); % kth row, jth col.
           
           % Indexes from slowest to fastest.
           if do_color
             idx = find(ts_vec == ts_kj);
             str_dat_cols = sprintf('%s &\\cellcolor[rgb]{%.4f, %.4f, %.4f} %.2f', str_dat_cols, ...
               mp_fine(idx, 1), mp_fine(idx,2), mp_fine(idx, 3), 1000*ts_kj);
-           % keyboard
           else
             str_dat_cols = sprintf('%s & %.2f', str_dat_cols,  1000*ts_kj);
           end
-          % keyboard
         end
         s_row = sprintf('%s%s\\\\ \n', str_ref_cols, str_dat_cols);
         S = sprintf('%s%s', S, s_row);
@@ -113,19 +145,20 @@ classdef ProcessTsData
       % -- Build the footer. This is where the totals go.
       str_ref_cols = sprintf('total & -- & --');
       str_dat_cols = '';
-      for j = 1:length(TS_dat_cell)
+      for j = 1:n_exps
         str_dat_cols = sprintf('%s &%.2f', str_dat_cols, ...
-          1000*sum(TS_dat_cell{j}.ts_s) );
+          1000*sum(self.TS_mat(:,j)));
       end
       
       s_row = sprintf('%s%s\\\\ \n', str_ref_cols, str_dat_cols);
       
       S = sprintf('%s\\midrule\n %s', S, s_row);
-      
-      
       S = sprintf('%s\\end{tabular}\n', S);
       
     end
+  end % methods
+  
+  methods (Static)
     function ts_vec = ts_vec_from_dir(root, TOL, tol_mode)
       files = strsplit(ls(root));
       
@@ -143,6 +176,14 @@ classdef ProcessTsData
         ts_vec = [ts_vec; dat.settle_time(TOL, tol_mode, verbose)];
       end
     end
+    
+    function write_tex_data(S, fpath)
+      % write_tex_data(S, fpath)
+      fid = fopen(fpath, 'w+');
+      fprintf(fid, '%s', S);
+      fclose(fid);
+    end
+    
     function ts_vec = concat_TS_cell(ts_cell)
       ts_vec = []
       for k=1:length(ts_cell)

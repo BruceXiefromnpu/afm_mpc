@@ -97,9 +97,9 @@ set(leg, 'Location', 'NorthEast')
 
 % ------------------------------------------------------
 % ------------ Build the LaTex table -------------------
-ts_vec = ProcessTsData.ts_vec_from_dir(root, TOL, tol_mode);
+ts_vec = ManyStepExps.ts_vec_from_dir(root, TOL, tol_mode);
 %%
-S = ProcessTsData.TS_dat2tex(TS_dat_cell, step_ref, 'do_color', true, 'ts_vec', ts_vec);
+S = ManyStepExps.TS_dat2tex(TS_dat_cell, step_ref, 'do_color', true, 'ts_vec', ts_vec);
 fprintf('%s', S); % just display it.
 
 if saveon

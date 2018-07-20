@@ -24,7 +24,7 @@ step_ref.plot_settle_boundary(Fig, TOL, tol_mode);
 
 % ----------------------------------------------------------------
 % --------- Constant sigma, rob-opt -------------------
-files_const_sig_rob_opt = {
+files_choose_zet = {
 'many_steps_ymax7_linfxp_sim_choose-zet-min-gam_07-18-2018.mat',...
 'many_steps_ymax7_mpcfxp_sim_choose-zet-min-gam_07-18-2018.mat',...
 'many_steps_ymax7_linfxp_sim_choose-zet-rob-opt_07-18-2018.mat',...
@@ -53,7 +53,7 @@ hands = gobjects(1,length(names_const_sig_rob_opt));
 TS_s_cell = {};
 
 for k=1:length(names_const_sig_rob_opt)
-  dat = load(fullfile(root, files_const_sig_rob_opt{k}));
+  dat = load(fullfile(root, files_choose_zet{k}));
   exp_name_str = fields(dat);
   exp_name_str = exp_name_str{1};
   dat = dat.(exp_name_str);
@@ -97,8 +97,8 @@ set(leg, 'Location', 'NorthEast')
 
 % ------------------------------------------------------
 % ------------ Build the LaTex table -------------------
-ts_vec = ProcessTsData.ts_vec_from_dir(root, TOL, tol_mode);
-S = ProcessTsData.TS_dat2tex(TS_dat_cell, step_ref, 'do_color', true, 'ts_vec', ts_vec);
+ts_vec = ManyStepExps.ts_vec_from_dir(root, TOL, tol_mode);
+S = ManyStepExps.TS_dat2tex(TS_dat_cell, step_ref, 'do_color', true, 'ts_vec', ts_vec);
 fprintf('%s', S);
 
 if saveon
