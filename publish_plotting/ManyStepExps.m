@@ -1,4 +1,4 @@
-classdef ManyStepExps
+classdef ManyStepExps < handle
   properties
     TOL;
     tol_mode;
@@ -22,14 +22,25 @@ classdef ManyStepExps
       end
     end
 
-    function [hands] = ploty_all(self, ax)
-      idx = 1:length(self.step_exps);
-      hands = self.ploty_selected(idx, ax);
+    function self = add_step_exp(self, step_exp)
+    % self = add_step_exp(self, step_exp)
+    % Add another step experiment to the property (a cell array) 
+    % self.step_exps
+      n = length(self.step_exps);
+      self.step_exps(n+1) = step_exp;
     end
-    function [hands] = ploty_selected(self, idx, ax)
+    
+    function [hands] = ploty_all(self, fig_ax)
+    % [hands] = ploty_all(self, ax)
+    % plot all of the step experiment y (output) trajectories in
+    % self.step_exps to the figure or axis pointed to by fig_ax.
+      idx = 1:length(self.step_exps);
+      hands = self.ploty_selected(idx, fig_ax);
+    end
+    function [hands] = ploty_selected(self, idx, fig_ax)
       hands = gobjects(1, length(idx));
       for k=1:length(idx)
-        hands(k) = self.step_exps{idx(k)}.ploty(ax);
+        hands(k) = self.step_exps{idx(k)}.ploty(fig_ax);
         hold on
       end
       
@@ -76,29 +87,32 @@ classdef ManyStepExps
       p = inputParser();
       p.addParameter('do_color', true);
       p.addParameter('ts_vec', []);
+      p.addParameter('colormap', []);
       
       p.parse(varargin{:});
       do_color = p.Results.do_color;
       ts_vec   = p.Results.ts_vec;
-      
+      color_map = p.Results.colormap;
       
       % ------------------------------------------------------
       % ------------ Build the LaTex table -------------------
       
       if do_color
         % Build a colormap, interpolated onto the TOTAL number of settling times we have.
-        mp = colormap(gca, 'jet');
-        x = 1:size(mp,1);
+        if isempty(color_map)
+          color_map = colormap(gca, 'jet')
+        end
+        x = 1:size(color_map,1);
         if isempty(ts_vec)
           ts_vec = concat_TS_cell(TS_dat_cell);
         end
         ts_vec = unique(sort(ts_vec, 'descend'));
-        xq = linspace(1, (size(mp,1)), length(ts_vec));
+        xq = linspace(1, (size(color_map,1)), length(ts_vec));
         
         mp_fine = zeros(length(xq), 3);
-        mp_fine(:,1) = interp1(x, mp(:,1), xq);
-        mp_fine(:,2) = interp1(x, mp(:,2), xq);
-        mp_fine(:,3) = interp1(x, mp(:,3), xq);
+        mp_fine(:,1) = interp1(x, color_map(:,1), xq);
+        mp_fine(:,2) = interp1(x, color_map(:,2), xq);
+        mp_fine(:,3) = interp1(x, color_map(:,3), xq);
         
       end
       
