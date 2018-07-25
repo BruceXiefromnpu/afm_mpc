@@ -50,6 +50,8 @@
 % \newcommand{\ubp}{\ensuremath{\bar{u}^+ }\xspace}
 % \newcommand{\ubm}{\ensuremath{\bar{u}^- }\xspace}
 
+\usepackage[table]{colortbl}
+
 \begin{document}
 \title{Control strategies for step tracking a piezo stage}
 \author{Roger A. Braker and Lucy Y. Pao
@@ -65,25 +67,29 @@
 \end{abstract}
 
 
-\section{Introduction}
-\label{sec:orge362f71}
-BOILER PLATE ABOUT AFM AND COMPRESSED SENSING.
- \newline
+\section{Introduction}\label{sec:intro}
 
-In the context of CS, we are interested in rapidly moving the AFM stage between setpoints. The setpoints define either discrete measurement locations or the start of a new \(\mu\)-path scan.
+The Atomic Force Microscope (AFM) is a nano-scale imaging instrument which acquires an image of the surface topography of a sample by mechanically interrogating it with an atomically-sharp probe.  \cite{abramovitch_tutorial_2007}. Typically, the probe is scanned across a specimen in a raster patter, sequentially acquiring pixels in an image. This process endows the AFM with excellent spatial resolution. However, the serial acquisition of pixels limits the speed of any given instrument, yielding framerates on the order of minutes for many commercially available instruments.
 
-Point-to-point movements by AFM is also of interest in other areas like visceolastic property mapping \cite{killgore_visceolastic_2011}.\newline
+While slow imaging is inconvenient for static samples, it represents a fundamental limitation in the study of dynamic specimens and  has led to a large research effort to increase the speed of AFMs. Most of these efforts focus on various methods to increase the overall speed of the system. Approaches include building stiff piezo stages with higher first-resonance frequencies (e.g., \cite{schitter_designmodeling,kenton_threeaxis}); replacing the standard triangle wave reference with a reference signal which has a more friendly harmonic content such as spirals or Lissajous patterns (e.g., \cite{Mahmood_nano_2009,Tuma:2012hv,rana_spiral_2014}), or driving the stage with a pure sinusoid \cite{fleming_bridging_2010}; and using advanced control methods, including very effective use of feedfoward control \cite{butterworth_dualadaptive_2011, li_feedforward_2007,moheimani_IRC, Leang_IEEECS_2009}. In the $z$-direction, the sample surface acts as an unknown disturbance, making feedforward approaches less effective. Here, improvements have been made with advanced feedback control techniques like $H_{\infty}$ and high speed hardware such as fast piezo stacks \cite{fleming_bridging_2010, reza_zaxis_videorate}.
 
-BOILER PLATE ABOUT MINIMUM TIME STUFF
+% One of the drawbacks to these approaches is that to increase the actual imaging rate, all the pieces have to be be improved in lockstep \cite{schitter_scanning_2009}. Increasing the speed of one element is of limited value because it will only expose a bottleneck somewhere else. For example, increasing the bandwidth of the $xy$-stage leads to a bottleneck in the $z$-direction, and vice versa. Increasing either can expose deficiencies in the power amplifiers or the sample rate of the digital control system.
 
-Reference \cite{broeck_time_2009} uses a quadratic cost with a terminal constraint combined with an exhaustive search over the control horizon length to formulate a Time Optimal MPC problem. However, the implementation only runs at 100~Hz, which is about 250 times too slow for our application. 
-\newline
+Complementary to these efforts are \emph{algorithmic} approaches that seek to increase speed by reducing the number of measurements taken rather than increasing the scan speed. This includes approaches such as Local Circular Scanning \cite{Huang:2014dw,Hartman:2017ud} and Compressed Sensing (CS). The central idea of CS-based imaging (which is our interest here) is to leverage the redundancy present in most in signals such that the  number of pixels to be acquired is reduced. Details of implementing this approach can be found in \cite{braker_hardware_2018}.
 
+For good guarantees on reconstruction quality, measurements in CS-based imaging scheme need to be randomly distributed across the specimen. Each measurement might acquire a single pixel \cite{andersson_pao} or short micro-scan \cite{braker_hardware_2018, maxwell_acc_2014}. Once a measurement is completed, the AFM probe is retracted from the sample surface, then moved in the XY plane to the next measurement location, the probe is re-engaged with the surface and the measurement is acquired. 
+
+In this paper we are concerned with the point-to-point movement in the XY plane between measurement locations. 
+Point-to-point movements by AFM is also of interest in other areas like visceolastic property mapping \cite{killgore_visceolastic_2011}.
+
+In principle, minimizing the tracking time of such point-to-point motions is a classic time-optimal control problem and for piezo stages which can be adequately modeled as a second-order system, robust methods to effect this have been developed \cite{braker_proximate_2017}. However, for stages with more complex dynamics, including the stage in our own lab, closed-form solutions to the minimum time problem are intractable. Certainly, it is straightforward to solve numerically for a time-optimal trajectory (in either discrete or continuous time) and such schemes have been implemented online in a Model Predictive Control (MPC) framework. For example, reference \cite{broeck_time_2009} uses a quadratic cost with a terminal constraint combined with an exhaustive search over the control horizon length to formulate a Time Optimal MPC problem. The key caveat here is that the implementation only runs at 100~Hz, which is about 250 times too slow for our application and 6000 times too slow for many newer stages which have bandwidths exceeding 20~kHz~\cite{kenton_threeaxis}.
 
 
 One of the typically cited reasons for using MPC is that (state or input) constraints can be handled explicitly as part of the optimization. On the other hand, for a linear MPC problem with a quadratic cost when the terminal cost $Q_p$ is set equal to the solution of the Discrete Algebraic Riccati Equation (DARE), the resulting control is equivalent to linear feedback control when the solution to REF is within the feasible set. For problems with input constraints only, acceptable closed-loop trajectories can often be obtained with pure linear feedback by relaxing the performance criteria, e.g., by increasing $\gamma$. Because MPC is both more difficult to implement and more resource intensive than linear feedback, an important question to answer is \emph{how much performance is gained with MPC?}. While many papers have begun to appear which demonstrate MPC on mechatronic systems with fast dynamics, few consider this aspect.
 
-One of the primary constraints in setpoint tracking with our piezo stage is the power amplifier's current which roughly translates to a slew rate limitation on the control signal. In earlier work, we considered the use of model predictive control to directly address the rate of change limitation and showed that the range of stabilizable setpoints was increased as compared to a simple saturated linear feedback \cite{braker_application_2017}. The question which naturally arises from that study, and which is one of the main topics of this paper, is "how much \emph{time} is actually saved with MPC?" In essence, the stabilizable set of setpoints using saturated linear feedback can be expanded by relaxing the performance criteria. While we might expect this to result in a slower settling time, the question we seek to answer is \emph{how much slower}? In other words, given a range of setpoints we wish to be able to visit, to what extent does MPC reduce the settling time and is this reduction significant enough to warrant the additional complexity?
+One of the primary constraints in setpoint tracking with our piezo stage is the current limit of the power amplifier,  which roughly translates to a slew rate limitation on the control signal. 
+
+In earlier work, we considered the use of model predictive control to directly address the rate of change limitation and showed that the range of stabilizable setpoints was increased as compared to a simple saturated linear feedback law \cite{braker_application_2017}. The question which naturally arises from that study, and which is one of the main topics of this paper, is "how much \emph{time} is actually saved with MPC?" In essence, the stabilizable set of setpoints using saturated linear feedback can be expanded by relaxing the performance criteria. While we might expect this to result in a slower settling time, the question we seek to answer is \emph{how much slower}? In other words, given a range of setpoints we wish to be able to visit, to what extent does MPC reduce the settling time and is this reduction significant enough to warrant the additional complexity?
 
 The second limitation of \cite{braker_application_2017} is that we did not consider the affects of drift and hysteresis and only considered tracking a single setpoint with the stage starting at rest. When tracking a \emph{sequence} of setpoints across the stages range, the affects of hysteresis become much more prominent. Thus, in this paper, we employ inverse drift and hysteresis compensation. Those inversions have the potential to violate the slew-rate limit our MPC controller has worked so hard to respect. To counteract this, in Section REF, we derive bounds on the rate of change of the output of the inverse compensators such that the slew rate limit can be guaranteed.
 
@@ -97,16 +103,14 @@ The overall control structure we consider in this paper is illustrated in block 
 We want to look at a few different ways of driving the stage from point to point as rapidly as possible, yet still be practical. Inspired by our past work, we focus on the experimental comparison of two methods:
 \begin{itemize}
 \item\emph{Saturated Linear state feedback (SLF)} The basic idea here to use standard linear state feedback which is saturated (on $\Delta u$) but to de-rate the design such that the closed-loop system is demonstrably stable up to a certain reference size. 
-\item\emph{Constrained Model Predictive Control (MPC)} The goal with MPC is that, instead of fully de-rating the design to account for the slew rate constraint, to directly account for the constraint as part of the control law itself. Do to limitations on the implementation, MPC must still be de-rated to some extent to be implementable, since the length of control horizon needed to achieve stabilty over the full range of the stage becomes large for an aggressive design.
+\item\emph{Constrained Model Predictive Control (MPC)} The goal with MPC is that, instead of fully de-rating the design to account for the slew rate constraint, to directly account for the constraint as part of the control law itself. Due to limitations on the implementation, MPC must still be de-rated to some extent to be implementable, since the length of control horizon needed to achieve stabilty over the full range of the stage becomes large for an aggressive design.
 \end{itemize}
 
 
 
 
 \section{Experimental Testbed}\label{sec:testbed}
-
-
-The AFM in our lab consists of an Agilent 5400 which has been retrofited with an nPoint NPXY100A piezo stage, which provides lateral movement of the sample. The NPXY100A is driven by an nPoint C300. The C300 amplifies the low voltage ($\pm~10$ volts) control inputs to a high voltage signal which drives the piezo stage and provides signal conditioning for the capacitive position sensors in the stage. Although the C300 can implement a basic PID controller, in this work we always operate the C300 in open loop mode. Unfortunately, even in open-loop mode, signals in the C300 still run through its internal DSP, which introduces around 360 $\mu$s of delay. 
+The AFM in our lab consists of an Agilent 5400 which has been retrofited with an nPoint NPXY100A piezo stage, which provides lateral movement of the sample. The NPXY100A, which is the focus of this paper, is driven by an nPoint C300. The C300 amplifies the low voltage ($\pm~10$ volts) control inputs to a high voltage signal which drives the piezo stage and provides signal conditioning for the capacitive position sensors in the stage. Although the C300 can implement a basic PID controller, in this work we always operate the C300 in open-loop mode. Unfortunately, even in open-loop mode, signals in the C300 still run through an internal DSP, which introduces around 360 $\mu$s of delay. 
 
 All control logic is programmed into a Xilinx Spartan-6 LX150 FPGA in a cRIO 9082 from National Instruments. Due to limitations in the digital to analog converter, the maximum sampling frequency is 100~kHz. However, in this work we use a sampling frequency of 25~kHz, which we choose because the fastest modeled resonance is at about 1~kHz. The sampling frequency of 25~kHz, the approximate 360~$\mu$s of delay translates to about 9 samples.
 
@@ -142,7 +146,7 @@ where $K_{op}\approx 15.15$ is the gain of the operational amplifier.
   \caption{The overall plant model consists of a vibrational component, $G_{vib}$, a drift model $G_{d}$ and a hysteresis model $\mathcal{H}[\cdot]$. }
   \label{fig:ss_bd}
 \end{figure*}
-To keep the discussion manageable, we will concentrate the discussion to the $x$-direction. We model the overall plant for the $X$-direction as three cascaded systems: $\mathcal{H}$ which models the hysteresis of the piezo, a drift model $G_d$ and a vibrational model $G_{vib}$. This cascaded structure is shown in Fig.~\ref{fig:ss_bd}. In general, the effects of hysteresis are most noticeable when moving across wide ranges. Thus, by using relatively small input signals, the drift and vibrational dynamics can be identified separately from the hysteresis. Here, we model both $G_{vib}$ and $G_d$ as linear, time-invariant discrete-time systems. The dynamics of drift are predominantly low frequency while vibrational aspects on the other hand are fast by comparison, which allows the two systems to be easily separted in the identification.
+To keep the discussion manageable, we will concentrate the discussion to the $X$-direction. We model the overall plant for the $X$-direction as three cascaded systems: $\mathcal{H}$ which models the hysteresis of the piezo, a drift model $G_d$ and a vibrational model $G_{vib}$. This cascaded structure is shown in Fig.~\ref{fig:ss_bd}. In general, the effects of hysteresis are most noticeable when moving across wide ranges. Thus, by using relatively small input signals, the drift and vibrational dynamics can be identified separately from the hysteresis. Here, we model both $G_{vib}$ and $G_d$ as linear, time-invariant discrete-time systems. The dynamics of drift are predominantly low frequency while vibrational aspects on the other hand are fast by comparison, which allows the two systems to be easily separted in the identification.
  Modeling these three components is the subject of the next three subsections.
 
 % \begin{figure*}
@@ -176,7 +180,7 @@ Here, we are concerned with the transfer function from the low voltage control s
   \label{fig:Guz2stage_frf}
 \end{figure}
 % However, to characterize the limitations of the C300 it will also be helpful to consider the transfer functions enumerated in Table~\ref{tab:TFS}. 
-% Note the large amounts of phase lag in both $G_{pow}$ and $G_{stage}$. This is due to the C300 including its own DSP which cannot be turned off, even when run in open loop mode. 
+% Note the large amounts of phase lag in both $G_{pow}$ and $G_{stage}$. This is due to the C300 including its own DSP which cannot be turned off, even when run in open-loop mode. 
 
 % \begin{table}
 %   \centering
@@ -195,7 +199,7 @@ Here, we are concerned with the transfer function from the low voltage control s
 % \end{table}
 
 
-Obtaining a parametric models of $G_{X,u_X}$ for control design involves two steps. We obtain a preliminary model using an Eigenspace Realization Algorithm (ERA) \cite{Jacques_sysidfrf}. In general, the ERA does not produce a model with poles at $z=0$, which is what we need in order to model the delay. Thus, the delay in the frequency response is divided out before passing it to the ERA algorithm.
+Obtaining a parametric models of $G_{X,u_X}$ for control design involves two steps. We obtain a preliminary model using an Eigenspace Realization Algorithm (ERA) \cite{Jacques_sysidfrf}. In general, the ERA does not produce a model with poles at $z=0$, which is what we need in order to model the delay. Thus, the delay in the frequency response is divided out of the FRF before passing it to the ERA algorithm.
 % The ERA does a fair job of identifying the resonances and anti-resonances. However, it gets the relative degree wrong.
 
 The second step uses the model generated by the ERA as the initial guess to a non-linear least squares problem \cite{sidman_parametric_1991} which minimizes the ratio of the logarithm of the experimental frequency response to that of the model. Though Sidman et al. develop the idea for a continuous time models, their strategy is easily adapted to fit a discrete time model. In this scenario, the optimization is given by
@@ -205,14 +209,14 @@ The second step uses the model generated by the ERA as the initial guess to a no
 \end{align}
 where $\omega_i$ is each frequency in the experimental frequency response and $\hat{G}(e^{j\omega_iT_s}|\theta)$ is the model parametrized by the vector $\theta$. The model $\hat{G}(z|\theta)$ is composed of first and second-order factors
 \begin{equation}
-  \hat{G}(z|\theta) =k \frac{\prod_{i=1}^{n_{rz}} (z-b^r_i) \prod_{j=1}^{n_{cz}}(z^2 +b^c_jz + b^c_{j+1})}
-  { \prod_{l=1}^{n_{rp}}(z-a^r_l) \prod_{m=1}^{n_{cp}}(z^2 +a^c_mz + a^c_{m+1})}z^{-p} \label{eqn:mode_struc}
+  \hat{G}(z|\theta) =K \frac{\prod_{i=0}^{n_{rz}-1} (z-b^r_i) \prod_{j=0}^{2n_{cz}-1}(z^2 +b^c_{2j}z + b^c_{2j+1})}
+  { \prod_{l=0}^{n_{rp}-1}(z-a^r_l) \prod_{m=0}^{2n_{cp}-1}(z^2 +a^c_{2m}z + a^c_{2m+1})}z^{-p} \label{eqn:mode_struc}
 \end{equation}
 so that
 \begin{equation}
-\theta = [b^r_1\dots b^r_{n_{rz}}, b^c_{1}\dots b^c_{n_cz}, a^r_1\dots a^r_{n_{rp}}, a^c_{1}\dots a^c_{n_cp}, k, p].
+\theta = [b^r_0\dots b^r_{n_{rz}}, b^c_{0}\dots b^c_{2n_{cz}-1}, a^r_0\dots a^r_{n_{rp}}, a^c_{0}\dots a^c_{2n_{cp}-1}, k, p].
 \end{equation}
-Due to the multiplicative structure \eqref{eqn:mode_struc}, the Jacobian of $\log(\hat{G}(z|theta))$ is surprisingly easy to calculate. Details can be found in \cite{sidman_parametric_1991}, though some modifications are required for the discrete-time case.
+Due to the logrithms in \eqref{eqn:logfit} and the multiplicative structure \eqref{eqn:mode_struc}, the Jacobian of $\log(\hat{G}(z|\theta))$ is surprisingly easy to calculate. Details can be found in \cite{sidman_parametric_1991}, though some modifications are required for the discrete-time case.
 
 The model structure \eqref{eqn:mode_struc} includes a fractional delay $z^{-p}$. This allows us to include the delay as a term in the decision variable and obviates the need to optimize over integers. This is further beneficial because we are not guaranteed that the latency from input to output is an exact integer and allowing a fractional delay helps the optimization to more accurately match the phase. In the final model, we round $p$ to the nearest integer. In this work, we do not model the modes above 1100~Hz. Thus, the optimization \eqref{eqn:logfit} is only done over frequency up to 1100~Hz. The final pole and zero locations for $G_{vib}$ are listed in Table \ref{tab:pzgvib}.
 
@@ -261,7 +265,7 @@ This non-linear optimization problem is solved with MATLAB's \texttt{lsqnonlin} 
 
 
 \subsection{Hysteresis Modeling}\label{sec:hyst_model}
-In typical raster scanning applications, hysteresis manifests as a bowing of the otherwise linear ramps. To motivate the need for hysteresis compensation in a step tracking application, consider Fig. \ref{fig:hyst_resp_dem}, which shows an input signal of various steps applied open loop to the stage. The dotted-black curve is the input (scaled by the nominal DC-gain of $G_dG_{vib}$ while the solid black curve is the stage response. Observe that for the same steady state value of control, the steady state value of the stage is different. Effectively then, the gain of the system depends on the control history.
+In typical raster scanning applications, hysteresis manifests as a bowing of the otherwise linear ramps. To motivate the need for hysteresis compensation in a step tracking application, consider Fig. \ref{fig:hyst_resp_dem}, which shows an input signal of various steps applied open-loop to the stage. The dotted-black curve is the input (scaled by the nominal DC-gain of $G_dG_{vib}$ while the solid black curve is the stage response. Observe that for the same steady state value of control, the steady state value of the stage is different. Effectively then, the gain of the system depends on the control history.
 
 There are many models for hysteresis. Here, we opt for simplicity (and by proxy, fast computation) and use the Modified Prandtl-Ishlinksi Hysteresis model developed in \cite{kuhnen_modeling_2003}. This hysteresis model is composed of a linear combination of saturation operators cascaded with a linear combination of classic hysteretic play\footnote{The term ``play'' is derived from the operator's use in modeling mechanical slop.} operators. The overall input-output relationship of the hysteresis operator $\mathcal{H}[\dot]$ in Fig.~\ref{fig:ss_bd} is
 \begin{equation}
@@ -500,7 +504,7 @@ The advantage in representing the closed-loop dynamics as \eqref{eqn:cltf} is th
 
 \begin{figure}
   \includesvg[width=1\linewidth]{figures/obs_cl.svg}
-  \caption{(black) Open loop plant pole (x) and zero(circle) locations. (red x) closed-loop observer pole locations.}
+  \caption{(black) open-loop plant pole (x) and zero(circle) locations. (red x) closed-loop observer pole locations.}
   \label{fig:obs_cl}
 \end{figure}
 
@@ -658,6 +662,7 @@ As we will see (and as one might expect), SLF requires more de-rating than MPC a
 To be able to make this comparison, we need a way to decide when a trajectory is unstable, or more generally, unacceptable. There are a number of ways one might approach this. The most naive way to this would be to look at the settling time over a sufficiently long simulation: if the trajectory never settles into the settle boundary, we decide the system was unstable for that setpoint size. The trouble with this is that there is a middle ground, where the trajectory will actually settle, but spends a lot of time oscillating (in some non-linear fashion) before it gets there. This is illustrated in Fig. REF. 
 
 \begin{table*}
+  \begin{minipage}{1\textwidth}
   \caption{Columns from left to right: Linear simulation, constant-$\sigma$, robust-optimal (LS-CSRO); MPC simulation, constant-$\sigma$, robust-optimal (MPC-CSRO); Linear Experiment, constant-$\sigma$, robust-optimal (LE-CSRO);
     MPC Experiment, constant-$\sigma$, robust-optimal (MPCE-CSRO);
     Linear simulation, constant-$\sigma$, minimum-$\gamma$ (LS-CSMG);
@@ -667,8 +672,45 @@ To be able to make this comparison, we need a way to decide when a trajectory is
   }
    % \begin{tabular}{cccccc}
    \input{manystepsdata.tex}
-  % \end{tabular}
+   % \end{tabular}
+ \end{minipage}
+ \begin{minipage}{1\textwidth}
+     \caption{Columns from left to right: Linear simulation, constant-$\sigma$, robust-optimal (LS-CSRO); MPC simulation, constant-$\sigma$, robust-optimal (MPC-CSRO); Linear Experiment, constant-$\sigma$, robust-optimal (LE-CSRO);
+    MPC Experiment, choose-$\zeta$, robust-optimal (MPCE-CZRO);
+    Linear simulation, choose-$\zeta$, minimum-$\gamma$ (LS-CZMG);
+    MPC simulation, choose-$\zeta$, minimum-$\gamma$ (MPCS-CZMG);
+    Linear Experiment, choose-$\zeta$, minimum-$\gamma$ (LE-CGMG);
+    MPC Experiment, choose-$\zeta$, minimum-$\gamma$ (MPCE-CZMG);
+  }
+   % \begin{tabular}{cccccc}
+   \input{manystepsdata_choosezeta.tex}
+   % \end{tabular}
+ \end{minipage}
+   \begin{centering}
+    \includesvg[scale=1]{figures/ts_colorbar.svg}
+  \end{centering}
+
 \end{table*}
+
+\begin{figure*}
+  \begin{minipage}{1\columnwidth}
+    \includesvg[width=1\columnwidth]{figures/step_exps_const_sig_y.svg}
+  \caption{(top) All the step inputs. (bottom left) best. (bottom right) worst}
+  \label{fig:const_sig_y}
+\end{minipage}
+\begin{minipage}{1\columnwidth}
+  \includesvg[width=1\columnwidth]{figures/step_exps_choose_zet_y.svg}
+  \caption{(top) All the step inputs. (bottom left) best. (bottom right) worst}
+  \label{fig:const_sig_y}
+\end{minipage}
+\end{figure*}
+
+\begin{figure*}
+  \includesvg[width=1\columnwidth]{figures/ts_vs_delref_sim.svg}
+  \includesvg[width=1\columnwidth]{figures/ts_vs_delref.svg}
+  \caption{(left) Simulated and settling-time vs reference size for the 8 different control schemes. (left) Shows the same set of steps for the experimental results. }
+  \label{fig:ts_vs_delr}
+\end{figure*}
 
 
 % Additionally, in simulation we consider two additional techniques:
