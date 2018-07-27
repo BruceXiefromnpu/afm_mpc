@@ -165,10 +165,10 @@ fprintf(['Margins with observer:\nGM:%f [dB]\nPM: %f [deg]\n'], 20*log10(gm), pm
 fprintf('Closed loop BW: %f [Hz]\n', bandwidth(minreal(Hyr))/2/pi);
 F1 = figure(10); clf
 [~, ~, omegas] = bode(G);
-frfBode(G, omegas/2/pi, F1, '-b', 'Hz');
-frfBode(Loop, omegas/2/pi, F1, '-g', 'Hz');
-frfBode(Hyr, omegas/2/pi, F1, '-r', 'Hz');
-frfBode(Sens, omegas/2/pi, F1, '--k', 'Hz');
+frfBode(G, omegas/2/pi, F1, 'Hz', '-b');
+frfBode(Loop, omegas/2/pi, F1, 'Hz', '-g');
+frfBode(Hyr, omegas/2/pi, F1, 'Hz', '-r');
+frfBode(Sens, omegas/2/pi, F1, 'Hz', '--k');
 
 
 %%

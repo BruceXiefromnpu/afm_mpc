@@ -19,9 +19,9 @@ P_uz2pow = squeeze(G_xpow(2,3, :)./G_xpow(3,3, :));
 
 % Visualize everything
 F1 = figure(1); clf
-frfBode(P_pow2stage, freqs, F1, 'g', 'Hz');
-frfBode(P_uz2stage, freqs, F1, 'r', 'Hz');
-frfBode(P_uz2pow, freqs, F1, 'b', 'Hz');
+frfBode(P_pow2stage, freqs, F1, 'Hz', 'g');
+frfBode(P_uz2stage, freqs, F1, 'Hz', 'r');
+frfBode(P_uz2pow, freqs, F1, 'Hz', 'b');
 
 [P_uz2pow, freqs_pow] = monotonicFRF(P_uz2pow, freqs);
 [P_uz2stage, freqs_stage] = monotonicFRF(P_uz2stage, freqs);
@@ -33,15 +33,15 @@ P_uz2pow_frd = frd(P_uz2pow, omegas, Ts);
 
 G_uz2pow = tfest(P_uz2pow_frd, 2, 0,5, 'Ts', Ts);
 % G_uz2pow.InputDelay = 1
-frfBode(G_uz2pow, freqs, F1, '--m', 'Hz');
+frfBode(G_uz2pow, freqs, F1, 'Hz', '--m');
 
 %%
 % Try fitting everything at once, (uz 2 stage).
 G = P_uz2stage;
 
 F2 = figure(2); clf;
-frfBode(P_uz2stage, freqs, F2, 'r', 'Hz');
-% frfBode(G, freqs, F, 'g', 'Hz')
+frfBode(P_uz2stage, freqs, F2, 'Hz', 'r');
+% frfBode(G, freqs, F, 'Hz', 'g')
 ss_opts = frf2ss_opts('Ts', Ts);
 
 f2ss = frf2ss(G, omegas, 11, ss_opts); % 12
@@ -57,7 +57,7 @@ gr = zpk([], exp(-2*pi*2500*Ts), 1, Ts);
 gr = gr/dcgain(gr);
 
 
-frfBode(sys*gr, freqs, F2, '--k', 'Hz');
+frfBode(sys*gr, freqs, F2, 'Hz', '--k');
 
 plotPZ_freqs(sys*gr, F2);
 %
@@ -76,15 +76,15 @@ gdrift = gdrift/dcgain(gdrift);
 % together.
 
 F3 = figure(3);clf
-frfBode(P_pow2stage, freqs, F3, 'r', 'Hz');
-frfBode(P_uz2stage, freqs, F3, 'g', 'Hz');
-frfBode(P_uz2pow, freqs, F3, 'b', 'Hz');
-frfBode(G_uz2pow, freqs, F3, '--m', 'Hz');
+frfBode(P_pow2stage, freqs, F3, 'Hz', 'r');
+frfBode(P_uz2stage, freqs, F3, 'Hz', 'g');
+frfBode(P_uz2pow, freqs, F3, 'Hz', 'b');
+frfBode(G_uz2pow, freqs, F3, 'Hz', '--m');
 
 
 G = P_uz2stage./squeeze(freqresp(G_uz2pow, omegas));
 % G = P_pow2stage;
-% frfBode(G, freqs, F, 'g', 'Hz')
+% frfBode(G, freqs, F, 'Hz', 'g')
 ss_opts = frf2ss_opts('Ts', Ts)
 
 f2ss = frf2ss(G, omegas, 6, ss_opts);
@@ -95,23 +95,23 @@ nmp_z = tzero(sys);
 nmp_z = nmp_z(find(abs(nmp_z) > 1))
 % g_eject = zpk([], nmp_z(1:2), 1, Ts)
 % sys = minreal(g_eject*sys)/dcgain(g_eject)
-frfBode(sys, freqs, F3, '--k', 'Hz');
+frfBode(sys, freqs, F3, 'Hz', '--k');
 
 
 
 plotPZ_freqs(sys, F3)
 
 F4 = figure(4);clf
-% frfBode(P_pow2stage, freqs, F3, 'r', 'Hz');
-frfBode(P_uz2stage, freqs, F4, 'g', 'Hz');
-% frfBode(P_uz2pow, freqs, F3, 'b', 'Hz');
-% frfBode(G_uz2pow, freqs, F3, '--m', 'Hz');
+% frfBode(P_pow2stage, freqs, F3, 'Hz', 'r');
+frfBode(P_uz2stage, freqs, F4, 'Hz', 'g');
+% frfBode(P_uz2pow, freqs, F3, 'Hz', 'b');
+% frfBode(G_uz2pow, freqs, F3, 'Hz', '--m');
 gdrift = 1;
-frfBode(sys*G_uz2pow*gdrift, freqs, F4, '--k', 'Hz');
+frfBode(sys*G_uz2pow*gdrift, freqs, F4, 'Hz', '--k');
 plotPZ_freqs(sys*G_uz2pow*gdrift, F4);
 
 %%
-frfBode(sys*G_uz2pow, freqs, F1, 'r', 'Hz')
+frfBode(sys*G_uz2pow, freqs, F1, 'Hz', 'r')
 
 plotPZ_freqs(sys*G_uz2pow, F1)
 
@@ -152,12 +152,12 @@ nmp_z = nmp_z(find(abs(nmp_z) > 1))
 
 
 F4 = figure(4); clf
-frfBode(G, freqs, F4, 'r', 'Hz')
-frfBode(sys2, freqs, F4, '--g', 'Hz');
+frfBode(G, freqs, F4, 'Hz', 'r')
+frfBode(sys2, freqs, F4, 'Hz', '--g');
 
-% frfBode(P_uz2stage, freqs, F2, 'k', 'Hz');
+% frfBode(P_uz2stage, freqs, F2, 'Hz', 'k');
 plotPZ_freqs(sys2, F4);
-% frfBode(sys2*G_uz2pow, freqs, F2, '--g', 'Hz');
+% frfBode(sys2*G_uz2pow, freqs, F2, 'Hz', '--g');
 % plotPZ_freqs(sys2*G_uz2pow, F2);
 
 
@@ -165,8 +165,8 @@ plotPZ_freqs(sys2, F4);
 %%
 if 0
     F3 = figure(3); clf;
-    frfBode(P_uz2stage,  freqs, F3, 'r', 'Hz');
-    frfBode(sys2*G_uz2pow, freqs, F3, '--k', 'Hz');
+    frfBode(P_uz2stage,  freqs, F3, 'Hz', 'r');
+    frfBode(sys2*G_uz2pow, freqs, F3, 'Hz', '--k');
 
     plotPZ_freqs(sys2*G_uz2pow, F3);
 

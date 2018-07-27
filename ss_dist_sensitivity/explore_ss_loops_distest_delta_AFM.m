@@ -72,9 +72,9 @@ H_distresp = gobjects(1, length(gam_s));
 H_stepresp = gobjects(1, length(gam_s));
 
 plotstyle = {'color', 'k', 'LineStyle', ':'};
-frfBodeMag(sys, freqs, ax1, plotstyle, 'Hz');
+frfBodeMag(sys, freqs, ax1, 'Hz', plotstyle);
 
-frfBodeMag(sys, freqs, ax2, plotstyle, 'Hz');
+frfBodeMag(sys, freqs, ax2, 'Hz', plotstyle);
 
 % mp = colormap(gca, 'jet');
 mp = colormap(gca, 'copper');
@@ -135,8 +135,8 @@ for k = 1:length(gam_s)
   
   clr = mp_fine(k,:);
   plot_style = {'color', clr};
-  H_hyr(k) = frfBodeMag(H_yr, freqs, ax1, plot_style, 'Hz');
-  H_Sens(k) = frfBodeMag(Sens, freqs, ax2, plot_style, 'Hz');
+  H_hyr(k) = frfBodeMag(H_yr, freqs, ax1, 'Hz', plot_style);
+  H_Sens(k) = frfBodeMag(Sens, freqs, ax2, 'Hz', plot_style);
   hold on
 %   H_hyd(k).DisplayName = sprintf('$H_{yd}=G\\mathcal{S}$, $\\gamma=%.4f$', gam);
   H_Sens(k).DisplayName = sprintf('$\\mathcal{S}$, $\\gamma=%.4f$, $\\kappa = %.1f$', gam, kappa);
@@ -265,9 +265,9 @@ for k = 1:length(gam_s)
   H_yr = ((zpk(sys)*zpk(D2)*zpk(Sens)));
   H_yd = minreal( zpk(sys)*zpk(Sens));
 
-  %H_hyd(k) = frfBode(H_yd, omegas, F1, ['-', CS{k}], 'Hz');
+  %H_hyd(k) = frfBode(H_yd, omegas, F1, 'Hz', ['-', CS{k}]);
   plot_style = {'color', clr};
-  H_Sens(k) = frfBode(Sens, freqs, F3, plot_style, 'Hz');
+  H_Sens(k) = frfBode(Sens, freqs, F3, 'Hz', plot_style);
   hold on
   %H_hyd(k).DisplayName = sprintf('$H_{yd}=G\\mathcal{S}$, $\\gamma=%.4f$', gam);
   H_Sens(k).DisplayName = sprintf('$\\mathcal{S}$, $\\gamma=%.4f$', gam);

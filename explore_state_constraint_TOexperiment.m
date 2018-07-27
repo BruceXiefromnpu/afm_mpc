@@ -36,10 +36,10 @@ sys = G_stage*Gpow;
 F1 = figure(1000);
 
 [~,~,omegas] = bode(sys);
-frfBode(Gpow, omegas/2/pi, F1,'-b', 'Hz');
-frfBode(G_stage, omegas/2/pi, F1,'-k', 'Hz');
-frfBode(sys_old, omegas/2/pi, F1,'-r', 'Hz');
-frfBode(sys, omegas/2/pi, F1,'-g', 'Hz');
+frfBode(Gpow, omegas/2/pi, F1,'Hz', '-b');
+frfBode(G_stage, omegas/2/pi, F1,'Hz', '-k');
+frfBode(sys_old, omegas/2/pi, F1,'Hz', '-r');
+frfBode(sys, omegas/2/pi, F1,'Hz', '-g');
 
 plotPZ_freqs(sys, F1);
 plotPZ_freqs(G_stage, F1);

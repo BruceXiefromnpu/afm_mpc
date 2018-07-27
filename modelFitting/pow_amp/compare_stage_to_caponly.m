@@ -58,10 +58,10 @@ ylabel('Mag [dB]')
 
 F30 = figure(30); clf
 F30.PaperPosition = [1.3333, 2.4635, 5.8333, 6.0729];
-[h30_1m, h30_1p] = frfBode(MF_stage.frf.G_uz2stage, freqs_stage, F30, '-r', 'Hz');
-[h30_2m, h30_2p] = frfBode(MF_stage.frf.G_uz2powV, freqs_stage, F30, '--b', 'Hz');
-[h30_3m, h30_3p] = frfBode(MF_stage.frf.G_uz2powI, freqs_stage, F30, '-k', 'Hz');
-[h30_4m, h30_4p] = frfBode(MF_stage.frf.G_powV2powI, freqs_stage, F30, ':k', 'Hz');
+[h30_1m, h30_1p] = frfBode(MF_stage.frf.G_uz2stage, freqs_stage, F30, 'Hz', '-r');
+[h30_2m, h30_2p] = frfBode(MF_stage.frf.G_uz2powV, freqs_stage, F30, 'Hz', '--b');
+[h30_3m, h30_3p] = frfBode(MF_stage.frf.G_uz2powI, freqs_stage, F30, 'Hz', '-k');
+[h30_4m, h30_4p] = frfBode(MF_stage.frf.G_powV2powI, freqs_stage, F30, 'Hz', ':k');
 
 h30_1p.DisplayName = '$G_{y_X,u_X}$';
 h30_2p.DisplayName = '$G_{V_X,u_X}$';

@@ -54,7 +54,7 @@ H_distresp = gobjects(1, length(gam_s));
 H_stepresp = gobjects(1, length(gam_s));
 
 plotstyle = {'color', 'k', 'LineStyle', ':'};
-frfBode(sys, freqs, F1, plotstyle, 'Hz');
+frfBode(sys, freqs, F1, 'Hz', plotstyle);
 
 mp = colormap(gca, 'jet');
 x = 1:size(mp,1);
@@ -69,7 +69,7 @@ mp_fine(:,3) = interp1(x, mp(:,3), xq);
 
 Gu = tf([1, 2*pi*0.1], [1, 2*pi*0.01]);
 Gu = ss(c2d(Gu, Ts));
-frfBode(Gu, freqs, F1, plotstyle, 'Hz');
+frfBode(Gu, freqs, F1, 'Hz', plotstyle);
 
 %%
 
@@ -125,10 +125,10 @@ for k = 1:length(gam_s)
   H_yr = ((sys*D2*Sens));
   H_yd = minreal( sys*Sens);
 
-  %H_hyd(k) = frfBode(H_yd, omegas, F1, ['-', CS{k}], 'Hz');
+  %H_hyd(k) = frfBode(H_yd, omegas, F1, 'Hz', ['-', CS{k}]);
   clr = mp_fine(k,:);
   plot_style = {'color', clr};
-  H_Sens(k) = frfBode(Sens, freqs, F1, plot_style, 'Hz');
+  H_Sens(k) = frfBode(Sens, freqs, F1, 'Hz', plot_style);
   hold on
   %H_hyd(k).DisplayName = sprintf('$H_{yd}=G\\mathcal{S}$, $\\gamma=%.4f$', gam);
   H_Sens(k).DisplayName = sprintf('$\\mathcal{S}$, $\\gamma=%.4f$', gam);
@@ -279,9 +279,9 @@ for k = 1:length(gam_s)
   H_yr = ((zpk(sys)*zpk(D2)*zpk(Sens)));
   H_yd = minreal( zpk(sys)*zpk(Sens));
 
-  %H_hyd(k) = frfBode(H_yd, omegas, F1, ['-', CS{k}], 'Hz');
+  %H_hyd(k) = frfBode(H_yd, omegas, F1, 'Hz', ['-', CS{k}]);
   plot_style = {'color', clr};
-  H_Sens(k) = frfBode(Sens, freqs, F3, plot_style, 'Hz');
+  H_Sens(k) = frfBode(Sens, freqs, F3, 'Hz', plot_style);
   hold on
   %H_hyd(k).DisplayName = sprintf('$H_{yd}=G\\mathcal{S}$, $\\gamma=%.4f$', gam);
   H_Sens(k).DisplayName = sprintf('$\\mathcal{S}$, $\\gamma=%.4f$', gam);

@@ -78,20 +78,20 @@ G_powV2powI = FC_s(:,idx_powI)./FC_s(:, idx_powV);
 
 F2 = figure(2); clf
 F2.PaperPosition = [1.3376    2.3454    5.8247    6.3093];
-h1 = frfBode(G_uz2stage, freqs, F2, '-r', 'Hz');
+h1 = frfBode(G_uz2stage, freqs, F2, 'Hz', '-r');
 subplot(2,1,1)
 title('Control signal to stage output')
 
 
 F3 = figure(3); clf
 F3.PaperPosition = [1.3376    2.3454    5.8247    6.3093];
-h1 = frfBode(G_uz2powV, freqs, F3, '-r', 'Hz');
+h1 = frfBode(G_uz2powV, freqs, F3, 'Hz', '-r');
 subplot(2,1,1)
 title('Control signal to Amplifier Voltage');
 
 F5 = figure(5); %clf
-frfBode(G_uz2powI, freqs, F5, '--k', 'Hz');
-frfBode(G_powV2powI, freqs, F5, '--m', 'Hz');
+frfBode(G_uz2powI, freqs, F5, 'Hz', '--k');
+frfBode(G_powV2powI, freqs, F5, 'Hz', '--m');
 
 subplot(2,1,1)
 title('Amplifier Current')

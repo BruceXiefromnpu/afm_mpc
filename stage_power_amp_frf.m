@@ -12,7 +12,7 @@ F1 = figure(1);
 
 plt_hands1 = frfBode(mf_new.frf.Gx_ux_OL_frf, F1, '-r', 0);
 plt_hands2 = frfBode(mf_old.frf.Gx_ux_OL_frf, F1, '--k', 0);
-plt_hands3 = frfBode(squeeze(mf_new.frf.G_pow_frf), mf_new.frf.freq_s, F1, '-b', 'Hz');
+plt_hands3 = frfBode(squeeze(mf_new.frf.G_pow_frf), mf_new.frf.freq_s, F1, 'Hz', '-b');
 
 hand_mag_stage_new = plt_hands1.h_mag;
 hand_mag_stage_new.DisplayName = 'stage + amp: new';
@@ -36,7 +36,7 @@ F2 = figure(2);
 [frf_pow, freqs]= monotonicFRF(squeeze(mf_new.frf.G_pow_frf), mf_new.frf.freq_s);
 frf_stage = squeeze(mf_new.frf.Gx_ux_OL_frf.ResponseData)./frf_pow;
 
-frfBode(frf_stage, freqs, F2, 'r', 'Hz')
+frfBode(frf_stage, freqs, F2, 'Hz', 'r')
 
 
 %%
@@ -49,8 +49,8 @@ Gpow_est_frf = squeeze(freqresp(Gpow_est, freqs*2*pi));
 
 
 F3 = figure(3);
-plt_hands3 = frfBode(squeeze(mf_new.frf.G_pow_frf), mf_new.frf.freq_s, F3, '-b', 'Hz');
-frfBode(Gpow_est_frf, freqs, F3, '--k', 'Hz');
+plt_hands3 = frfBode(squeeze(mf_new.frf.G_pow_frf), mf_new.frf.freq_s, F3, 'Hz', '-b');
+frfBode(Gpow_est_frf, freqs, F3, 'Hz', '--k');
 
 save('gpow_tf.mat', 'Gpow_est')
 
