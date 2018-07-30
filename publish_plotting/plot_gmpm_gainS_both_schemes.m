@@ -36,8 +36,83 @@ can_cntrl = CanonCntrlParams_ns14();
 [Q1, R0, S1] = build_control(G_recyc, can_cntrl);
 [GM_s2, PM_s2, Sens_gain2, TS_s2] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obsDist, Q1, R0, S1, LxLd, gams);
 
+%
+% -------------------------------------------------------------------------
+% ----- Build LaTeX table of gamma, GM,PM |S| data for all 4 8 schemes ----
+
+min_gam_labels = {'const-$\sigma$ (lin, min-$\gamma$)',  'const-$\sigma$ (MPC, min-$\gamma$)',...
+  'choose-$\zeta$ (lin, min-$\gamma$)', 'choose-$\zeta$ (MPC, min-$\gamma$)'};
+
+rob_labels = {'const-$\sigma$ (lin, rob) ', 'const-$\sigma$ (MPC, rob)',...
+  'choose-$\zeta$ (lin, rob) ', 'choose-$\zeta$ (MPC, rob)',   };
+labels = {rob_labels{:}, min_gam_labels{:}};
+
+% ------------------- Constant-sigma --------------------------------------
+% 1) Robust-optimal
+[~, idx_csro] = min(Sens_gain1);
+% for rob-optimal, mpc and linear take the same gamma
+lin_sig_rob_data = [gams(idx_csro), GM_s1(idx_csro), PM_s1(idx_csro), Sens_gain1(idx_csro)];
+mpc_sig_rob_data = [gams(idx_csro), GM_s1(idx_csro), PM_s1(idx_csro), Sens_gain1(idx_csro)];
+
+% 2). minimum-gamma. For const-sigma, and rmax=14, we get gam=10 for
+%     linear, and gam=0.5 for Nmpc=12.
+idx_csmg_lin = find(gams == 10, 1, 'first');
+lin_sig_ming_data = [gams(idx_csmg_lin), GM_s1(idx_csmg_lin),...
+                     PM_s1(idx_csmg_lin), Sens_gain1(idx_csmg_lin)];
+idx_csmg_mpc = find(gams == 0.5, 1, 'first');
+mpc_sig_ming_data = [gams(idx_csmg_mpc), GM_s1(idx_csmg_mpc),...
+                     PM_s1(idx_csmg_mpc), Sens_gain1(idx_csmg_mpc)];
+
+% --------------------- Choose-zeta ---------------------------------------
+% 1). Robust optimal
+[~, idx_czro] = min(Sens_gain2);
+lin_zet__rob_data = [gams(idx_czro), GM_s2(idx_czro), PM_s2(idx_czro), Sens_gain2(idx_czro)];
+mpc_zet_rob_data = [gams(idx_czro), GM_s2(idx_czro), PM_s2(idx_czro), Sens_gain2(idx_czro)];
+
+% 2). We have, I think, gam=0.2 for MPC and gam=2.9 for linear,
+%     in the choose zeta scheme.
+idx_czmg_lin = find(gams == 2.9, 1, 'first');
+lin_zet_ming_data = [gams(idx_czmg_lin), GM_s2(idx_czmg_lin),...
+                     PM_s2(idx_czmg_lin), Sens_gain2(idx_czmg_lin)];
+idx_czmg_mpc = find(gams == 0.2, 1, 'first');
+mpc_zet_ming_data = [gams(idx_czmg_mpc), GM_s2(idx_czmg_mpc),...
+                     PM_s2(idx_czmg_mpc), Sens_gain2(idx_czmg_mpc)];
+
+data = [lin_sig_rob_data;
+  mpc_sig_rob_data; 
+  lin_zet__rob_data; 
+  mpc_zet_rob_data; 
+  lin_sig_ming_data; 
+  mpc_sig_ming_data; 
+  lin_zet_ming_data; 
+  mpc_zet_ming_data];
+
+body = sprintf('%s\n\\hline\n', 'scheme           & $\gamma$ &GM [dB]& PM [deg] & $|\mathcal{S}|$ [dB]\\');
+
+
+for row=1:size(data,1)
+  row_str = sprintf('%s &', labels{row});
+  for col = 1:size(data,2)
+    
+    if col < size(data,2)
+      fmt = '%s %.1f &';
+    else
+      fmt = '%s %.1f';
+    end
+     row_str = sprintf(fmt, row_str, data(row, col));
+  end
+  body = sprintf('%s%s\\\\\n', body, row_str);
+end
+
+body
+if saveon
+  fid = fopen(fullfile(PATHS.MPCJ_root, 'latex', 'rob_data.tex'), 'w+');
+  fprintf(fid, '%s', body);
+  fclose(fid);
+end
+
 %%
-clc
+
 % -------------- Plot Colors & Linestyles ----------------------
 GM_colr = 'k';
 PM_colr = 'r';
@@ -92,79 +167,62 @@ set(leg2, 'Position', [0.1100 0.4663 0.6503 0.2091], 'Box', 'off')
 set(ax2, 'XTick', [0.01, 0.1, 1, 10, 100])
 yyaxis(ax2, 'left')
 ylim([32, 52])
-% P_x  = getCharDes(G_recyc, can_cntrl.gam_s, can_cntrl.pint,...
+%%
+figure(f5)
+% idx_csro, idx_czro, idx_csmg_lin, idx_csmg_mpc, idx_czmg_lin, idx_czmg_mpc
+plot(gams(idx_csro), Sens_gain1(idx_csro), 'xk')
+plot(gams(idx_czro), Sens_gain2(idx_czro), 'xk')
 
-% [Chat, Dhat] = place_zeros(G_recyc, P_x);
-% Q1 = Chat'*Chat;
-% S1 = Chat'*Dhat;
-% R0 = Dhat'*Dhat;
-% 
+plot(gams(idx_csmg_lin), Sens_gain1(idx_csmg_lin), 'ok')
+plot(gams(idx_csmg_mpc), Sens_gain1(idx_csmg_mpc), 'sk')
 
+plot(gams(idx_czmg_lin), Sens_gain2(idx_czmg_lin), 'ok')
+plot(gams(idx_czmg_mpc), Sens_gain2(idx_czmg_mpc), 'sk')
+
+legend([h_sens1, h_sens2, h_ts1, h_ts2]);
+
+figure(f4);
+f4.CurrentAxes = ax1;
+yyaxis(ax1, 'left')
+plot(gams(idx_csro), GM_s1(idx_csro), 'xk')
+yyaxis(ax1, 'right')
+plot(gams(idx_csro), PM_s1(idx_csro), 'xk')
+
+yyaxis(ax1, 'left')
+plot(gams(idx_csmg_lin), GM_s1(idx_csmg_lin), 'ok')
+yyaxis(ax1, 'right')
+plot(gams(idx_csmg_lin), PM_s1(idx_csmg_lin), 'ok')
+
+yyaxis(ax1, 'left')
+plot(gams(idx_csmg_mpc), GM_s1(idx_csmg_mpc), 'sk')
+yyaxis(ax1, 'right')
+plot(gams(idx_csmg_mpc), PM_s1(idx_csmg_mpc), 'sk')
+
+% choose zeta
+yyaxis(ax1, 'left')
+plot(gams(idx_czro), GM_s2(idx_czro), 'xk')
+yyaxis(ax1, 'right')
+plot(gams(idx_czro), PM_s2(idx_czro), 'xk')
+
+yyaxis(ax1, 'left')
+plot(gams(idx_czmg_lin), GM_s2(idx_czmg_lin), 'ok')
+yyaxis(ax1, 'right')
+plot(gams(idx_czmg_lin), PM_s2(idx_czmg_lin), 'ok')
+
+yyaxis(ax1, 'left')
+ plot(gams(idx_czmg_mpc), GM_s2(idx_czmg_mpc), 'sk')
+yyaxis(ax1, 'right')
+plot(gams(idx_czmg_mpc), PM_s2(idx_czmg_mpc), 'sk')
+
+leg1 = legend([hgm1, hgm2, hpm1, hpm2]);
+
+%%
 if saveon
    saveas(f4, fullfile(PATHS.jfig, pmgm_figfile))
    saveas(f5, fullfile(PATHS.jfig, sens_ts_figfile))
 end
 
-%
-clc
-% Its rediculous to enter the data in a table by hand.
-min_gam_labels = {'const-$\sigma$ (lin, min-$\gamma$)',  'const-$\sigma$ (MPC, min-$\gamma$)',...
-  'choose-$\zeta$ (lin, min-$\gamma$)', 'choose-$\zeta$ (MPC, min-$\gamma$)'};
-
-rob_labels = {'const-$\sigma$ (lin, rob) ', 'const-$\sigma$ (MPC, rob)',...
-  'choose-$\zeta$ (lin, rob) ', 'choose-$\zeta$ (MPC, rob)',   };
-labels = {rob_labels{:}, min_gam_labels{:}};
-
-
-%
-[~, idx] = min(Sens_gain1);
-% for rob-optimal, mpc and linear take the same gamma
-lin_sig__rob_data = [gams(idx), GM_s1(idx), PM_s1(idx), Sens_gain1(idx)];
-mpc_sig_rob_data = [gams(idx), GM_s1(idx), PM_s1(idx), Sens_gain1(idx)];
-[~, idx] = min(Sens_gain2);
-lin_zet__rob_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
-mpc_zet_rob_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
-data = [lin_sig__rob_data; mpc_sig_rob_data; lin_zet__rob_data; mpc_zet_rob_data];
-
-% minimum-gamma scheme.  For const-sigma, and rmax=14, we get gam=10 for
-% linear, and gam=0.5 for Nmpc=12.
-idx = find(gams == 10, 1, 'first');
-lin_sig_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
-idx = find(gams == 0.5, 1, 'first');
-mpc_sig_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
-
-% We have, I think, gam=2.9 for MPC and gam=3.1 for linear, in the choose zeta scheme.
-idx = find(gams == 2.9, 1, 'first');
-lin_zet_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
-idx = find(gams == 0.2, 1, 'first');
-mpc_zet_ming_data = [gams(idx), GM_s2(idx), PM_s2(idx), Sens_gain2(idx)];
-
-data = [data; lin_sig_ming_data; mpc_sig_ming_data; lin_zet_ming_data; mpc_zet_ming_data];
-
 %%
-body = sprintf('%s\n\\hline\n', 'scheme           & $\gamma$ &GM [dB]& PM [deg] & $|\mathcal{S}|$ [dB]\\');
-
-
-for row=1:size(data,1)
-  row_str = sprintf('%s &', labels{row});
-  for col = 1:size(data,2)
-    
-    if col < size(data,2)
-      fmt = '%s %.1f &';
-    else
-      fmt = '%s %.1f';
-    end
-     row_str = sprintf(fmt, row_str, data(row, col));
-  end
-  body = sprintf('%s%s\\\\\n', body, row_str);
-end
-
-body
-if saveon
-  fid = fopen(fullfile(PATHS.MPCJ_root, 'latex', 'rob_data.tex'), 'w+');
-  fprintf(fid, '%s', body);
-  fclose(fid);
-end
 
 
 

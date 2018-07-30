@@ -1,6 +1,8 @@
 clear
 clc
 
+saveon = false;
+
 addpath('~/gradschool/sysID/matlab/functions')
 % modelFit_file = 'FRF_data_current_stage.mat';
 modelFit_file = fullfile(PATHS.sysid, 'FRF_data', 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat');
@@ -125,7 +127,7 @@ sys = f2ss.realize(8);
 g_der = zpk([1], [], 1, Ts); % 
 frfBode(sys, freqs, F20,  'Hz', '--k');
 sys.InputDelay = 4;
-frfBode(sys*g_der, freqs, F10, 'Hz', '--k',);
+frfBode(sys*g_der, freqs, F10, 'Hz', '--k');
 
 sos_fos = SosFos(sys, 'iodelay', sys.InputDelay);
 LG = LogCostZPK(G_deluz2powI_frf, freqs*2*pi, sos_fos);
@@ -212,7 +214,7 @@ ax = gca;
 % set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
 
 
-%
+%%
 % ------------------- Fit Hysteresis + Sat -------------------------------------
 
 fprintf('============================================\n')
@@ -284,7 +286,7 @@ modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift_1p0 = gdrift;
 modelFit.models.hyst = hyst;
 modelFit.models.hyst_sat = hyst_sat;
-if 1
+if saveon
     save(modelFit_file, 'modelFit');
 end
 
