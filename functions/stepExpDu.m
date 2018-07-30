@@ -73,6 +73,7 @@ classdef stepExpDu
     y;
     u;
     du;
+    Ipow;
     pstyle;
     name;
     exptype;
