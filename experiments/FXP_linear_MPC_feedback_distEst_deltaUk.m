@@ -39,11 +39,12 @@ TOL = 14/512; % max volts by pixels
 % TOL = .01;
 tol_mode = 'abs';
 % which simulations to run
-do_siml_infp = false;
-do_sim_mpcfp = false;
-do_sim_linfxp = true;
+do_sim_linfp = true;
+do_sim_mpcfp = true;
 
+do_sim_linfxp = false;
 do_sim_mpcfxp = false;
+
 do_sim_hyst = true;
 do_inv_hyst = true;
 do_drift = true;
@@ -99,9 +100,9 @@ end
 
 % Get a ref trajectory to track.
 N  = 800;
-r1 =1;
+r1 =4;
 r2 = -r1;
-trajstyle =4;
+trajstyle =2;
 if trajstyle == 1
   step_ref = StepRef(r1, N);
   yref = step_ref.yref;
@@ -164,16 +165,6 @@ else
 end
 % du_max = 1000;
 
-% % % can_cntrl = CanonCntrlParams_ns14(plants.SYS);
-% % % % can_cntrl = can_cntrl.aggressive_params();
-% % % [Q1, R0, S1, P_x] = build_control(plants.sys_recyc, can_cntrl);
-% % % %
-% % % gam_lin = 1;
-% % % gam_mpc = 3;
-% % % % R1 = R0 + gam_mpc;
-% % % % K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
-% % % K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1)*1;
-% % % R1 = R0 + gam_mpc;
 
 
 % p_int = 0.8; cmplx_rad = 0.9; rho_s = [1, 1]; rad = 0.25;
@@ -188,17 +179,28 @@ end
 % S2 = Chat'*Dhat; S1 = S2;
 % R2 = Dhat'*Dhat; 
 % R0 = R2;
-cmplx_rad = 0.9;
-[Q2, R0, S2, P_x] = build_control_constsigma(plants.sys_recyc, cmplx_rad);
-Q1 = Q2;
-S1 = S2;
-gam_lin = 100;
-gam_mpc = 100;
-R1 = R0 + gam_mpc;
-K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q2, R0+gam_lin, S2);
-K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q2, R0+gam_mpc, S2)*1;
-cntrl_descr = 'constsig';
+if 0
+  can_cntrl = CanonCntrlParams_ns14(plants.SYS);
+  % can_cntrl = can_cntrl.aggressive_params();
+  [Q1, R0, S1, P_x] = build_control(plants.sys_recyc, can_cntrl);
+  %
+  gam_lin = 2.9;
+  gam_mpc = .2;
+  % R1 = R0 + gam_mpc;
+  K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
+  K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
+  R1 = R0 + gam_mpc;
 
+elseif 1
+  cmplx_rad = 0.9;
+  [Q1, R0, S1, P_x] = build_control_constsigma(plants.sys_recyc, cmplx_rad);
+  gam_lin = 10;
+  gam_mpc = 0.5;
+  R1 = R0 + gam_mpc;
+  K_lqr = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_lin, S1);
+  K_mpc = dlqr(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1)*1;
+  cntrl_descr = 'constsig';
+end
 
 % % can_cntrl = CanonCntrlParams_ns14(plants.SYS);
 % % % linear control
@@ -232,9 +234,9 @@ end
 
 N_mpc = 12;
 
-Qp = dare(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R1, S1);
+Qp = dare(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
 nu = 1;
-mpcProb = condensedMPCprob_OA(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1);
+mpcProb = condensedMPCprob_OA(plants.sys_recyc, N_mpc, Q1, Qp, R0+gam_mpc, S1);
 % mpcProb.lb = zeros(N_mpc,1)-du_max;
 % mpcProb.ub = zeros(N_mpc,1)+du_max;
 
@@ -248,8 +250,8 @@ mpcProb.CON = CON;
 Hmpc = mpcProb.H; Mmpc = mpcProb.M;
 maxIter = 100;
 fprintf('condition of H = %.1f\n', mpcProb.kappa);
-
-fgm_fp = FGMprob_1(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1, du_max, maxIter);
+%
+fgm_fp = FGMprob_1(plants.sys_recyc, N_mpc, Q1, Qp, R0+gam_mpc, S1, du_max, maxIter);
 I_H_mpc = fgm_fp.I_HL;
 ML_x0  = fgm_fp.ML;
 beta    = fgm_fp.beta;
@@ -331,7 +333,7 @@ end
 
 
 % ------------------------ Linear floating point simulation ---------------
-if do_siml_infp
+if do_sim_linfp
   sims_fpl = SimAFM(plants.PLANT, K_lqr, Nx, sys_obsDist, L_dist, du_max, false, 'thenoise', thenoise);
   
   if do_sim_hyst
@@ -357,7 +359,7 @@ if do_siml_infp
   Ts_vec_lfp = sim_exp_fpl.settle_time(TOL, tol_mode, 1);
   
   fprintf('Total linear fp settle-time = %.3f [ms]\n', sum(Ts_vec_lfp)*1000);
-  
+  [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp_fpl);
   h1 = sim_exp_fpl.plot(F_yudu, 'umode', 'both');
   legend([h1(1)])
   
@@ -406,6 +408,9 @@ if do_sim_mpcfp
   h12mpc = sim_exp_fpm.ploty(F_y);
   legend([h12(1), h12mpc(1)])
 
+  fprintf('Total linear fp settle-time = %.3f [ms]\n', sum(Ts_vec_fpm)*1000);
+  [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp_fpl, sim_exp_fpm);
+
 end
 
 if plotstate
@@ -434,7 +439,7 @@ L_fxp = fi(L_dist, 1, 32, 30);
 sys_obs_fxp.a = fi(sys_obsDist.a -L_dist*sys_obsDist.c, 1, nw, nw-7);
 sys_obs_fxp.b = fi(sys_obsDist.b, 1, nw, 29);
 sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
-%%
+%
 % --------------------  Fixed Linear stuff -----------------------------
 if do_sim_linfxp
   sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
@@ -465,7 +470,7 @@ if do_sim_linfxp
   h22 = sim_exp_fxpl.ploty(F_y);
   try; legend([h12, h22]);end;
   
-  try; [~, F_state] = plotState(Xhat_fxpl, F_state, [], [], '--r'); end
+  try; [~, F_state] = plotState(Xhat_fxpl, F_state, [], [], '--m'); end
   fprintf('max of Xhat = %.2f\n', max(abs(Xhat_fxpl.Data(:))));
   fprintf('max of M*Xhat = %.2f\n', max(max(abs(ML_x0*Xhat_fxpl.Data'))));
   
@@ -476,14 +481,14 @@ if do_sim_linfxp
   hlin_Ipow.DisplayName = 'Linear Current';
   hold on, grid on;
 end
-%%
+%
 % ----------------------------------------------------------------------- %
 % --------------------- MPC, fgm fixed-point ---------------------------- %
 if do_sim_mpcfxp
   nw_fgm = 32;
   nf_fgm = 28;
   
-  fgm_fxp = FGMprob_fxp_1(plants.sys_recyc, N_mpc, Q1, Qp, R1, S1, du_max,...
+  fgm_fxp = FGMprob_fxp_1(plants.sys_recyc, N_mpc, Q1, Qp, R0+gam_mpc, S1, du_max,...
     maxIter, nw_fgm, nf_fgm);
   fgm_fxp.ML = fi(fgm_fp.ML, 1, 32, 26);
   fgm_fxp.x_nw = 32;
