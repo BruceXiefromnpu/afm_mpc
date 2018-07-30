@@ -17,7 +17,15 @@ P_x  = getCharDes(sys_recyc, can_cntrl.gam_s, can_cntrl.pint,...
                              can_cntrl.zeta_s, can_cntrl.rho_s, can_cntrl.rad);
 plot(real(P_x), imag(P_x), 'ob')
 hold on
-[ax, C_hand] = lqr_locus(sys_recyc, Q1, 1, S1, .001, 1000);
+ax = gca();
+rgb1 = [0.230, 0.299, 0.754];
+rgb2 = [0.706, 0.016, 0.150];
+s_ = linspace(0,1, length(step_ref.step_diff_amps));
+color_map = diverging_map(s_, rgb1, rgb2);
+
+[ax, C_hand] = lqr_locus(sys_recyc, Q1, 1, S1, .001, 1000, ax,...
+  'color_map', color_map);
+
 C_hand.Label.Interpreter = 'latex';
 C_hand.Label.FontSize = 14;
 C_hand.Location = 'eastoutside';

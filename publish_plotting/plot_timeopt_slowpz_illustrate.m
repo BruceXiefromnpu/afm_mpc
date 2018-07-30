@@ -25,14 +25,14 @@ height = 4;
 set(F1, 'Units', 'Inches', 'Position', [0, 0, width, height],...
     'PaperUnits', 'Inches', 'PaperSize', [width, height])
 set(F1, 'Color', 'w');
-frfBode(P_uz2stage, freqs, F1, 'r', 'Hz');
+frfBode(P_uz2stage, freqs, F1, 'Hz', 'r');
 
 
 sys = modelFit.models.G_uz2stage;
 sys.InputDelay = 0;
 % sys = sys*modelFit.models.G_real_extra;
 
-frfBode(sys, freqs, F1, '--k', 'Hz')
+frfBode(sys, freqs, F1, 'Hz', '--k')
 
 plotPZ_freqs(sys, F1, 0, 0)
 %% Create system without slow pz-pair

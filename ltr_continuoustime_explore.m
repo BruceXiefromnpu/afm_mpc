@@ -69,13 +69,13 @@ rlocus(L_obs)
 %                       Bode Plots                                        %
 freqs = w_s/2/pi;
 F1 = figure(200);clf
-h1 = frfBode(sys_frf, freqs, F1, '-k', 'Hz');
+h1 = frfBode(sys_frf, freqs, F1, 'Hz', '-k');
 h1.DisplayName = 'G(s)';
-h2 = frfBode(L_pure_frf, freqs, F1, 'b', 'Hz');
+h2 = frfBode(L_pure_frf, freqs, F1, 'Hz', 'b');
 h2.DisplayName = 'K(sI - A)^-1B';
-h3 = frfBode(L_obs_frf, freqs, F1, '--r', 'Hz');
+h3 = frfBode(L_obs_frf, freqs, F1, 'Hz', '--r');
 h3.DisplayName = 'K(sI - A + BK +LC)^-1BG(s)';
-h4 = frfBode(H_frf, freqs, F1, ':k', 'Hz');
+h4 = frfBode(H_frf, freqs, F1, 'Hz', ':k');
 h4.DisplayName = 'Closed Loop (obs)';
 legend([h1, h2, h3, h4], 'location', 'southwest')
 
@@ -203,13 +203,13 @@ grid on
 %                       Bode Plots                                        %
 % freqs = w_s/2/pi;
 % F10 = figure(10);clf
-% h1 = frfBode(sys_z_frf, freqs, F10, '-k', 'Hz');
+% h1 = frfBode(sys_z_frf, freqs, F10, 'Hz', '-k');
 % h1.DisplayName = 'G(s)';
-% h2 = frfBode(Lz_pure_frf, freqs, F10, 'b', 'Hz');
+% h2 = frfBode(Lz_pure_frf, freqs, F10, 'Hz', 'b');
 % h2.DisplayName = 'K(sI - A)^-1B';
-% h3 = frfBode(Lz_obs_frf, freqs, F10, '--r', 'Hz');
+% h3 = frfBode(Lz_obs_frf, freqs, F10, 'Hz', '--r');
 % h3.DisplayName = 'K(sI - A + BK +LC)^-1BG(s)';
-% h4 = frfBode(Hz_frf, freqs, F10, ':k', 'Hz');
+% h4 = frfBode(Hz_frf, freqs, F10, 'Hz', ':k');
 % h4.DisplayName = 'Closed Loop (obs)';
 % legend([h1, h2, h3, h4], 'location', 'southwest')
 

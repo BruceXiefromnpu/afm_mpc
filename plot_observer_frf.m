@@ -95,17 +95,17 @@ LL_obs_frf = D1_frf.*sys_frf;
 h = [];
 % gobjects(4,1)
 F1 = figure(1); clf
-h_i = frfBode(H_frf, freqs, F1, '-k', 'Hz');
+h_i = frfBode(H_frf, freqs, F1, 'Hz', '-k');
 h_i.DisplayName = 'H closed loop';
 h = [h; h_i];
 
-% h(2) = frfBode(sys*D1, freqs, F1, '--k', 'Hz');
+% h(2) = frfBode(sys*D1, freqs, F1, 'Hz', '--k');
 
-h_i = frfBode(LL_frf, freqs, F1, '--r', 'Hz');
+h_i = frfBode(LL_frf, freqs, F1, 'Hz', '--r');
 h_i.DisplayName = '$L = K(zI-A)^{-1}B$';
 h = [h; h_i];
 
-h_i = frfBode(LL_obs_frf, freqs, F1, '--b', 'Hz');
+h_i = frfBode(LL_obs_frf, freqs, F1, 'Hz', '--b');
 h_i.DisplayName = '$L = G(s)K(zI - A + BK + LC)L$';
 h = [h;h_i];
 % h(2).DisplayName = 'G*D1';

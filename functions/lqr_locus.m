@@ -11,23 +11,26 @@ function [ax, C_hand] = lqr_locus(sys, Q, Ro, S, lb, ub, ax, varargin)
   
   p = inputParser;
 %   p.addParameter('ax', gca);
-  p.addParameter('cmap', 'jet');
+  p.addParameter('color_map', []);
   p.addParameter('N', 100);
   p.parse(varargin{:});
-  
-  cmap = p.Results.cmap;
-%   ax = p.Results.ax;
   N = p.Results.N;
+  
+  mp = p.Results.color_map;
+  if isempty(mp)
+    mp = colormap(ax, 'jet');
+  else
+    colormap(ax, mp)
+  end
+%   ax = p.Results.ax;
+  
   
   if isempty(S)
     S = sys.b*0;
   end
   
-
-  
   gam_s = logspace(log10(lb), log10(ub), N);
-  mp = colormap(ax, 'jet');
-  
+
   x = 1:size(mp,1);
 
   xq = linspace(1, (size(mp,1)), length(gam_s));

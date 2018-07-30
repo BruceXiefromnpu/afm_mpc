@@ -2,7 +2,11 @@
 % for a step experiment. 
 %   properties:
 %       y, u, du:    output, control input, diff(u). Should be y.Time, y.Data
-%       pstyle:  e.g., '--g'
+%       pstyle:  e.g., '--g'. This is only used if both Color and LineStyle are
+%                             emtpy
+%       Color:  e.g., 'r', or an rgb value [0.5, 0.2, 0.1]
+%       LineStyle: e.g., '.-'
+%       LineWidth: e.g., 1.2
 %       name:    e.g. 'linear feedback (sim)'. This field is used to
 %           construct the legend, ie, h.DisplayName = obj.name
 %       exptype: e.g., 'linear, sim', 'CLQR, exp', 'MPC'
@@ -75,6 +79,9 @@ classdef stepExpDu
     du;
     Ipow;
     pstyle;
+    Color;
+    LineStyle;
+    LineWidth;
     name;
     exptype;
     params;
@@ -102,6 +109,7 @@ classdef stepExpDu
     end % end constructor
     % =================================================================
     function [H_line, F1, H_text] = plot(obj,  varargin)
+    % [H_line, F1, H_text] = plot(obj,  varargin)
       p = inputParser();
       p.addParameter('textOn', false);
       p.addParameter('yunits_scaled', obj.yunits);
@@ -136,14 +144,62 @@ classdef stepExpDu
       end
     end % end standard plot function
     
-    function [hline, F1] = ploty(self, F1)
-      F1 = figure(F1);
-      hline = plot(self.y.Time, self.y.Data, self.pstyle);
+    function [hline, F1, ax] = ploty(self, fig_ax, varargin)
+    % [hline, F1] = ploty(self, fig_ax, varargin)
+    % fig_ax can be either a figure handle or axis handle. If it is neither, we
+    % will assume that you want the first arguement to be treated as the first
+    % keyword pair passed to plot, and will plot to gcf() and gca().
+    %
+    % If varargin is empty, plot y with self.pstyle. Otherwise, varargin will
+    % be passed into the plot() function and thus should be name value pairs
+    % appropriate to plot().
+
+      if isa(fig_ax, 'matlab.ui.Figure')
+        F1 = figure(fig_ax);
+        ax = gca();
+      elseif isa(fig_ax, 'matlab.graphics.axis.Axes')
+        F1 = fig_ax.Parent();
+        ax = fig_ax;
+      else
+        F1 = figure();
+        ax = gca();
+        varargin = {fig_ax, varargin{:}};
+      end
+      plot_opts = self.get_plot_opts();
+      
+      if isempty(varargin)
+        hline = plot(ax, self.y.Time, self.y.Data, plot_opts{:});
+      else
+        hline = plot(ax, self.y.Time, self.y.Data, varargin{:});
+      end
       hline.DisplayName = self.name;
     end
     
+%     function [fig, ax] = get_fig_ax(fig_ax)
+%     % [fig, ax] = get_fig_ax(fig_ax)
+%       
+%     end
+    function [opts, ispstyle] = get_plot_opts(self)
+    % [opts, ispstyle] = get_plot_opts(self)
+    %keyboard
+      if isempty(self.Color) && isempty(self.LineStyle)
+        opts = {self.pstyle};
+      elseif isempty(self.Color)
+        opts = {'LineStyle', self.LineStyle};
+      elseif isempty(self.LineStyle)
+        opts = {'Color', self.Color};
+      else
+        opts = {'LineStyle', self.LineStyle, 'Color', self.Color};
+      end
+      
+      if ~isempty(self.LineWidth)
+        opts = {opts{:}, 'LineWidth', self.LineWidth};
+      end
+      
+    end
     % =================================================================
     function [H_line, F1, H_text] = plotZoom(obj, xlm, ylm, varargin)
+    % [H_line, F1, H_text] = plotZoom(obj, xlm, ylm, varargin)
       if length(varargin)>= 1
         if isgraphics(varargin{1},'figure')
           F1 = varargin{1};

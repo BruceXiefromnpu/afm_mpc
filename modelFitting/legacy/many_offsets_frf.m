@@ -43,22 +43,22 @@ for k = 1:length(data_names_FC)
   FRF_dat_cell{k} = frf_dat_k;
   
   G_uz2stage = FC_data(:,2)./FC_data(:,1);
-  h_k = frfBode(G_uz2stage, freqs, F1, LS{k}, 'Hz');
+  h_k = frfBode(G_uz2stage, freqs, F1, 'Hz', LS{k});
   h_k.DisplayName = sprintf('$G_{uz2stage}$, offset=%.2f, Amp = %.1f', ssOpts.offset, ssOpts.Amps(1));
   h_uz2stage(k) = h_k;
   
   G_uz2powV = FC_data(:,3)./FC_data(:,1);
-  h_k = frfBode(G_uz2powV, freqs, F2, LS{k}, 'Hz');
+  h_k = frfBode(G_uz2powV, freqs, F2, 'Hz', LS{k});
   h_k.DisplayName = sprintf('$G_{uz2powV}$, offset=%.2f, Amp = %.1f', ssOpts.offset, ssOpts.Amps(1));
   h_uz2powV(k) = h_k;
   
   G_uz2powI = FC_data(:,4)./FC_data(:,1);  
-  h_k = frfBode(G_uz2powI, freqs, F3, LS{k}, 'Hz');
+  h_k = frfBode(G_uz2powI, freqs, F3, 'Hz', LS{k});
   h_k.DisplayName = sprintf('$G_{uz2powI}$, offset=%.2f, Amp = %.1f', ssOpts.offset, ssOpts.Amps(1));
   h_uz2powI(k) = h_k;
   
   G_powV2powI = FC_data(:,4)./FC_data(:,3);
-  h_k = frfBode(G_powV2powI, freqs, F4, LS{k}, 'Hz');
+  h_k = frfBode(G_powV2powI, freqs, F4, 'Hz', LS{k});
   h_k.DisplayName = sprintf('$G_{powV2powI}$, offset=%.2f, Amp = %.1f', ssOpts.offset, ssOpts.Amps(1));
   h_powV2powI(k) = h_k;
   
@@ -67,22 +67,22 @@ end
 %%
 k= 1
   G_uz2stage = FC_data(:,2)./FC_data(:,1);
-  h_k = frfBode(G_uz2stage, freqs, F1, LS{k}, 'Hz');
+  h_k = frfBode(G_uz2stage, freqs, F1, 'Hz', LS{k});
   h_k.DisplayName = sprintf('$G_{uz2stage}$, offset=%.2f, Amp = %.1f', ssOpts.offset, ssOpts.Amps(1));
   h_uz2stage(k) = h_k;
   
   G_uz2powV = FC_data(:,3)./FC_data(:,1);
-  h_k = frfBode(G_uz2powV, freqs, F2, LS{k}, 'Hz');
+  h_k = frfBode(G_uz2powV, freqs, F2, 'Hz', LS{k});
   h_k.DisplayName = sprintf('$G_{uz2powV}$, offset=%.2f, Amp = %.1f', ssOpts.offset, ssOpts.Amps(1));
   h_uz2powV(k) = h_k;
   
   G_uz2powI = FC_data(:,4)./FC_data(:,1);  
-  h_k = frfBode(G_uz2powI, freqs, F3, LS{k}, 'Hz');
+  h_k = frfBode(G_uz2powI, freqs, F3, 'Hz', LS{k});
   h_k.DisplayName = sprintf('$G_{uz2powI}$, offset=%.2f, Amp = %.1f', ssOpts.offset, ssOpts.Amps(1));
   h_uz2powI(k) = h_k;
   
   G_powV2powI = FC_data(:,4)./FC_data(:,3);
-  h_k = frfBode(G_powV2powI, freqs, F4, LS{k}, 'Hz');
+  h_k = frfBode(G_powV2powI, freqs, F4, 'Hz', LS{k});
   h_k.DisplayName = sprintf('$G_{powV2powI}$, offset=%.2f, Amp = %.1f', ssOpts.offset, ssOpts.Amps(1));
   h_powV2powI(k) = h_k;
 figure(F1)
@@ -149,22 +149,22 @@ F13 = figure(3); %clf
 F14 = figure(4); %clf
 k = 2;
 
-h_k = frfBode(G_uz2stage, freqs, F10, LS{k}, 'Hz');
+h_k = frfBode(G_uz2stage, freqs, F10, 'Hz', LS{k});
 h_k.DisplayName = sprintf('$G_{uz2stage}$, offset=%.2f, Amp = %.1f', ssOpts2.offset, ssOpts.Amps(1));
 h_uz2stage(k) = h_k;
 
 
-h_k = frfBode(G_uz2powV, freqs, F12, LS{k}, 'Hz');
+h_k = frfBode(G_uz2powV, freqs, F12, 'Hz', LS{k});
 h_k.DisplayName = sprintf('$G_{uz2powV}$, offset=%.2f, Amp = %.1f', ssOpts2.offset, ssOpts.Amps(1));
 h_uz2powV(k) = h_k;
 
 
-h_k = frfBode(G_uz2powI, freqs, F13, LS{k}, 'Hz');
+h_k = frfBode(G_uz2powI, freqs, F13, 'Hz', LS{k});
 h_k.DisplayName = sprintf('$G_{uz2powI}$, offset=%.2f, Amp = %.1f', ssOpts2.offset, ssOpts.Amps(1));
 h_uz2powI(k) = h_k;
 
 
-h_k = frfBode(G_powV2powI, freqs, F14, LS{k}, 'Hz');
+h_k = frfBode(G_powV2powI, freqs, F14, 'Hz', LS{k});
 h_k.DisplayName = sprintf('$G_{powV2powI}$, offset=%.2f, Amp = %.1f', ssOpts2.offset, ssOpts.Amps(1));
 h_powV2powI(k) = h_k;
 

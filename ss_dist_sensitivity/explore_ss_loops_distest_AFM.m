@@ -40,7 +40,7 @@ H_distresp = gobjects(1, length(gam_s));
 H_stepresp = gobjects(1, length(gam_s));
 CS = {'k', 'g', 'r', 'k', 'm'};
 
-frfBode(sys, freqs, F1, ':k', 'Hz');
+frfBode(sys, freqs, F1, 'Hz', ':k');
 
 for k = 1:length(gam_s)
   gam = gam_s(k);
@@ -86,7 +86,7 @@ for k = 1:length(gam_s)
 
   %H_hyd(k) = frfBode(H_yd, omegas, F1, ['-', CS{k}], 'rad');
   
-  H_Sens(k) = frfBode(Sens, freqs, F1, ['-', CS{k}], 'Hz');
+  H_Sens(k) = frfBode(Sens, freqs, F1, 'Hz', ['-', CS{k}]);
   hold on
   %H_hyd(k).DisplayName = sprintf('$H_{yd}=G\\mathcal{S}$, $\\gamma=%.4f$', gam);
   H_Sens(k).DisplayName = sprintf('$\\mathcal{S}$, $\\gamma=%.4f$', gam);

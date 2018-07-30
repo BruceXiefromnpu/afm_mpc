@@ -36,6 +36,11 @@ auto/
 *.log
 *.bbl
 *#
+# Auto-generated latex tables
+latex/manystepsdata_choosesig.tex
+latex/manystepsdata_choosezeta.tex
+latex/manystepsdata_rand.tex
+latex/rob_data.tex
 
 # simulink backups
 *.r2016b

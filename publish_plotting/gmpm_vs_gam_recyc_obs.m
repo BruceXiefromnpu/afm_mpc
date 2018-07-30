@@ -20,8 +20,8 @@ function [GM_s, PM_s, Sens_gain, TS_s] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obs
     [y, t] = step(Hyr, t);
     TS_s(k) = settle_time(t, y, 1, 0.01, [], 20);
     
-    z = sort(zero(Sens));
-    zr = z(imag(z) == 0);
+    % z = sort(zero(Sens));
+    % zr = z(imag(z) == 0);
     % Int_prox = zpk([], [zr(end)], 1, Ts);
     % Sens_gain2(k) = dcgain(minreal(Sens*Int_prox));
     Der = zpk([1], [], 1, Ts);
@@ -32,6 +32,7 @@ function [GM_s, PM_s, Sens_gain, TS_s] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obs
     
     GM_s(k) = 20*log10(gm);
     PM_s(k) = pm;
+
   end
   
   

@@ -19,7 +19,7 @@ sys = ss(G)/dcgain(G);
 [Gfrf, ws] = freqresp(sys, logspace(0, 3, 100));
 Gfrf = Gfrf(:);
 F1 = figure(20);
-frfBode(sys, ws*2*pi, F1, '-r', 'Hz');
+frfBode(sys, ws*2*pi, F1, 'Hz', '-r');
 plotPZ_freqs(sys, F1);
 
 

@@ -14,9 +14,9 @@ freqs_bolted = MF_bolted.modelFit.frf.freq_s;
 
 F1 = figure(1);
 
-h2 = frfBode(G_unbolted, freqs_unbolted, F1, '-b', 'Hz');
+h2 = frfBode(G_unbolted, freqs_unbolted, F1, 'Hz', '-b');
 
-h1 = frfBode(G_bolted, freqs_bolted, F1, '--r', 'Hz');
+h1 = frfBode(G_bolted, freqs_bolted, F1, 'Hz', '--r');
 
 
 h1.DisplayName = 'Stage Bolted to AFM base';

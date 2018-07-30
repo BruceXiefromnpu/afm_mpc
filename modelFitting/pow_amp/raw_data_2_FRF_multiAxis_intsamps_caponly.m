@@ -72,13 +72,13 @@ G_powV2powI = FC_s(:,idx_powI)./FC_s(:, idx_powV);
 
 F3 = figure(3); clf
 F3.PaperPosition = [1.3376    2.3454    5.8247    6.3093];
-h1 = frfBode(single(G_uz2powV), freqs, F3, '-r', 'Hz');
+h1 = frfBode(single(G_uz2powV), freqs, F3, 'Hz', '-r');
 subplot(2,1,1)
 title('Control signal to Amplifier Voltage')
 
 F5 = figure(5); clf
-frfBode(single(G_uz2powI), freqs, F5, '-r', 'Hz');
-frfBode(single(G_powV2powI), freqs, F5, '-b', 'Hz');
+frfBode(single(G_uz2powI), freqs, F5, 'Hz', '-r');
+frfBode(single(G_powV2powI), freqs, F5, 'Hz', '-b');
 
 subplot(2,1,1)
 title('Amplifier Current')
@@ -91,7 +91,7 @@ grid on
 title('Residual energy')
 
 f6 = figure(6)
-frfBode(single(G_powV2powI), freqs, f6, '-r', 'Hz');
+frfBode(single(G_powV2powI), freqs, f6, 'Hz', '-r');
 
 if 0
 saveas(F3, '../figures/pow-amp/G_uz2Current.svg')

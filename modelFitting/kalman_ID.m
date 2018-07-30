@@ -50,12 +50,12 @@ sys = minreal(ss(gg)*sys/dcgain(gg));
 % [A, B, C] = ssdata(sys);
 
 F1 = figure(100); clf
-frfBode(Gxx_frf, w_s_xx/2/pi, F1, '-k', 'Hz')
+frfBode(Gxx_frf, w_s_xx/2/pi, F1, 'Hz', '-k')
 
 
 [~,~,ws] = bode(sys, {w_s_xx(1), w_s_xx(end)});
 
-frfBode(sys, ws/2/pi, F1, '--r', 'Hz')
+frfBode(sys, ws/2/pi, F1, 'Hz', '--r')
 plotPZ_freqs(sys, F1, 0)
 isstable(sys)
 
@@ -87,8 +87,8 @@ pzplot(sys, 'b')
 legend('closed loop', 'open loop')
 
 F2 = figure(300);
-frfBode(Gxx_frf, w_s_xx/2/pi, F2, 'k', 'Hz')
-frfBode(PLANT_init_x, w_s_xx/2/pi, F2, '--r', 'Hz')
+frfBode(Gxx_frf, w_s_xx/2/pi, F2, 'Hz', 'k')
+frfBode(PLANT_init_x, w_s_xx/2/pi, F2, 'Hz', '--r')
 plotPZ_freqs(PLANT_init_x, F2, 0)
 %%
 Fs = 1/Ts;

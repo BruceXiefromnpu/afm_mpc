@@ -8,6 +8,7 @@ classdef CanonPlants
   
   methods (Static)
     function [plants, frf_data] = plants_ns14(nd)
+    % [plants, frf_data] = plants_ns14(nd)
       
 %       load(fullfile(PATHS.sysid, ['hysteresis/steps_hyst_model.mat']));
 %       hyst.rp = rp;

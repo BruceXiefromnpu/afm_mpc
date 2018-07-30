@@ -41,29 +41,58 @@ classdef StepRef
       
     end
     
-    function [Fig, h] =  plot(self, Fig, varargin)
-    % plot(self, Fig, varargin)
-      if ~exist('Fig', 'var') || ~isvalid(Fig)
+    function [Fig, h] =  plot(self, fig_ax, varargin)
+    % plot(self, fig_ax, varargin)
+%       if ~exist('Fig', 'var') || ~isvalid(Fig)
+%         Fig = figure();
+%       end
+      if ~exist('fig_ax', 'var') || ~isvalid(fig_ax)
+        Fig = figure;
+        ax = gca();
+      elseif isa(fig_ax, 'matlab.ui.Figure')
+        Fig = figure(fig_ax);
+        ax = gca();
+      elseif isa(fig_ax, 'matlab.graphics.axis.Axes')
+        Fig = fig_ax.Parent();
+        ax = fig_ax;
+      else
         Fig = figure();
+        ax = gca();
+        varargin = {fig_ax, varargin{:}};
       end
+      
       figure(Fig); 
-      h = plot(self.yref.Time, self.yref.Data, varargin{:});
-      hold on; grid on;
+      h = plot(ax, self.yref.Time, self.yref.Data, varargin{:});
+      hold(ax, 'on'); 
+      grid(ax, 'on');
       
     end
     
-    function [Fig] = plot_settle_boundary(self, Fig, TOL, tol_mode)
-    % [Fig, h_line] = plot_settle_boundary(self, Fig, TOL, tol_mode)
+    function [Fig] = plot_settle_boundary(self, fig_ax, TOL, tol_mode)
+    % [Fig, h_line] = plot_settle_boundary(self, fig_ax, TOL, tol_mode)
       if ~strcmp(tol_mode, 'abs') && ~strcmp(tol_mode, 'rel')
         error('tol_mode must be one of "abs" or "rel"\n');
       end
+      
+      
 
       ref_s = self.step_amps;
       
-      if ~exist('Fig', 'var') || ~isvalid(Fig)
+      if ~exist('fig_ax', 'var') || ~isvalid(fig_ax)
         Fig = figure;
+        ax = gca();
+      elseif isa(fig_ax, 'matlab.ui.Figure')
+        Fig = figure(fig_ax);
+        ax = gca();
+      elseif isa(fig_ax, 'matlab.graphics.axis.Axes')
+        Fig = fig_ax.Parent();
+        ax = fig_ax;
+      else
+        Fig = figure();
+        ax = gca();
+        varargin = {fig_ax, varargin{:}};
       end
-      figure(Fig);
+      %figure(Fig);
       
       
       r = self.yref;
@@ -86,8 +115,9 @@ classdef StepRef
           TOL_k = TOL*(ref - ref_s(k-1));
         end
         
-        plot([t0, t1], [ref+TOL_k, ref+TOL_k], ':k');
-        plot([t0, t1], [ref-TOL_k, ref-TOL_k], ':k');
+        plot(ax, [t0, t1], [ref+TOL_k, ref+TOL_k], ':k');
+        plot(ax, [t0, t1], [ref-TOL_k, ref-TOL_k], ':k');
+        
       end
 
     end

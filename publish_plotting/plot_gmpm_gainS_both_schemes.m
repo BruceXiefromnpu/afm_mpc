@@ -1,6 +1,9 @@
 % This script plots the LQR based root locus for the "lowgain"
 % version of things.
 
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
+
 clear, clc
 saveon = true;
 plants = CanonPlants.plants_ns14();
@@ -29,14 +32,21 @@ gams = logspace(log10(0.1), log10(1000), 100);
 gams = unique([gams, 1.0, 3.0, 3.1, 3.8, 12,10, 2, 0.001, 0.5, 0.2, 2.9]);
 [GM_s1, PM_s1, Sens_gain1, TS_s1] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obsDist, Q1, R0, S1, LxLd, gams);
 
-[GM_s1_pure, PM_s1_pure] = gmpm_vs_gam_recyc(G, G_recyc, Q1, R0, S1, gams);
-
 can_cntrl = CanonCntrlParams_ns14();
 [Q1, R0, S1] = build_control(G_recyc, can_cntrl);
 [GM_s2, PM_s2, Sens_gain2, TS_s2] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obsDist, Q1, R0, S1, LxLd, gams);
-[GM_s2_pure, PM_s2_pure] = gmpm_vs_gam_recyc(G, G_recyc, Q1, R0, S1, gams);
 
 %%
+clc
+% -------------- Plot Colors & Linestyles ----------------------
+GM_colr = 'k';
+PM_colr = 'r';
+GM_ls1 = '-';
+GM_ls2 = '--';
+
+PM_ls1 = '-.';
+PM_ls2 = ':';
+
 width = 3.45;
 height = 3;
 figbase = 0;
@@ -47,44 +57,41 @@ f5 = mkfig(5+figbase, width, height); clf
 figure(f4);
 ax1 = axes('Position', [0.1100 0.1300 0.7750 0.8150], 'YAxisLocation', 'left');
 
-[hgm1, hpm1] = plot_gmpm(gams, GM_s1, PM_s1, ax1, f4);
+[hgm1, hpm1] = plot_gmpm(gams, GM_s1, PM_s1, ax1, f4, 'GM_color', GM_colr,...
+  'GM_LS', GM_ls1, 'PM_color', PM_colr, 'PM_LS', PM_ls1);
 hgm1.DisplayName = 'GM (constant-$\sigma$)';
 hpm1.DisplayName = 'PM (constant-$\sigma$)';
 
-% [hgm1_pure] = plot_gmpm(gams, GM_s1_pure, PM_s1_pure, ax1, f4);
-% hgm1_pure.DisplayName = 'GM (constant-$\sigma$) state fdbk';
-% hpm1_pure.DisplayName = 'PM (constant-$\sigma$) state fdbk';
 
+figure(f4);
+[hgm2, hpm2] = plot_gmpm(gams, GM_s2, PM_s2, ax1, f4, 'GM_color', GM_colr,...
+  'GM_LS', GM_ls2, 'PM_color', PM_colr, 'PM_LS', PM_ls2);
+hgm2.DisplayName = 'GM (choose-$\zeta$)';
+hpm2.DisplayName = 'PM (choose-$\zeta$)';
+
+set(ax1, 'XTick', [0.01, 0.1, 1, 10, 100])
+leg1 = legend([hgm1, hgm2, hpm1, hpm2]);
+set(leg1, 'Location', 'NorthWest', 'Box', 'off')
+%
 
 
 figure(f5);
 ax2 = axes('Position', [0.1100 0.1300 0.7750 0.8150], 'YAxisLocation', 'left');
-[h_sens1, h_ts1] = plot_sens_ts(gams, Sens_gain1, TS_s1, ax2, f5);
+[h_sens1, h_ts1] = plot_sens_ts(gams, Sens_gain1, TS_s1, ax2, f5,...
+  'Ts_color', PM_colr, 'Ts_LS', PM_ls1, 'Sens_color', GM_colr, 'Sens_LS', GM_ls1);
 h_sens1.DisplayName = 'Gain of S (constant-$\sigma$)';
 h_ts1.DisplayName = 'Nominal settle-time (constant-$\sigma$)';
 
-
-figure(f4);
-[hgm2, hpm2] = plot_gmpm(gams, GM_s2, PM_s2, ax1, f4);
-hgm2.DisplayName = 'GM (choose-$\zeta$)';
-hpm2.DisplayName = 'PM (choose-$\zeta$)';
-
-% [hgm2_pure, hpm2_pure] = plot_gmpm(gams, GM_s2_pure, PM_s2_pure, ax1, f4);
-% hgm2_pure.DisplayName = 'GM (choose-$\zeta$) state fdbk';
-% hpm2_pure.DisplayName = 'PM (choose-$\zeta$) state fdbk';
-
-leg1 = legend([hgm1, hgm2, hpm1, hpm2]);
-% leg1 = legend([hgm1, hgm1_pure, hgm2, hgm2_pure]);
-set(leg1, 'Location', 'NorthWest')
- 
-figure(f5);
-[h_sens2, h_ts2] = plot_sens_ts(gams, Sens_gain2, TS_s2, gca(), f5);
+[h_sens2, h_ts2] = plot_sens_ts(gams, Sens_gain2, TS_s2, gca(), f5,...
+  'Ts_color', PM_colr, 'Ts_LS', PM_ls2, 'Sens_color', GM_colr, 'Sens_LS', GM_ls2);
 h_sens2.DisplayName = 'Gain of S (choose-$\zeta$)';
 h_ts2.DisplayName = 'Nominal settle-time (choose-$\zeta$)';
 
 leg2 = legend([h_sens1, h_sens2, h_ts1, h_ts2]);
-set(leg2, 'Position', [0.1132    0.7788    0.6499    0.2091])
-
+set(leg2, 'Position', [0.1100 0.4663 0.6503 0.2091], 'Box', 'off')
+set(ax2, 'XTick', [0.01, 0.1, 1, 10, 100])
+yyaxis(ax2, 'left')
+ylim([32, 52])
 % P_x  = getCharDes(G_recyc, can_cntrl.gam_s, can_cntrl.pint,...
 
 % [Chat, Dhat] = place_zeros(G_recyc, P_x);
@@ -161,55 +168,66 @@ end
 
 
 
+% ------------------------------------------------------------------
+% ------------------------------------------------------------------
+% ------- Function Defs. So nice matlab FINALLY allows this --------
 
-
-
-
-
-
-
-
-
-%   K_lqr = dlqr(G_recyc.a, G_recyc.b, Q1, R0+107, S1);
-%   [Sens, Hyd, Hyr, Hyeta, Loop] = ss_loops_delta_dist(plants.SYS, G_recyc, G_obsDist, K_lqr, LxLd);
-%   figure, step(Hyr, Hyd)
+function [h_sens, h_ts] = plot_sens_ts(gams, Sens_gain_s, TS_s, ax, Fig, varargin)
+  p = inputParser();
+  p.addParameter('Sens_color', 'k')
+  p.addParameter('Ts_color', 'r')
+  p.addParameter('Sens_LS', '-')
+  p.addParameter('Ts_LS', '--')
+  p.parse(varargin{:})
+  Sens_opts = {'Color', p.Results.Sens_color, 'LineStyle', p.Results.Sens_LS};
+  Ts_opts = {'Color', p.Results.Ts_color, 'LineStyle', p.Results.Ts_LS};
+  ax.YAxis(1).Color = p.Results.Sens_color;
   
-
-  function [h_sens, h_ts] = plot_sens_ts(gams, Sens_gain_s, TS_s, ax, Fig)
-    
-    Fig.CurrentAxes = ax;
-    yyaxis left;
-    
-    h_sens = plot(gams, Sens_gain_s);
-    hold on
-    grid on
-    xlabel('$\gamma$')
-    ylabel('Gain of $S(z)$ [dB]')
-    
-    yyaxis right
-    h_ts = plot(gams, TS_s*1000);
-    ylabel('Settle-time [ms]')
-    
-    
-  end
+  Fig.CurrentAxes = ax;
+  yyaxis left;
+  
+  h_sens = semilogx(gams, Sens_gain_s, Sens_opts{:});
+  hold on
+  grid on
+  xlabel('$\gamma$')
+  ylabel('Gain of $S(z)$ [dB]')
+  
+  yyaxis right
+  h_ts = semilogx(gams, TS_s*1000, Ts_opts{:});
+  ylabel('Settle-time [ms]')
+  
+  ax.YAxis(2).Color = p.Results.Ts_color;
+  
+end
 
 
-function [h_gm, h_pm] = plot_gmpm(gams, GM_s, PM_s, ax1, ax2, Fig)
+function [h_gm, h_pm] = plot_gmpm(gams, GM_s, PM_s, ax1, Fig, varargin)
   %PLOT_GMPM Summary of this function goes here
   %   Detailed explanation goes here
 
+  p = inputParser();
+  p.addParameter('GM_color', 'k')
+  p.addParameter('PM_color', 'r')
+  p.addParameter('GM_LS', '-')
+  p.addParameter('PM_LS', '--')
+  p.parse(varargin{:})
+  GM_opts = {'Color', p.Results.GM_color, 'LineStyle', p.Results.GM_LS};
+  PM_opts = {'Color', p.Results.PM_color, 'LineStyle', p.Results.PM_LS};
+  
+  
   Fig.CurrentAxes = ax1;
   yyaxis left;
-  h_gm = semilogx(ax1, gams, GM_s);
+  h_gm = semilogx(ax1, gams, GM_s, GM_opts{:});
   h_gm.DisplayName = 'Gain Margin';
   hold on
   grid on
   xlab = xlabel('$\gamma$');
   ylabel('Gain Margin [dB]')
+  ax1.YAxis(1).Color = p.Results.GM_color;
   
   Fig.CurrentAxes = ax1;
   yyaxis right
-  h_pm = plot(ax1, gams, PM_s);
+  h_pm = plot(ax1, gams, PM_s, PM_opts{:});
   h_pm.DisplayName = 'Phase Margin';
   ylabel('Phase Margin [deg]')
   
@@ -218,7 +236,7 @@ function [h_gm, h_pm] = plot_gmpm(gams, GM_s, PM_s, ax1, ax2, Fig)
   
 
   xlim([gams(1), gams(end)])
-  
+  ax1.YAxis(2).Color = p.Results.PM_color;
   
 end
 

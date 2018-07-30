@@ -20,7 +20,7 @@ P_uz2pow = modelFit.frf.G_uz2pow;
 
 % Visualize everything
 F1 = figure(1); clf
-frfBode(P_uz2pow, freqs, F1, 'b', 'Hz');
+frfBode(P_uz2pow, freqs, F1, 'Hz', 'b');
 
 omegas = freqs*2*pi;
 Ts = modelFit.frf.Ts;
@@ -28,7 +28,7 @@ P_uz2pow_frd = frd(P_uz2pow, omegas, Ts);
 
 G_uz2pow = tfest(P_uz2pow_frd, 2, 0,5, 'Ts', Ts);
 % G_uz2pow.InputDelay = 1
-frfBode(G_uz2pow, freqs, F1, '--m', 'Hz');
+frfBode(G_uz2pow, freqs, F1, 'Hz', '--m');
 
 %%
 R2 = 1.7e6;
