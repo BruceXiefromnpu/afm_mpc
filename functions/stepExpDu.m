@@ -77,6 +77,7 @@ classdef stepExpDu
     y;
     u;
     du;
+    Ipow;
     pstyle;
     Color;
     LineStyle;

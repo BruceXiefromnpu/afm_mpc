@@ -62,7 +62,7 @@ saveon = true;
 %
 % For all cases, drift and hysteresis compensation remains
 % unchanged. 
-md = 3;
+md = 1;
 
 % !!!!!! These gamas should match the data in table II !!!!!!
 if md == 1
@@ -77,14 +77,16 @@ elseif md == 2
   exp_id_str = 'const-sig-rob-opt';
 elseif md ==3
 % 3). Choose zeta, minimum-gamma
-  gam_lin = 3.8;
-  gam_mpc = 3.1;
+%   gam_lin = 3.8;
+%   gam_mpc = 3.1;
+  gam_lin = 2.9;
+  gam_mpc = 0.2;
   exp_id_str = 'choose-zet-min-gam';
 elseif md ==4
 % 4). Choose zeta, rob-optimal
-  gam_lin = 42.3;
-  gam_mpc = 42.3;
-  exp_id_str = 'choose-zet-min-gam';
+  gam_lin = 61.4;
+  gam_mpc = 61.4;
+  exp_id_str = 'choose-zet-rob-opt';
 end
 
 
@@ -373,6 +375,8 @@ if do_sim_linfxp
   % Simulate current
   figure(1000); clf
   Ipow = lsim(plants.G_uz2powI, U_full_fxpl.Data, U_full_fxpl.Time);
+  sim_exp_fxpl.Ipow = timeseries(Ipow, U_full_fxpl.Time);
+  
   hlin_Ipow = plot(U_full_fxpl.Time, Ipow, '--k');
   hlin_Ipow.DisplayName = 'Linear Current';
   hold on, grid on;
@@ -413,6 +417,7 @@ if do_sim_mpcfxp
     'controller', K_lqr, 'name',  name);
   
   sim_exp_fxpm = stepExpDu(y_fxpm, U_full_fxpm, dU_fxpm, fxpm_Opts);
+  
   h3 = plot(sim_exp_fxpm, F_yudu, 'umode', 'both');
   legend([h2(1), h3(1)]);
   
@@ -426,6 +431,8 @@ if do_sim_mpcfxp
   figure(1000);
   hold on
   Ipow = lsim(plants.G_uz2powI, U_full_fxpm.Data, U_full_fxpm.Time);
+  sim_exp_fxpm.Ipow = timeseries(Ipow, U_full_fxpm.Time);
+  
   hmpc_Ipow = plot(U_full_fxpl.Time, Ipow, '--g');
   hmpc_Ipow.DisplayName = 'MPC Current';
   
@@ -433,8 +440,8 @@ if do_sim_mpcfxp
   [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp_fxpl, sim_exp_fxpm);
 
 end
-%return
-%%
+% return
+
 if saveon
   save(fullfile(save_root, [step_descr, '_linfxp_sim_', exp_id_str, '_',...
     datestr(now, 'mm-dd-yyyy'), '.mat']), 'sim_exp_fxpl');
@@ -451,7 +458,7 @@ traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
 if ispc & do_sim_mpcfxp
   sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
 end
-
+%
 
 
 %--------------------------------------------------------------------------
@@ -516,6 +523,8 @@ expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', fgm_fxp,
   'pstyle', '-b', 'name', sprintf('AFM Stage (Linear) (%s)', exp_id_str));
 
 afm_exp_lin = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
+afm_exp_lin.Ipow = Ipow_exp;
+
 Ts_vec_afm_lin = afm_exp_lin.settle_time(TOL, tol_mode, 1);
 fprintf('Total AFM lin FXP settle-time = %.3f [ms]\n', sum(Ts_vec_afm_lin)*1000);
 
@@ -527,6 +536,7 @@ end
 plot(y_exp.Time, yy, ':k')
 %
 H_linexp2 = afm_exp_lin.ploty(F_y);
+
 % legend([h12, h22, h32, H_mpcexp2])
 try; legend([h12, h22, h32,  H_mpcexp2, H_linexp2]); end
 %
@@ -540,15 +550,14 @@ try; [~, F_state] = plotState(xhat_exp, F_state); end;
 fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp_fxpl,...
   sim_exp_fxpm, afm_exp_lin);
-%
-%
+
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
 save(fullfile(save_root, [step_descr, '_lin_EXP_', exp_id_str, '_',...
     datestr(now, 'mm-dd-yyyy'), '.mat']), 'afm_exp_lin')
 
-
+%
 %--------------------------------------------------------------------------
 % -------------- MPC Experiment -------------------------------------------
 
@@ -613,6 +622,7 @@ expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', K_lqr,..
   'pstyle', '--m', 'name', sprintf('AFM Stage (MPC, %s), ', exp_id_str));
 
 afm_exp_mpc = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
+afm_exp_mpc.Ipow = Ipow_exp;
 
 try
 Ts_vec_afm_mpc = afm_exp_mpc.settle_time(TOL, tol_mode, 1);
@@ -625,6 +635,7 @@ subplot(3,1,1)
 plot(y_exp.Time, yy, ':k')
 
 H_mpcexp2 = afm_exp_mpc.ploty(F_y);
+
 try; legend([h12, h22, h32, H_mpcexp2]); end
 
 figure(1000); %clf
