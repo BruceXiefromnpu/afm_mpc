@@ -89,12 +89,24 @@ Point-to-point movements by AFM is also of interest in other areas like visceola
   % [grid]
   \begin{overpic}[scale=1]{figures/blocks/ss_block_diagram_cropped.pdf}
     \put(63.,19){$\mathcal{F}${\raisebox{1.15ex}{$\scriptscriptstyle -1$}}$[\cdot]$}
-    \put(76.7,19){$\mathcal{F}[\cdot]$}
+    \put(76.4,19){$\mathcal{F}[\cdot]$}
 % \includegraphics                
 \end{overpic}
   \caption{The overall plant model consists of a vibrational component, $G_{vib}$, a drift model $G_{d}$ and a hysteresis model $\mathcal{F}[\cdot]$. }
   \label{fig:ss_bd}
 \end{figure*}
+
+% \begin{figure}
+%   \centering
+%   % [grid]
+%   \begin{overpic}[width=1\columnwidth]{figures/blocks/ss_block_diagram_cropped.pdf}
+%     \put(63.,19){\tiny{$\mathcal{F}${\raisebox{1.15ex}{$\scriptscriptstyle -1$}}$[\cdot]$}}
+%     \put(76.4,19){\tiny{$\mathcal{F}[\cdot]$}}
+% % \includegraphics                
+% \end{overpic}
+%   \caption{The overall plant model consists of a vibrational component, $G_{vib}$, a drift model $G_{d}$ and a hysteresis model $\mathcal{F}[\cdot]$. }
+%   \label{fig:ss_bd}
+% \end{figure}
 
 One of the primary constraints in setpoint tracking with our piezo stage is the current limit of the power amplifier,  which roughly translates to a slew rate limitation on the control signal. Thus, 
 in principle at least, minimizing the tracking time of such point-to-point motions is a classic time-optimal control problem. For piezo stages which can be adequately modeled as a second-order system, we have considered robust methods to effect this \cite{braker_proximate_2017}. However, for stages with more complex dynamics,  including the stage in our own lab, closed-form solutions to the minimum time problem are intractable, rendering the methods presented in \cite{braker_proximate_2017} inapplicable.
@@ -108,8 +120,9 @@ Given a discrete-time state space system $\{A,B,C,0\}$ with state $x_k$, and con
  \text{s.t.} \quad z_{i+1} &= A z_{i} + B v_{i}\\
 z_{0} &= x_{k}, \\
 v_i  \in \mathds{U}
-\end{align}\label{eqn:optcost0}
-\end{subequations}\noindent where $\mathds{U}$ is a convex set, $P$ solves the Discrete Algebraic Riccati Equation (DARE), $Q$ and $R$ are symmetric matrices and, together with $S$, satisfy
+\end{align}\label{eqn:optcost0}%
+\end{subequations}
+where $\mathds{U}$ is a convex set, $P$ solves the Discrete Algebraic Riccati Equation (DARE), $Q$ and $R$ are symmetric matrices and, together with $S$, satisfy
 \begin{equation}
   \begin{bmatrix}
     Q & S\\S^T &R
@@ -141,22 +154,22 @@ The AFM in our lab consists of an Agilent 5400 which has been retrofitted with a
 
 All control logic is programmed into a Xilinx Spartan-6 LX150 FPGA in a cRIO 9082 from National Instruments. Due to limitations in the digital to analog converter, the maximum sampling frequency is 100~kHz. In this work we use a sampling frequency of 25~kHz, which is based on the system dynamics (see Fig.~\ref{fig:Guz2stage_frf} in Section \ref{sec:vib_model}). The sampling frequency of 25~kHz, the approximate 360~$\mu$s of delay translates to about 9 samples.
 
-In characterizing the limitations of this system, it will be helpful to enable direct measurements of both the high voltage output, $V_X$, and current, $I_X$, of the C300. These are obtained by re-routing the C300 drive signal as shown in Fig.~\ref{fig:c300_meas}. The voltage divider output provides a (scaled) measurement of the C300 high-voltage output and is given by
-\todo{I dont use this measurement anywhere except to produce the TF from ux to Vx in fig 6.}
-\begin{equation}
-V_X = \frac{R_1 + R_2}{R_2}V_{div}
-\end{equation}
-The impedance of the divider is high (about $32.5\text{M}\Omega$) to avoid loading the amplifier output.
+In characterizing the limitations of this system, it will be helpful to enable a direct measurement of the power amplifier current, $I_X$, of the C300. This measurement is obtained by re-routing the C300 drive signal as shown in Fig.~\ref{fig:c300_meas}. % The voltage divider output provides a (scaled) measurement of the C300 high-voltage output and is given by
+% \todo{I dont use this measurement anywhere except to produce the TF from ux to Vx in fig 6.}
+% \begin{equation}
+% V_X = \frac{R_1 + R_2}{R_2}V_{div}
+% \end{equation}
+% The impedance of the divider is high (about $32.5\text{M}\Omega$) to avoid loading the amplifier output.
 
 A small, $0.1~\Omega$ resistor on the return side of the piezo provides a current measurement of $I_X$. The voltage across this resistor is amplified by an op-amp circuit so that
 \begin{equation}
 I_{X} = \frac{1}{K_{op}R_{\text{sense}}}V_{op}
 \end{equation}
-where $K_{op}\approx 15.15$ is the gain of the operational amplifier.
+where $K_{op}\approx 151$ is the gain of the operational amplifier.
 
 
 \begin{figure}
-    \includegraphics[width=0.48\textwidth]{figures/c300_measurement_schematic.pdf}
+    \includegraphics[width=1\columnwidth]{figures/blocks/c300_measurement_cropped.pdf}
     \caption{Schematic of the augmented high voltage output measurement and current measurement used in characterizing the C300.}
     \label{fig:c300_meas}
   % \end{minipage}
@@ -328,11 +341,7 @@ If the thresholds $d_H^i$ and $d_S^i$ are pre-defined, \cite{kuhnen_modeling_200
 \end{figure}
 
 The high voltage output of the C300 is current limited to 100 mA. The solid black curve in Figure~\ref{fig:powTF} shows the transfer function from the low voltage input of the C300 to current flowing through the stage, $G_{I_X,u_X}$. Because the piezo actuators are highly capacitive, at frequencies below about 600~Hz, $G_{I_X,u_x}$ looks like a pure derivative.
-
-% If the electrical impedance of the piezo is modeled as a pure capacitance (a common assumption  ~\cite{fleming_megahertz_2009, Bazghaleh_digital_2013}), this translates to a rate of change limitation on the voltage control signal through the current-voltage relation $\dot v = \frac{1}{C} i(t)$.
-% It is tempting to think that we ought to constrain the rate of change of the power amplifier voltage output $V_X$, since this is the voltage actually running through the piezo. There are two difficulties with this approach. First, as seen in Fig~\ref{fig:powTF}, \(G_{V_{x},u_{x}}\) rolls off at about 250~Hz, which means that such a constraint will lead to a constraint on the states of \(G_{V_{x},u_{x}}\). Second, the transfer function \(G_{I_{x}, V_{X}}\) has a break frequency at about 700~Hz, where it begins increasing at 40~dB per decade. Thus, a rate of change limitation based on a pure capacitance would \emph{under}-estimate the actual current draw.
-% In the interest of computational simplicity, we would like to approximate $G_{I_X,u_X}$ with a simple derivative, because this will lead to a box constraint on the rate of change of $u(k)$.
-Noting that, for frequency less than about 600 Hz, $G_{I_X,u_X}$ increases at 20dB per decade (i.e., looks like a pure derivative), we factor $G_{I_X,u_X}$ as
+Thus, we can factor $G_{I_X,u_X}$ as
 \begin{align}
   I_{X}(z) &= G_{I_X,u_X} u_X(z)\\
           & = (z-1) G_o u_X(z)\\
@@ -524,7 +533,7 @@ where $Q$ and $R$ are symmetric matrices and the matrices $Q,R,S$ satisfy
     Q & S\\S^T &R
   \end{bmatrix} > 0
 \end{equation}
-The terminal cost $P$ is the solution of the DARE. The solution of \eqref{eqn:optcost} results in a sequence of $N$ optimal controls, $\{v_i\}_{i=0}^{N-1}$. In the case of MPC, one sets $\Delta u_k = v_0$ and discards the remaining elements. The process is repeated at the next time step. Note that in the case of MPC, the saturator in Fig. \ref{fig:ss_bd} is superfluous because the optimal control satisfies the constraints by design.
+The terminal cost $P$ is the solution of the DARE. The solution of \eqref{eqn:optcost} results in a sequence of $N$ optimal controls, $\{v_i\}_{i=0}^{N-1}$. In the case of MPC, one sets $\Delta u_k = v_0$ and discards the remaining elements. The process is repeated at the next time step. Note that in the case of MPC, the saturator in Fig.~\ref{fig:ss_bd} is superfluous because the optimal control satisfies the constraints by design.
 
 In the case of linear feedback, $N=1$ and we eliminate the constraint on the control \eqref{eqn:cntrl_constraint} and thus the optimal control is simply $-Kx_k$, where
 \begin{equation}
@@ -541,7 +550,7 @@ Alternatively, one could use the same $\gamma$ for both the MPC design and SLF d
 
 
 \subsection{Control Weight Selection}
-Let $Q = F^TF$ for some vector $F\in\mathds{R}^{\bar{n}_s}$, $S=F$, and $R=1+\gamma$, where $\gamma$ is a scalar parameter. Consider the fictitious output
+Let $Q = F^TF$ for some vector $F\in\mathds{R}^{\bar{n}_s}$, $S=F$, and $R=1+\gamma$ where $\gamma$ is a scalar parameter. Consider the fictitious output
 \begin{equation}
   \eta_k = F\xd_k + \Delta u_k. \label{eqn:fictout}
 \end{equation}
@@ -630,17 +639,17 @@ To consider the minimum-$\gamma$ approach, we need to determine the smallest $\g
 \end{table}
 
 \section{Results}\label{sec:results}
-\begin{figure*}
-  \begin{minipage}{0.48\textwidth}
-    \includesvg[width=1\textwidth]{figures/perc_increase_Ipow_lowgain_rmax14.svg}
-    \caption{For the choose-$\zeta$ method, percentage increase over the discrete minimum time trajectory.}
-  \end{minipage}
-  \hfill
-  \begin{minipage}{0.48\textwidth}
-    \includesvg[width=1\textwidth]{figures/perc_increase_Ipow_lowgain_rmax14_constsig.svg}
-    \caption{For the constant-$\sigma$ method, percentage increase over the discrete minimum time trajectory.}
-  \end{minipage}
-\end{figure*}
+% \begin{figure*}
+%   \begin{minipage}{0.48\textwidth}
+%     \includesvg[width=1\textwidth]{figures/perc_increase_Ipow_lowgain_rmax14.svg}
+%     \caption{For the choose-$\zeta$ method, percentage increase over the discrete minimum time trajectory.}
+%   \end{minipage}
+%   \hfill
+%   \begin{minipage}{0.48\textwidth}
+%     \includesvg[width=1\textwidth]{figures/perc_increase_Ipow_lowgain_rmax14_constsig.svg}
+%     \caption{For the constant-$\sigma$ method, percentage increase over the discrete minimum time trajectory.}
+%   \end{minipage}
+% \end{figure*}
 
 
 \begin{table*}
@@ -672,7 +681,6 @@ To consider the minimum-$\gamma$ approach, we need to determine the smallest $\g
 \end{table*}
 We tested the MPC and SLF control laws for both pole placement schemes (CS and CZ) and both $\gamma$ selection schemes by giving the stage a sequence of 23 reference commands. The first 20 references we selected randomly over the range $[-35~\mu$\text{m}, $35\mu\text{m}]$. We chose the final three references references we selected as $35\mu$m, $-35\mu$m, and $0\mu$m, to exercise the full range of the stage. The sequence of references is shown in the top plots of Figs \ref{fig:const_sig_y} and \ref{fig:choose_zet_y}.
 
-
 Settling times are computed in an absolute sense. Specifically, the settle boundary is 70~$\mu$m/512, which would correspond to settling within one pixel of a 512 by 512 pixel image.
 The settling times for each reference command are compiled into Table~\ref{tab:ts_CS} for the constant-$\sigma$ scheme and Table~\ref{tab:ts_CZ} for the chosen-$\zeta$ scheme. Each row corresponds to a different reference command, as indicated in the first column. The second column shows the overall change in setpoint. Columns 3 through 6 show the simulation settling time and columns 7 through 10 show the experimental settling times.
 
@@ -682,14 +690,15 @@ On the other hand, in the experiments, choosing the $\gamma$ which minimizes the
 
 Figures~\ref{fig:const_sig_y} and \ref{fig:choose_zet_y} show the output trajectories for the CS scheme (Fig. ~\ref{fig:const_sig_y}) and CZ scheme (Fig. \ref{fig:choose_zet_y}). Large amounts of overshoot can be seen in the top row of Fig.~\ref{fig:choose_zet_y}, which are the minimum $\gamma$ trajectories and can be attributed to the excessively low stability margins associated with that choice. The bottom row plots in the two figures zooms in on two references. Here it can be seen that the CZ schemes eliminates some of the residual (though small) oscillations present in the CS scheme.
 
+Finally, Fig.~\ref{fig:Ipow_exp}  shows the actual current measured in the experiments.
 
-Finally, Fig.~REF shows the actual current measured in the experiments.
 \begin{figure*}
   \begin{minipage}{1\columnwidth}
     \includesvg[width=1\columnwidth]{figures/step_exps_const_sig_y.svg}
   \caption{(top) All the step inputs. (bottom left) best. (bottom right) worst}
   \label{fig:const_sig_y}
 \end{minipage}
+\hfill
 \begin{minipage}{1\columnwidth}
   \includesvg[width=1\columnwidth]{figures/step_exps_choose_zet_y.svg}
   \caption{(top) All the step inputs. (bottom left) best. (bottom right) worst}
@@ -704,13 +713,24 @@ Finally, Fig.~REF shows the actual current measured in the experiments.
   \label{fig:ts_vs_delr}
 \end{figure*}
 
+\begin{figure*}
+  % \begin{minipage}{1\columnwidth}
+  \begin{subfigure}[t]{1\columnwidth}
+    \includesvg[width=1\columnwidth]{figures/step_exps_const_sig_Ipow.svg}
+  % \caption{}
+\end{subfigure}
+% \end{minipage}
+% \begin{minipage}{1\columnwidth}
+\begin{subfigure}[t]{1\columnwidth}
+  \includesvg[width=1\columnwidth]{figures/step_exps_choose_zet_Ipow.svg}
+  % \caption{}
+\end{subfigure}
+% \end{minipage}
+\caption{Measured power amplifier current for the constant-$\sigma$ (left) and choose-$\zeta$ (right) schemes.
+\textcolor{red}{It's hard to see anything useful in these figures. Maybe it would make more sense to show only ``best'' and ``worst''}}
+\label{fig:Ipow_exp}
+\end{figure*}
 
-% Additionally, in simulation we consider two additional techniques:
-% \begin{itemize}
-% \item\emph{Discrete time, minimum time optimal control (DTMT)}
-% \item\emph{Constrained, Finite horizon LQR (CLQR)} The optimization is the same as the MPC optimization, just over a much longer horizon. Similarly to the DTMT idea, this would be implemented in a feedforward/tracking configuration. However, the broader goal of considering this scheme is that it shows how much optimality we have sacrificed with a relatively short horizon in MPC.
-% \end{itemize}
-% These schemes are used as benchmarks against which to judge the performance of SLF and MPC. Certainly, one could apply the control trajectories either CLQR or DTMT in a feedforward manner and track the optimal state sequences, as we have considered before in past work \cite{braker_fast_2017}. However, such a technique has several disadvantages: (1) the entire sequence of setpoints must be known before hand, eliminating the possibility of adjusting them in real time. (2) Computing each optimal trajectory requires defining an initial condition, which becomes problematic when, for example, performing short $\mu$-path scans and (3) transferring the data defining each trajectory in real-time increases the burden on the I/O bus.
 
 \section{Conclusions}
 

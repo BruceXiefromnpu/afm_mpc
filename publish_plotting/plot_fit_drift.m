@@ -34,7 +34,7 @@ gdrift = zpk(theta(np+1:end-1), theta(1:np), theta(end), Ts);
 
 ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_exp);
 y_vib = lsim(Gvib, u_exp, t_exp);
-
+%%
 width = 3.5;
 height = 2.5;
 fig = mkfig(105, width, height); clf
@@ -66,5 +66,5 @@ ax = gca;
 
 tighten_axis(fig, ax)
 set(leg1, 'Units', 'inches', 'Box', 'off', 'Position', [1.7751 0.5873 1.5782 0.6273]);
-
+%%
 saveas(fig, fullfile(PATHS.jfig(), 'drift_fit.svg'))

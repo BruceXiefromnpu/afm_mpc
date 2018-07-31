@@ -56,7 +56,8 @@ function tighten_axis(fig, ax)
                     
   yt_pad = 1.3; % how much we imagine the yticks are spaced from
                 % the y-axis.
-  
+  xt_pad = 1.3; % how much we imagine the xticks are spaced down from
+                % the x-axis.
   ylab = ax.YLabel;
   xlab = ax.XLabel;
   tit_lab = ax.Title;
@@ -75,7 +76,7 @@ function tighten_axis(fig, ax)
   % compute the bottom of the axes. Account for height of xlabel,
   % height of xticks, plus 30% for space between xticks and axis
   
-  bt = xlab.FontSize/72 + xt_ht;
+  bt = xlab_ht + xt_ht;
   lft = ylab_wd + yt_pad*yt_wd;
   
   % compute axis height. This is the height of the figure, minus
@@ -88,7 +89,7 @@ function tighten_axis(fig, ax)
   wd = fig_width - lft - xt_wd/2;
   
   set(ax, 'Position', [lft, bt, wd, ht])
-  set(xlab, 'Position', [ax.Position(3)/2, -xlab.FontSize/72, 0])
+  set(xlab, 'Position', [ax.Position(3)/2, -xlab_ht, 0])
 
   set(ylab, 'HorizontalAlignment', 'center', 'Position', [-yt_wd*yt_pad, ax.Position(4)/2, 0])
   
