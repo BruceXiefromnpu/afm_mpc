@@ -34,17 +34,17 @@ gdrift = zpk(theta(np+1:end-1), theta(1:np), theta(end), Ts);
 
 ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_exp);
 y_vib = lsim(Gvib, u_exp, t_exp);
-%%
+
 width = 3.5;
 height = 2.5;
 fig = mkfig(105, width, height); clf
 ax = gca();
 hold on
 
-h0 = plot(ax, t_exp, u_exp, '-.b');
+h0 = plot(ax, t_exp, u_exp, '-.k');
 h0.DisplayName = 'Input';
 
-h1 = plot(t_exp, y_exp, '-k');
+h1 = plot(t_exp, y_exp, '-b');
 h1.DisplayName = 'Exp. Step Response';
 
 h2 = plot(t_exp, ydrift_est0, '--r');
@@ -66,5 +66,5 @@ ax = gca;
 
 tighten_axis(fig, ax)
 set(leg1, 'Units', 'inches', 'Box', 'off', 'Position', [1.7751 0.5873 1.5782 0.6273]);
-%%
+
 saveas(fig, fullfile(PATHS.jfig(), 'drift_fit.svg'))
