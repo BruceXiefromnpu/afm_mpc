@@ -134,8 +134,9 @@ classdef ManyStepExps < handle
       %    the number of columns in the table
       [n_steps, n_exps] = size(self.TS_mat);
       
-      c_fmt = repmat('c', 1, 3+n_steps);
-      S = sprintf('\\begin{tabular}{%s}\n', c_fmt);
+      % c_fmt = repmat('c', 1, 3+n_exps);
+      % S = sprintf('\\begin{tabular}{%s}\n', c_fmt);
+      S = '';
       
       % -- Form the table header:
       str_ref_cols = sprintf('&ref & delta');
@@ -181,7 +182,7 @@ classdef ManyStepExps < handle
       s_row = sprintf('%s%s\\\\ \n', str_ref_cols, str_dat_cols);
       
       S = sprintf('%s\\midrule\n %s', S, s_row);
-      S = sprintf('%s\\end{tabular}\n', S);
+      %S = sprintf('%s\\end{tabular}\n', S);
       
     end
   end % methods

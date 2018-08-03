@@ -49,10 +49,14 @@ files_const_sig = {
 'many_steps_ymax7_lin_EXP_const-sig-rob-opt_07-30-2018.mat',...
 'many_steps_ymax7_mpc_EXP_const-sig-rob-opt_07-30-2018.mat'};
 
-names_const_sig_rob_opt = {'LS-CSMG','MPCS-CSMG',...
-                           'LS-CSRO','MPCS-CSRO',...
-                           'LE-CSMG', 'MPCE-CSMG',...
-                            'LE-CSRO', 'MPCE-CSRO'};
+% names_const_sig_rob_opt = {'LS-CSMG','MPCS-CSMG',...
+%                            'LS-CSRO','MPCS-CSRO',...
+%                            'LE-CSMG', 'MPCE-CSMG',...
+%                             'LE-CSRO', 'MPCE-CSRO'};
+names_const_sig_rob_opt = {'SLF-CS-MG','MPC-CS-MG',...
+                           'SLF-CS-RG','MPC-CS-RG',...
+                           'SLF-CS-MG', 'MPC-CS-MG',...
+                            'SLF-CS-RG', 'MPC-CS-RG'};
 
  
 % clrs = {[0    0.4470    0.7410],...
@@ -106,10 +110,10 @@ files_choose_zet = {
 'many_steps_ymax7_mpc_EXP_choose-zet-rob-opt_07-30-2018.mat',...
 };
 
-names_choose_zet = {'LS-CZMG','MPCZ-CZMG',...
-                           'LS-CZRO','MPCZ-CZRO',...
-                           'LE-CZMG', 'MPCE-CZMG',...
-                           'LE-CZRO', 'MPCE-CZRO'};
+names_choose_zet = {'SLF-CZ-MG', 'MPC-CZ-MG',...
+                    'SLF-CZ-RG', 'MPC-CZ-RG',...
+                    'SLF-CZ-MG', 'MPC-CZ-MG',...
+                    'SLF-CZ-RG', 'MPC-CZ-RG'};
 
 clrs = {'b', 'r', 'g', 'k', 'b', 'r', 'g', 'k'}    ;
 line_styles = {'-', '--', '-', '--','-', '--','-', '--','-', '--','-', '--','-', '--'};
@@ -133,9 +137,10 @@ end
 
 % leg = legend(hands);
 % set(leg, 'Location', 'NorthEast')
-
+%%
 step_exps_CZ = ManyStepExps(TOL, tol_mode, step_ref, step_exps_CZ_cell{:});
 
+clc
 % -------------------------------------------------------------------------
 rgb1 = [0.230, 0.299, 0.754];
 rgb2 = [0.706, 0.016, 0.150];
@@ -143,11 +148,14 @@ s_ = linspace(0,1, length(step_ref.step_diff_amps));
 color_map = diverging_map(s_, rgb1, rgb2);
 % ------------ Constant-Sigma LaTex table -------------------
 ts_master_vec = ManyStepExps.ts_vec_from_dir(root_CS, TOL, tol_mode);
+
 S = step_exps_CS.TS_dat2tex('do_color', true, 'ts_vec', ts_master_vec, 'colormap', color_map);
 fprintf('%s', S); % just display it.
+
 if saveon
   ManyStepExps.write_tex_data(S, fullfile(PATHS.MPCJ_root, 'latex', 'manystepsdata.tex'));
 end
+
 
 % ------------ Choose-Zeta LaTex table -------------------
 S = step_exps_CZ.TS_dat2tex('do_color', true, 'ts_vec', ts_master_vec, 'colormap', color_map);
@@ -238,7 +246,7 @@ htit = title('(experiment)', 'FontSize', 10);
 tick_pad_inches = ax1.FontSize/72 + 0.0;  % 1/72 = pt
 set(xlab, 'Units', 'inches', 'HorizontalAlignment', 'center',...
   'Position', [wd/2, -tick_pad_inches, 0])
-%%
+
 if saveon
   saveas(Fig15, fullfile(PATHS.jfig, 'ts_vs_delref.svg'))
 end
@@ -300,7 +308,7 @@ end
 %% -------------------------------------------------------------------------
 % ------------ Constant-Sigma Plot steps, experimental-only zoom in--------
 width = 3.4;
-height = 3.5 + 1.25;
+height = 3.5 + 2.5;
 
 Fig = mkfig(10, width, height); clf
 
@@ -308,12 +316,15 @@ Fig = mkfig(10, width, height); clf
 % ax2 = axes('Position', [0.1300 0.1100 0.36 0.55], 'Units', 'normalized'); 
 % ax3 = axes('Position', [0.5703 0.1100 .36 0.55], 'Units', 'normalized');
 
-ax1 = axes('Units', 'inches', 'Position', [0.4415 2.6250+1.25 2.85 0.8750]);
-ax2 = axes('Units', 'inches', 'Position', [0.4415 0.3850+1.25 1.3 1.9250]);
-ax3 = axes('Units', 'inches', 'Position', [1.99 0.3850+1.25 1.3 1.9250]);
+ax1 = axes('Units', 'inches', 'Position', [0.4415 2.6250+1.25+1.25 2.85 0.8750]);
+ax2 = axes('Units', 'inches', 'Position', [0.4415 0.3850+2.5 1.3 1.9250]);
+ax3 = axes('Units', 'inches', 'Position', [1.99 0.3850+2.5 1.3 1.9250]);
 
-ax4 = axes('Units', 'inches', 'Position', [0.4415 0.3850 1.3 1.], 'Box', 'on');
-ax5 = axes('Units', 'inches', 'Position', [1.99 0.3850 1.3 1.], 'Box', 'on');
+ax4 = axes('Units', 'inches', 'Position', [0.4415 0.3850+1.25 1.3 1.], 'Box', 'on');
+ax5 = axes('Units', 'inches', 'Position', [1.99 0.3850+1.25 1.3 1.], 'Box', 'on');
+
+ax6 = axes('Units', 'inches', 'Position', [0.4415 0.3 1.3 1.1], 'Box', 'on');
+ax7 = axes('Units', 'inches', 'Position', [1.99 0.3 1.3 1.1], 'Box', 'on');
 
 
 step_ref.plot(ax1);
@@ -325,14 +336,14 @@ set(ax1, 'YLim', [-7.5, 7.5]*5);
 
 % "best"
 el1 = annotation('ellipse');
-set(el1, 'Units', 'inches', 'Position', [0.6112 2.7300+1.25 0.1358 0.1750], 'Color', 'r');
+set(el1, 'Units', 'inches', 'Position', [0.6112 2.7300+2.5 0.1358 0.1750], 'Color', 'r');
 a1 = annotation('arrow');
-set(a1, 'Units', 'inches', 'X', [0.6792 0.6792], 'Y', [2.75, 2.1]+1.25); 
+set(a1, 'Units', 'inches', 'X', [0.6792 0.6792], 'Y', [2.75, 2.1]+2.5); 
 % "worst"
 el2 = annotation('ellipse');
-set(el2, 'Units', 'inches', 'Position', [2.4790 2.9750+1.35 0.1358 0.1750], 'Color', 'r');
+set(el2, 'Units', 'inches', 'Position', [2.45 2.9750+2.6 0.1358 0.1750], 'Color', 'r');
 a2 = annotation('arrow');
-set(a2, 'Units', 'inches', 'X', [2.5129 2.3825], 'Y', [3.01, 2.366]+1.3);
+set(a2, 'Units', 'inches', 'X', [2.5129 2.3825], 'Y', [3.01, 2.2]+2.6);
 
 % Even though we want to zoom in, its maybe easiest to stick with our framework
 % and plot the whole thing, then adjust xlim and ylim.
@@ -368,11 +379,25 @@ step_exps_CS.plotdu_selected([5:8], ax5);
 set(ax5, 'XLim', [2.0, 2.01]);
 % set(ax5, 'XTick', [2.1, 2.125, 2.15])
 grid(ax5, 'on')
-
-
-ax4.XLabel.String = 't [ms]';
 ax4.YLabel.String = '$\Delta u_k$';
-ax5.XLabel.String = 't [ms]';
+
+
+ax4.XLabel.String = '';
+ax5.XLabel.String = '';
+
+hold(ax6, 'on');
+hands_Ipow = step_exps_CS.plotIpow_selected(5:8, ax6);
+set(ax6, 'XLim', [0.20, 0.215]);
+grid(ax6, 'on')
+ax6.YLabel.String='$I_{pow}$ [mA]';
+xlabel(ax6, 'time [ms]')
+
+hands_Ipow = step_exps_CS.plotIpow_selected(5:8, ax7);
+set(ax7, 'XLim', [2.1, 2.115]);
+xlabel(ax7, 'time [ms]')
+% set(ax5, 'XTick', [2.1, 2.125, 2.15])
+grid(ax7, 'on')
+
 
 if saveon
   saveas(Fig, fullfile(PATHS.jfig, 'step_exps_const_sig_y.svg'))
@@ -382,17 +407,20 @@ end
 
 
 width = 3.4;
-height = 4.75;
+height = 4.75+1.25;
 Fig = mkfig(11, width, height); 
 %
 clf, clc
 % subplot(2,2,[1,2])
-ax1 = axes('Units', 'inches', 'Position', [0.4415 2.6250+1.25 2.85 0.8750]);
-ax2 = axes('Units', 'inches', 'Position', [0.4415 0.3850+1.25 1.3 1.9250]);
-ax3 = axes('Units', 'inches', 'Position', [1.99 0.3850+1.25 1.3 1.9250]);
+ax1 = axes('Units', 'inches', 'Position', [0.4415, 2.6250+1.25+1.25 2.85 0.8750]);
+ax2 = axes('Units', 'inches', 'Position', [0.4415, 0.3850+2.5 1.3 1.9250]);
+ax3 = axes('Units', 'inches', 'Position', [1.99 0.3850+2.5 1.3 1.9250]);
 
-ax4 = axes('Units', 'inches', 'Position', [0.4415 0.3850 1.3 1.], 'Box', 'on');
-ax5 = axes('Units', 'inches', 'Position', [1.99 0.3850 1.3 1.], 'Box', 'on');
+ax4 = axes('Units', 'inches', 'Position', [0.4415, 0.3850+1.25, 1.3, 1.], 'Box', 'on');
+ax5 = axes('Units', 'inches', 'Position', [1.99, 0.3850+1.25, 1.3, 1.], 'Box', 'on');
+
+ax6 = axes('Units', 'inches', 'Position', [0.4415 0.3 1.3 1.1], 'Box', 'on');
+ax7 = axes('Units', 'inches', 'Position', [1.99 0.3 1.3 1.1], 'Box', 'on');
 
 
 step_ref.plot(ax1);
@@ -404,14 +432,14 @@ set(ax1, 'YLim', [-7.5, 7.7]*5);
 
 % "best"
 a1 = annotation('ellipse');
-set(a1, 'Units', 'inches', 'Position', [0.6120 2.7300+1.25 0.1360 0.1750], 'Color', 'r');
+set(a1, 'Units', 'inches', 'Position', [0.6120 2.7300+2.5 0.1360 0.1750], 'Color', 'r');
 a2 = annotation('arrow');
-set(a2, 'Units', 'inches', 'X', [0.68, 0.68], 'Y', [2.7475, 2.1]+1.25);
+set(a2, 'Units', 'inches', 'X', [0.68, 0.68], 'Y', [2.7475, 2.1]+2.5);
 % "worst"
 a3 = annotation('ellipse');
-set(a3, 'Units', 'inches', 'Position', [2.7840 3.3950+1.25 0.1360 0.1050], 'Color', 'r')
+set(a3, 'Units', 'inches', 'Position', [2.7840 3.3950+2.5 0.1360 0.1050], 'Color', 'r')
 a4 = annotation('arrow');
-set(a4, 'Units', 'inches', 'X', [2.8180 2.4820], 'Y', [3.3950 2.2750]+1.25);
+set(a4, 'Units', 'inches', 'X', [2.8180 2.4820], 'Y', [3.3950 2.2750]+2.5);
 
 % Even though we want to zoom in, its maybe easiest to stick with our framework
 % and plot the whole thing, then adjust xlim and ylim.
@@ -447,8 +475,22 @@ set(ax5, 'XLim', [2.1, 2.115]);
 % set(ax5, 'XTick', [2.1, 2.125, 2.15])
 grid(ax5, 'on')
 
-ax4.XLabel.String = 't [ms]';
-ax5.XLabel.String = 't [ms]';
+ax4.XLabel.String = '';
+ax5.XLabel.String = '';
+
+hold(ax6, 'on');
+hands_Ipow = step_exps_CZ.plotIpow_selected(5:8, ax6);
+set(ax6, 'XLim', [0.20, 0.215]);
+grid(ax6, 'on')
+ax6.YLabel.String='$I_{pow}$ [mA]';
+xlabel(ax6, 'time [ms]')
+
+hands_Ipow = step_exps_CZ.plotIpow_selected(5:8, ax7);
+set(ax7, 'XLim', [2.1, 2.115]);
+xlabel(ax7, 'time [ms]')
+% set(ax5, 'XTick', [2.1, 2.125, 2.15])
+grid(ax7, 'on')
+
 
 
 
