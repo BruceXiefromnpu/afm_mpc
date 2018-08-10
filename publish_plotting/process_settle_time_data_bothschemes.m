@@ -365,7 +365,7 @@ set(ax3, 'YLim', [-.05, .1]*5);
 
 leg = legend(hands);
 set(leg, 'FontSize', 8, 'Box', 'off',...
-  'Position', [0.6211 0.6158 0.3630 0.1307])
+  'Position', [0.6239 0.6766 0.3634 0.1307])
 
 
 hold(ax4, 'on')

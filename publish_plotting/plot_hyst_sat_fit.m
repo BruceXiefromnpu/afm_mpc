@@ -1,6 +1,10 @@
 clear
 clc
+
+saveon = true;
 % load('hystID_data_4-30-2018_01.mat')
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
 hyst_file = 'hystID_data_5-4-2018_01.mat';
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
 load(hyst_path)
@@ -10,7 +14,7 @@ load(hyst_path)
 % load(modelFit_file)
 plants = CanonPlants.plants_ns14();
 whos
-%%
+
 
 Gvib = plants.Gvib;
 Ts = Gvib.Ts;
@@ -38,13 +42,13 @@ ht = 3;
 
 ax1 = axes('Units', 'inches', 'Position', [0.4550 0.35 3 2.58]);
 h1 = plot(tvec, ux*dcgain(Gvib*gdrift), ':k');
-h1.DisplayName = 'u(k)*$G_d(0) G_{vib}(0)$';
+h1.DisplayName = '$u_k G_d(0) G_{vib}(0)$';
 hold on
 h2 = plot(tvec, yx, 'k');
 h2.DisplayName = 'Stage Response';
 
 h3 = plot(tvec, y_fit, '--r');
-h3.DisplayName = 'Fit';
+h3.DisplayName = 'Model';
 ylim([-8, 8]);
 grid on
 xlim([tvec(1), tvec(end)]);
@@ -77,5 +81,6 @@ set(ax2, 'XTick', [], 'YTick', [-4.5, -4], 'Box', 'on')
 
 
 
-%%
-saveas(f1, fullfile(PATHS.jfig, 'hyst_response_ol.svg'))
+if saveon
+  saveas(f1, fullfile(PATHS.jfig, 'hyst_response_ol.svg'))
+end
