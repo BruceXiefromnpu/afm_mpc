@@ -41,6 +41,10 @@ latex/manystepsdata_choosesig.tex
 latex/manystepsdata_choosezeta.tex
 latex/manystepsdata_rand.tex
 latex/rob_data.tex
+latex/*.bst
+latex/*.cls
+latex/Gvib_data.tex
+latex/_region_.tex
 
 # simulink backups
 *.r2016b

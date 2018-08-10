@@ -5,7 +5,7 @@ clc
 
 % plotting options
 lw = 1.3;
-saveon = false; % set this to 0 to avoid saving the computed FRFs.
+saveon = true; % set this to 0 to avoid saving the computed FRFs.
 
 
 % rmpath('C:\Users\arnold\Documents\MATLAB\miscScripts\system_id\')
@@ -86,17 +86,18 @@ derz_frf_inf = derz_frf_inf*mag_max;
 % I_max = 0.1; %Amps
 % fprintf('Mag-max = %.3f, deltaUk_max = %.3f\n', mag_max, I_max/mag_max);
      
-      
-F3 = figure(3); clf
+width = 3.5;
+hieght = 3;
+F3 = mkfig(3, width, height); clf
 ax3 = gca();
 % F3.PaperPosition = [1.3376    2.3454    5.8247    6.3093];
-h3 = semilogx(ax3, frf_data.freqs_Hz, 20*log10(abs(frf_data.G_uz2powV)), '-.r', 'LineWidth', lw);
-hold on, grid on;
-h3.DisplayName = '$G_{V_X, u_X}$';
+% h3 = semilogx(ax3, frf_data.freqs_Hz, 20*log10(abs(frf_data.G_uz2powV)), '-.r', 'LineWidth', lw);
+% hold on, grid on;
+% h3.DisplayName = '$G_{V_X, u_X}$';
 
 h4 = semilogx(ax3, frf_data.freqs_Hz, 20*log10(abs(frf_data.G_uz2powI)), '-k', 'LineWidth', lw);
 h4.DisplayName = '$G_{I_x,u_x}$';
-
+hold on, grid on
 % h5 = semilogx(ax3, freqs, 20*log10(abs(G_powV2powI)), '-b', 'LineWidth', lw);
 % h5.DisplayName = '$G_{I_x, V_X}$';
 
@@ -110,13 +111,14 @@ h11_bnd.DisplayName = '$(z-1) ||G_{I_X,\Delta u_X}(z)||_{\infty}$ ';
 
 
 xlim([frf_data.freqs_Hz(1), frf_data.freqs_Hz(end)])
-
-leg = legend([h3,h4, h10_bnd, h11_bnd]);
-set(leg, 'location', 'SouthEast', 'FontSize', 14, 'Box', 'off')
+ylim([-80, 10])
+% leg = legend([h3,h4, h10_bnd, h11_bnd]);
+leg = legend([h4, h10_bnd, h11_bnd]);
+set(leg, 'location', 'SouthEast', 'FontSize', 8, 'Box', 'off')
 xlabel('Frequency [Hz]')
 ylabel('Mag [dB]')
 
-
+tighten_axis(F3, ax3)
 if saveon
   saveas(F3, fullfile(PATHS.jfig, 'G_pow_and_current.svg'));
 end

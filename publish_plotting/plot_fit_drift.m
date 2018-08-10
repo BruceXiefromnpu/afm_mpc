@@ -41,10 +41,10 @@ fig = mkfig(105, width, height); clf
 ax = gca();
 hold on
 
-h0 = plot(ax, t_exp, u_exp, '-.b');
+h0 = plot(ax, t_exp, u_exp, '-.k');
 h0.DisplayName = 'Input';
 
-h1 = plot(t_exp, y_exp, '-k');
+h1 = plot(t_exp, y_exp, '-b');
 h1.DisplayName = 'Exp. Step Response';
 
 h2 = plot(t_exp, ydrift_est0, '--r');

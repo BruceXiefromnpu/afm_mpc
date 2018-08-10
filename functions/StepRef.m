@@ -8,15 +8,21 @@ classdef StepRef
     step_diff_amps; % differential amplitudes
     step_amps;      % absolute amplitudes
     yref;
+    yscaling;
     
   end
   
   methods
-    function self = StepRef(step_amps, n_space);
+    function self = StepRef(step_amps, n_space, varargin)
       % self = StepRef(step_amps, n_space);
       % step_amps is a vector of amplitueds.
       % n_space is an integer, number of samples for each ref. Should be
       % scalar. 
+      p = inputParser;
+      p.addparameter('yscaling', 1);
+      p.parse(varargin{:});
+      
+      self.yscaling = p.Results.yscaling;
       step_amps = step_amps(:);
       Ts = StageParams.Ts;
       
@@ -62,7 +68,7 @@ classdef StepRef
       end
       
       figure(Fig); 
-      h = plot(ax, self.yref.Time, self.yref.Data, varargin{:});
+      h = plot(ax, self.yref.Time, self.yref.Data*self.yscaling, varargin{:});
       hold(ax, 'on'); 
       grid(ax, 'on');
       
@@ -115,8 +121,8 @@ classdef StepRef
           TOL_k = TOL*(ref - ref_s(k-1));
         end
         
-        plot(ax, [t0, t1], [ref+TOL_k, ref+TOL_k], ':k');
-        plot(ax, [t0, t1], [ref-TOL_k, ref-TOL_k], ':k');
+        plot(ax, [t0, t1], [ref+TOL_k, ref+TOL_k]*self.yscaling, ':k');
+        plot(ax, [t0, t1], [ref-TOL_k, ref-TOL_k]*self.yscaling, ':k');
         
       end
 

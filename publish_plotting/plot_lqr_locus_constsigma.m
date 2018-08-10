@@ -11,8 +11,7 @@ Ts = G_recyc.Ts;
 const_sig = false;
 
 figbase = 30;
-pmgm_figfile = 'PMGM_vs_gamma_constsig_0p9.svg';
-sens_ts_figfile = 'GainS_TS_vs_gamma_constsig_0p9.svg';
+
 lqr_locus_figfile = 'lqr_locus_constsig_0p9.svg';
 cmplx_rad = 0.9;
 [Q1, R0, S1, P_x] = build_control_constsigma(G_recyc, cmplx_rad);
@@ -22,7 +21,7 @@ f3 = figure(3+figbase); clf
 t = (0:.01:pi);
 x = cmplx_rad*sin(t);
 y = cmplx_rad*cos(t);
-plot(real(P_x), imag(P_x), 'ob')
+plot(real(P_x), imag(P_x), 'ok')
 hold on
 plot(x, y, 'k')
 
@@ -58,7 +57,9 @@ ylabel('Im')
 
 
 if saveon
-  saveas(f3, fullfile(PATHS.jfig, lqr_locus_figfile))
+  fpath = fullfile(PATHS.jfig, lqr_locus_figfile);
+  fprintf('saving Figure number %d as\n %s\n', f3.Number, fpath);
+  saveas(f3, fpath);
 end
 
 

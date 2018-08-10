@@ -153,6 +153,46 @@ classdef stepExpDu
     % If varargin is empty, plot y with self.pstyle. Otherwise, varargin will
     % be passed into the plot() function and thus should be name value pairs
     % appropriate to plot().
+      scale = self.yscaling;
+      [hline, F1, ax] = self.plot_traj('y', scale, fig_ax, varargin{:});
+    end
+
+    
+    function [hline, F1, ax] = plotdu(self, fig_ax, varargin)
+    % [hline, F1] = plotdu(self, fig_ax, varargin)
+    % fig_ax can be either a figure handle or axis handle. If it is neither, we
+    % will assume that you want the first arguement to be treated as the first
+    % keyword pair passed to plot, and will plot to gcf() and gca().
+    %
+    % If varargin is empty, plot y with self.pstyle. Otherwise, varargin will
+    % be passed into the plot() function and thus should be name value pairs
+    % appropriate to plot().
+      scale = 1;
+      [hline, F1, ax] = self.plot_traj('du', scale, fig_ax, varargin{:});    
+    end
+    
+    function [hline, F1, ax] = plotIpow(self, fig_ax, varargin)
+    % [hline, F1] = plotIpow(self, fig_ax, varargin)
+    % fig_ax can be either a figure handle or axis handle. If it is neither, we
+    % will assume that you want the first arguement to be treated as the first
+    % keyword pair passed to plot, and will plot to gcf() and gca().
+    %
+    % If varargin is empty, plot y with self.pstyle. Otherwise, varargin will
+    % be passed into the plot() function and thus should be name value pairs
+    % appropriate to plot().
+      scale = 1;
+      [hline, F1, ax] = self.plot_traj('Ipow', scale, fig_ax, varargin{:});
+    end
+    
+    function [hline, F1, ax] = plot_traj(self, traj_name, scale, fig_ax, varargin)
+    % [hline, F1] = plot_traj(self, fig_ax, varargin)
+    % fig_ax can be either a figure handle or axis handle. If it is neither, we
+    % will assume that you want the first arguement to be treated as the first
+    % keyword pair passed to plot, and will plot to gcf() and gca().
+    %
+    % If varargin is empty, plot y with self.pstyle. Otherwise, varargin will
+    % be passed into the plot() function and thus should be name value pairs
+    % appropriate to plot().
 
       if isa(fig_ax, 'matlab.ui.Figure')
         F1 = figure(fig_ax);
@@ -168,12 +208,14 @@ classdef stepExpDu
       plot_opts = self.get_plot_opts();
       
       if isempty(varargin)
-        hline = plot(ax, self.y.Time, self.y.Data, plot_opts{:});
+        hline = plot(ax, self.(traj_name).Time, self.(traj_name).Data*scale, plot_opts{:});
       else
-        hline = plot(ax, self.y.Time, self.y.Data, varargin{:});
+        hline = plot(ax, self.(traj_name).Time, self.(traj_name).Data*scale, varargin{:});
       end
       hline.DisplayName = self.name;
     end
+    
+    
     
 %     function [fig, ax] = get_fig_ax(fig_ax)
 %     % [fig, ax] = get_fig_ax(fig_ax)

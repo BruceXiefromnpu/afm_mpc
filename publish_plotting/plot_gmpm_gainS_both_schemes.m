@@ -36,16 +36,10 @@ can_cntrl = CanonCntrlParams_ns14();
 [Q1, R0, S1] = build_control(G_recyc, can_cntrl);
 [GM_s2, PM_s2, Sens_gain2, TS_s2] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obsDist, Q1, R0, S1, LxLd, gams);
 
-%
+
 % -------------------------------------------------------------------------
-% ----- Build LaTeX table of gamma, GM,PM |S| data for all 4 8 schemes ----
+% -------------- Build the LaTeX table ------------------------------------
 
-min_gam_labels = {'const-$\sigma$ (lin, min-$\gamma$)',  'const-$\sigma$ (MPC, min-$\gamma$)',...
-  'choose-$\zeta$ (lin, min-$\gamma$)', 'choose-$\zeta$ (MPC, min-$\gamma$)'};
-
-rob_labels = {'const-$\sigma$ (lin, rob) ', 'const-$\sigma$ (MPC, rob)',...
-  'choose-$\zeta$ (lin, rob) ', 'choose-$\zeta$ (MPC, rob)',   };
-labels = {rob_labels{:}, min_gam_labels{:}};
 
 % ------------------- Constant-sigma --------------------------------------
 % 1) Robust-optimal
@@ -78,39 +72,47 @@ idx_czmg_mpc = find(gams == 0.2, 1, 'first');
 mpc_zet_ming_data = [gams(idx_czmg_mpc), GM_s2(idx_czmg_mpc),...
                      PM_s2(idx_czmg_mpc), Sens_gain2(idx_czmg_mpc)];
 
-data = [lin_sig_rob_data;
-  mpc_sig_rob_data; 
-  lin_zet__rob_data; 
-  mpc_zet_rob_data; 
-  lin_sig_ming_data; 
-  mpc_sig_ming_data; 
-  lin_zet_ming_data; 
-  mpc_zet_ming_data];
+%%
+data = {lin_sig_ming_data, 'SLF-CS-MG', 'SLF, const-$\sigma$, minimum-$\gamma$';
+  mpc_sig_ming_data, 'MPC-CS-MG', 'MPC, const-$\sigma$ minimum-$\gamma$'; 
+  lin_sig_rob_data, 'SLF-CS-RG', 'SLF, const-$\sigma$, robust-$\gamma$ ';
+  mpc_sig_rob_data, 'MPC-CS-RG', 'MPC, const-$\sigma$, robust-$\gamma$'; 
+  %
+  lin_zet_ming_data, 'SLF-CZ-MG', 'SLF, choose-$\zeta$ minimum-$\gamma$'; 
+  mpc_zet_ming_data, 'MPC-CZ-MG', 'MPC, choose-$\zeta$ minimum-$\gamma$';
+  %
+  lin_zet__rob_data, 'SLF-CZ-RG', 'SLF, choose-$\zeta$  robust-$\gamma$'; 
+  mpc_zet_rob_data, 'MPC-CZ-RG', 'MPC, choose-$\zeta$ robust-$\gamma$'}
 
-body = sprintf('%s\n\\hline\n', 'scheme           & $\gamma$ &GM [dB]& PM [deg] & $|\mathcal{S}|$ [dB]\\');
+
+body = sprintf('%s\n\\hline\n', 'scheme    & abbreviation       & $\gamma$ &GM & PM & $|\mathcal{S}|$\\');
 
 
-for row=1:size(data,1)
-  row_str = sprintf('%s &', labels{row});
-  for col = 1:size(data,2)
+for col_cell=data'
+  dat = col_cell{1};
+  abrev = col_cell{2};
+  name = col_cell{3};
+  
+  row_str = sprintf('%s & %s & ', name, abrev);
+  for col = 1:size(dat,2)
     
-    if col < size(data,2)
+    if col < size(dat,2)
       fmt = '%s %.1f &';
     else
       fmt = '%s %.1f';
     end
-     row_str = sprintf(fmt, row_str, data(row, col));
+     row_str = sprintf(fmt, row_str, dat(col));
   end
   body = sprintf('%s%s\\\\\n', body, row_str);
 end
 
 body
+
 if saveon
   fid = fopen(fullfile(PATHS.MPCJ_root, 'latex', 'rob_data.tex'), 'w+');
   fprintf(fid, '%s', body);
   fclose(fid);
 end
-
 %%
 
 % -------------- Plot Colors & Linestyles ----------------------

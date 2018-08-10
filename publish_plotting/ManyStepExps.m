@@ -43,8 +43,21 @@ classdef ManyStepExps < handle
         hands(k) = self.step_exps{idx(k)}.ploty(fig_ax);
         hold on
       end
-      
-      
+    end
+    
+    function [hands] = plotdu_selected(self, idx, fig_ax)
+      hands = gobjects(1, length(idx));
+      for k=1:length(idx)
+        hands(k) = self.step_exps{idx(k)}.plotdu(fig_ax);
+        hold on
+      end
+    end
+    function [hands] = plotIpow_selected(self, idx, fig_ax)
+      hands = gobjects(1, length(idx));
+      for k=1:length(idx)
+        hands(k) = self.step_exps{idx(k)}.plotIpow(fig_ax);
+        hold on
+      end
     end
     function S = TS_dat2tex(self, varargin)
       % S = TS_dat2tex(TS_dat_cell, step_ref, varargin)
@@ -121,8 +134,9 @@ classdef ManyStepExps < handle
       %    the number of columns in the table
       [n_steps, n_exps] = size(self.TS_mat);
       
-      c_fmt = repmat('c', 1, 3+n_steps);
-      S = sprintf('\\begin{tabular}{%s}\n', c_fmt);
+      % c_fmt = repmat('c', 1, 3+n_exps);
+      % S = sprintf('\\begin{tabular}{%s}\n', c_fmt);
+      S = '';
       
       % -- Form the table header:
       str_ref_cols = sprintf('&ref & delta');
@@ -137,7 +151,8 @@ classdef ManyStepExps < handle
       for k = 1:n_steps  %2:length(self.step_ref.step_amps)
         
         delta_ref = self.step_ref.step_diff_amps(k+1);
-        str_ref_cols = sprintf('&%.2f & %.2f', self.step_ref.step_amps(k+1), delta_ref);
+        str_ref_cols = sprintf('&%.2f & %.2f',...
+          self.step_ref.step_amps(k+1)*self.step_ref.yscaling, delta_ref*self.step_ref.yscaling);
         str_dat_cols = '';
         % across columns, each experiment
         for j = 1:n_exps
@@ -167,7 +182,7 @@ classdef ManyStepExps < handle
       s_row = sprintf('%s%s\\\\ \n', str_ref_cols, str_dat_cols);
       
       S = sprintf('%s\\midrule\n %s', S, s_row);
-      S = sprintf('%s\\end{tabular}\n', S);
+      %S = sprintf('%s\\end{tabular}\n', S);
       
     end
   end % methods

@@ -1,29 +1,39 @@
 % Created 2018-02-21 Wed 19:30
 % Intended LaTeX compiler: pdflatex
-\documentclass[journal,twocolumn,twoside]{IEEEtran}
+
+\documentclass[twocolumn,twoside]{IEEEtran}
+% \documentclass[journal,twocolumn,twoside]{IEEEtran}
 % \documentclass[journal,12pt,onecolumn,draftclsnofoot,,twoside]{IEEEtran/IEEEtran}
 \pdfminorversion 4 % This is so manuscript central can use it.
 
-\usepackage[utf8]{inputenc}
+% \usepackage[utf8]{inputenc}
 % \usepackage[T1]{fontenc}
+% \usepackage{grffile}
+% \usepackage{rotating}
+% \usepackage[normalem]{ulem}
+% \usepackage{hyperref}
+% \usepackage{textcomp}
+% \usepackage{capt-of}
+
+
 \usepackage{graphicx}
-\usepackage{grffile}
+\usepackage{cite} % Need this to get compressed citation, e.g., [4]-[7]
 \usepackage{longtable}
 \usepackage{wrapfig}
-\usepackage{rotating}
+
 \usepackage{booktabs}
-% \usepackage[normalem]{ulem}
 \usepackage{amsmath}
-\usepackage{textcomp}
 \usepackage{amssymb}
-\usepackage{capt-of}
-% \usepackage{hyperref}
+\usepackage{mathtools}
+% \mathtoolsset{showonlyrefs=true}
 \usepackage[inkscapelatex=false, inkscapepath=svgsubpath]{svg}
 \usepackage{subcaption}
 \usepackage{xspace, dsfont}
 \usepackage{mathtools}
 \usepackage{multirow}
 \usepackage{overpic}
+\usepackage[table]{colortbl}
+
 \usepackage[textsize=tiny,textwidth=1\marginparwidth,draft,obeyFinal]{todonotes}
 
 \usepackage{courier} %for fixed-width, \texttt{stuff}
@@ -49,14 +59,17 @@
 \newcommand{\yr}{\ensuremath{y_{r} }\xspace}
 \newcommand{\y}{\ensuremath{y} \xspace}
 \newcommand{\dd}{\ensuremath{\Delta }\xspace}
+\newcommand{\Gv}{\ensuremath{G_{\text{vib}}}\xspace}
+\newcommand{\hGv}{\ensuremath{\hat{G}_{\text{vib}}}\xspace}
+
 % \newcommand{\ub}{\ensuremath{\bar{u} }\xspace}
 % \newcommand{\ubp}{\ensuremath{\bar{u}^+ }\xspace}
 % \newcommand{\ubm}{\ensuremath{\bar{u}^- }\xspace}
 
-\usepackage[table]{colortbl}
 
 \begin{document}
-\title{Control strategies for step tracking a piezo stage}
+\title{A Comparison of Tracking Step Inputs with a Piezo Stage Using MPC and Saturated LQG Control}
+  % Control strategies for step tracking a piezo stage}
 \author{Roger A. Braker and Lucy Y. Pao
   \thanks{The authors are with the Dept. of Electrical, Computer, and Energy Engineering at the University of Colorado, 425 UCB, Boulder, CO 80309, United States. Phone: +1 (303) 492-2360. Fax: +1 (303) 492-2758.
     R. A.  Braker (corresponding author roger.braker@colorado.edu) is a graduate student and
@@ -66,69 +79,74 @@
 
 \maketitle
 \begin{abstract}
-  This paper considers the setpoint tracking performance of piezo nano-positioning stage subject to rate of change limitations of the control signal imposed by the power amplifier. We compare the settling-time performance of a Model Predictive Control scheme to saturated linear feedback to compensate the vibrational dynamics of the stage. In both cases, hysteresis and drift are compensated via dynamic inversion. 
+  Compressed Sensing for Atomic Force Microscopy is a newer imaging mode that requires the piezo stage be driven rapidly between measurement locations. In contrast to raster scanning applications, this translates to a setpoint tracking problem. 
+  This paper considers the setpoint tracking performance of a piezo nano-positioning stage subject to rate-of-change limitations on the control signal, which we derive from the current limit of the power amplifier.
+To compensate the vibrational dynamics of the stage, we consider a model predictive control scheme and an LQG controller which saturates the control increment. In both cases, hysteresis and drift are compensated via dynamic inversion. We analyze the robustness of both schemes using classical methods. We conclude that model predictive control is of limited practical utility because selecting the control weights such that model predictive control is nominally beneficial results in degraded robustness.
 \end{abstract}
 
 
 \section{Introduction}\label{sec:intro}
 
-The Atomic Force Microscope (AFM) is a nano-scale imaging instrument which acquires an image of the surface topography of a sample by mechanically interrogating it with an atomically-sharp probe.  \cite{abramovitch_tutorial_2007}. Typically, the probe is scanned across a specimen in a raster patter, sequentially acquiring pixels in an image. This process endows the AFM with excellent spatial resolution. However, the serial acquisition of pixels limits the speed of any given instrument, yielding frame rates on the order of minutes for many commercially available instruments.
-\todo{Perhaps I don't need so much background on AFM, and I should just start off saying when imaging in CS mode, this is what needs to happen?}
+The Atomic Force Microscope (AFM) is a nano-scale imaging instrument which acquires an image of the surface topography of a sample by mechanically interrogating it with an atomically-sharp probe \cite{abramovitch_tutorial_2007, rana_improvement_survey_2017}. Typically, the probe is scanned across a specimen in a raster patter, sequentially acquiring pixels in an image. Although this process gives the AFM excellent spatial resolution, the serial acquisition of pixels limits the speed of any given instrument, yielding frame rates on the order of minutes for many commercially available instruments.
 
-While slow imaging is inconvenient for static samples, it represents a fundamental limitation in the study of dynamic specimens and  has led to a large research effort to increase the speed of AFMs. Most of these efforts focus on various methods to increase the overall speed of the system. Approaches include building stiff piezo stages with higher first-resonance frequencies (e.g., \cite{schitter_designmodeling,kenton_threeaxis}); replacing the standard triangle wave reference with a reference signal which has a more friendly harmonic content such as spirals or Lissajous patterns (e.g., \cite{Mahmood_nano_2009,Tuma:2012hv,rana_spiral_2014}), or driving the stage with a pure sinusoid \cite{fleming_bridging_2010}; and using advanced control methods, including effective use of feedfoward control \cite{butterworth_dualadaptive_2011, li_feedforward_2007, Leang_IEEECS_2009}. % \cite{fleming_bridging_2010, reza_zaxis_videorate}.
+While slow imaging is inconvenient for static samples, it represents a fundamental limitation in the study of dynamic specimens. Many methods have been proposed to increase AFM framerates include better mechanical design, \cite{schitter_designmodeling,kenton_threeaxis}, using advanced control methods,  \cite{butterworth_dualadaptive_2011, li_feedforward_2007, Leang_IEEECS_2009, reza_zaxis_videorate} and alternative scanning methods \cite{Mahmood_nano_2009,Tuma_highspeed_2012,rana_spiral_2014,fleming_bridging_2010, Huang_fast_2014,Hartman_feature_2017}
 
-Complementary to these efforts are \emph{algorithmic} approaches that seek to increase speed by reducing the number of measurements taken rather than increasing the scan speed. This includes approaches such as Local Circular Scanning \cite{Huang:2014dw,Hartman:2017ud} and Compressed Sensing (CS)~\cite{oxvig_structure_2017, andersson_pao}. The central idea of CS-based imaging (which is our interest here) is to leverage the redundancy present in most interesting signals such that the  number of pixels to be acquired is reduced. 
+One newer alternative to raster scanning, and which is our interest here, is the application of Compressive Sensing to AFM~\cite{oxvig_structure_2017, andersson_pao, song_video_2011}. The central idea of CS-based imaging is to leverage the redundancy present in most interesting signals such that the  number of pixels to be acquired is reduced. For good guarantees on reconstruction quality, measurements in CS-based imaging need to be randomly distributed across the specimen. Each measurement might acquire a single pixel \cite{andersson_pao} or short string of adjacent pixels in a micro-scan \cite{braker_hardware_2018, maxwell_acc_2014}. Once a measurement is completed, the AFM probe is retracted from the sample surface,  moved in the XY plane to the next measurement location and finally re-engaged with the specimen surface before the next measurement is acquired. Details of a basic implementation of this approach can be found in \cite{braker_hardware_2018}.
 
-For good guarantees on reconstruction quality, measurements in CS-based imaging need to be randomly distributed across the specimen. Each measurement might acquire a single pixel \cite{andersson_pao} or short micro-scan \cite{braker_hardware_2018, maxwell_acc_2014}. Once a measurement is completed, the AFM probe is retracted from the sample surface, then moved in the XY plane to the next measurement location, the probe is re-engaged with the surface and the measurement is acquired. Details of a basic implementation of this approach can be found in \cite{braker_hardware_2018}.
-
-In this paper we are concerned with the point-to-point movement in the XY plane between measurement locations. 
-Point-to-point movements by AFM is also of interest in other areas like visceolastic property mapping \cite{killgore_visceolastic_2011}.
+In this paper we are concerned with the point-to-point movement in the XY plane between measurement locations. During this operation, the probe is not in contact with the specimen. Thus, it is desirable to minimize the time taken moving between measurement locations. Thus, in contrast to standard raster scanning where the control goal is to minimize overall tracking error to a triangular reference, the goal here is to minimize the settling time to a step input. Point-to-point movements by AFM are also of interest in other areas like visceolastic property mapping \cite{killgore_visceolastic_2011}.
 
 \begin{figure*}
   \centering
   % [grid]
   \begin{overpic}[scale=1]{figures/blocks/ss_block_diagram_cropped.pdf}
+    \put(54.5,19){$\hat{G}_d${\raisebox{1.15ex}{$\scriptscriptstyle -1$}} }
     \put(63.,19){$\mathcal{F}${\raisebox{1.15ex}{$\scriptscriptstyle -1$}}$[\cdot]$}
-    \put(76.7,19){$\mathcal{F}[\cdot]$}
+    \put(76.4,19){$\mathcal{F}[\cdot]$}
 % \includegraphics                
 \end{overpic}
-  \caption{The overall plant model consists of a vibrational component, $G_{vib}$, a drift model $G_{d}$ and a hysteresis model $\mathcal{F}[\cdot]$. }
+  \caption{The overall plant model consists of a hysteresis model $\mathcal{F}[\cdot]$,  a drift model $G_{d}$ and a vibrational model, $\Gv$. The affects of drift and hysteresis are compensated for via dynamic inversion.}
   \label{fig:ss_bd}
 \end{figure*}
 
-One of the primary constraints in setpoint tracking with our piezo stage is the current limit of the power amplifier,  which roughly translates to a slew rate limitation on the control signal. Thus, 
-in principle at least, minimizing the tracking time of such point-to-point motions is a classic time-optimal control problem. For piezo stages which can be adequately modeled as a second-order system, we have considered robust methods to effect this \cite{braker_proximate_2017}. However, for stages with more complex dynamics,  including the stage in our own lab, closed-form solutions to the minimum time problem are intractable, rendering the methods presented in \cite{braker_proximate_2017} inapplicable.
+One of the primary constraints in setpoint tracking with our piezo stage is the current limit of the power amplifier,  which roughly translates to a slew rate limitation on the control signal.
+In principle, minimizing the settling-time of such point-to-point motions is a classic time-optimal control problem. % For piezo stages which can be adequately modeled as a second-order system, we have considered robust methods to effect this \cite{braker_proximate_2017}. 
+However, for stages with dynamics more complex than a second order system,  including the stage in our own lab, closed-form solutions to the minimum-time problem are intractable.
+% , rendering the methods presented in \cite{braker_proximate_2017} inapplicable.
 
+%One question which naturally arises from that study, is "how much \emph{time} is actually saved with MPC?" The quadratic cost in \eqref{eqn:optcost0} is not necessarily a good proxy for settling-time. While it is, of course, possible to numerically solve for a minimum-time control trajectory in discrete and MPC schemes have been built around such solutions~ \cite{broeck_time_2009} this approach requires a \emph{sequence} of optimization problems to be solved in a bisection search. This is impractical for systems with fast dynamics. 
 
-An enticing alternative to explicitly handle the slew rate constraint is Model Predictive Control (MPC).
-Given a discrete-time state space system $\{A,B,C,0\}$ with state $x_k$, and control input $u_k$, an MPC scheme solves, at each time step, the optimization problem 
+An enticing alternative to explicitly handle the slew rate constraint is model predictive control (MPC) with a quadratic cost.
+Given a discrete-time state space system $\{A,B,C,0\}$ with state $x_k$, and control input $u_k$, an MPC scheme solves, at each time step, the optimal control problem 
 \begin{subequations}
 \begin{align}
-\min_{v}\:\:& z^T_{N}Pz_{N} + \sum_{i=0}^{N-1}z_{i}^{T}Qz_{i} + z^T_iSu_i + v^{T}_{i}Rv_{i} \\
+\min_{v}\:\:& z^T_{N}Pz_{N} + \sum_{i=0}^{N-1}z_{i}^{T}Qz_{i} + 2z^T_iSv_i + v^{T}_{i}Rv_{i} \\
  \text{s.t.} \quad z_{i+1} &= A z_{i} + B v_{i}\\
 z_{0} &= x_{k}, \\
-v_i  \in \mathds{U}
-\end{align}\label{eqn:optcost0}
-\end{subequations}\noindent where $\mathds{U}$ is a convex set, $P$ solves the Discrete Algebraic Riccati Equation (DARE), $Q$ and $R$ are symmetric matrices and, together with $S$, satisfy
-\begin{equation}
-  \begin{bmatrix}
-    Q & S\\S^T &R
-  \end{bmatrix} > 0.
-\end{equation}
+v_i  &\in \mathds{U}
+\end{align}\label{eqn:optcost0}%
+\end{subequations}
+where $\mathds{U}$ is a convex set, $P$ solves the Discrete Algebraic Riccati Equation (DARE), $Q$ and $R$ are symmetric matrices and, together with $S$, satisfy
+\begin{align}
+  R &> 0 \label{eqn:schur0}\\
+  Q - SR^{-1}S^T &\geq 0. \label{eqn:schur1}
+\end{align}
+% \begin{equation}
+%   \begin{bmatrix}
+%     Q & S\\S^T &R
+%   \end{bmatrix} > 0.
+% \end{equation}
 The solution to the quadratic program (QP) \eqref{eqn:optcost0} results in a sequence of optimal controls $v_0\dots v_{N-1}$. One sets $u_k = v_0$ and repeats the process at the next time step.
 
-Historically, one of the challenges of applying MPC to systems with fast dynamics is the computational demands imposed by solving a QP within a small sample period. However, advances in both in both hardware and algorithms have mitigated this issue. For example, \cite{Jerez_Trans_2014} shows that when $\mathds{U}$ is a simple box (i.e., a saturating constraint), sample rates of up to 1 MHz can be achieved with high-end FPGAs using an algorithm called the Fast Gradient Method (FGM). In recent work, we applied the FGM formulation of \cite{Jerez_Trans_2014} to our piezo stage and showed that, given a particular set of weighting matrices, we could improve the stabilizable region of setpoints compared to simply saturating an equivalent linear feedback \cite{braker_application_2017}.
+Historically, one of the challenges of applying MPC to systems with fast dynamics is the computational demands imposed by solving a QP within a small sample period. However, advances in both in both hardware and algorithms have mitigated this issue. For example, \cite{Jerez_Trans_2014} shows that when $\mathds{U}$ is a simple box (i.e., a saturating constraint), sample rates of up to 1 MHz can be achieved with high-end FPGAs using an algorithm called the Fast Gradient Method (FGM). In recent work, we applied the FGM formulation of \cite{Jerez_Trans_2014} to our piezo stage and showed that, given a particular set of weighting matrices, we could increase the stabilizable range of setpoints compared to simply saturating an equivalent linear feedback \cite{braker_application_2017}.
 
 One question which naturally arises from that study, is "how much \emph{time} is actually saved with MPC?" In essence, the stabilizable set of setpoints using saturated linear feedback can be expanded by relaxing the performance criteria.
-% While we might expect this to result in a slower settling time, the question we seek to answer is \emph{how much slower}?
 In other words, given a range of setpoints we wish to be able to visit, to what extent does the additional aggressiveness permitted by MPC reduce the settling time and is this reduction significant enough to warrant the additional complexity?
 
+Additionally, we did not give any consideration to the robustness of our scheme. This is a limitation shared with other relevant applications of MPC to mechatronic systems \cite{Wills_CDC_2005, Lin_ASME_2012, rana_design_2014}. Nominally of course, MPC is a non-linear control law. However, when the solution to \eqref{eqn:optcost0} is within the interior of $\mathds{U}$, the control action is equivalent to a linear feedback law. In the situation we consider where the constraint limits the rate of change on the control, this will always be the case as the systems nears a given setpoint. Thus, within some region around any setpoint, classical ideas like gain and phase margin are directly applicable. We show in Section~\ref{sec:results} that improving these margins has a stronger influence on the experimental settle-time over a wide range of step inputs compared to a design that focuses only on increasing the aggressiveness of the control law.
 
-Additionally, we did not give any consideration to the robustness of our scheme. This is a limitation shared with other relevant applications of MPC to mechatronic systems \cite{Wills_CDC_2005, Lin_ASME_2012, rana_design_2014}. Nominally of course, MPC is a non-linear control law. However, when the solution to \eqref{eqn:optcost0} is within the interior of $\mathds{U}$, the control action is equivalent to a linear feedback. In the situation we consider where the constraint limits the rate of change on the control, this will always be the case as the systems nears a given setpoint. Thus, within some region around any setpoint, classical ideas like gain and phase margin are directly applicable. We show that improving these margins has a stronger influence on the experimental settle-time over a wide range of step inputs compared to a design that focuses only on increasing the aggressiveness of the control law.
+A related limitation of \cite{braker_application_2017} is that we did not consider the affects of drift and hysteresis and only considered tracking a single setpoint with the stage starting at rest. When tracking a \emph{sequence} of setpoints across the range of the stage, the affects of hysteresis become much more prominent. Thus, in this paper, we employ inverse drift and hysteresis compensation. However, these inversions are not perfect, which contributes to the need for good stability margins.
 
-A related limitation of \cite{braker_application_2017} is that we did not consider the affects of drift and hysteresis and only considered tracking a single setpoint with the stage starting at rest. When tracking a \emph{sequence} of setpoints across the range of the stage, the affects of hysteresis become much more prominent. Thus, in this paper, we employ inverse drift and hysteresis compensation.
-
-The overall control structure we consider in this paper is illustrated in the block diagram in Fig. ~\ref{fig:ss_bd}. We consider the plant to be a cascaded model of hysteresis ($\mathcal{F}$),  drift ($G_d$) and vibrational dynamics ($G_{vib}$). Modeling these three systems are the subject of Sections \ref{sec:hyst_model}, \ref{sec:drift_model}, and \ref{sec:vib_model} respectively. Generally speaking, all higher frequency dynamics, including transport delay, are collected into the vibrational model.
+The overall control structure we consider in this paper is illustrated in the block diagram in Fig. ~\ref{fig:ss_bd}. We consider the plant to be a cascaded model of hysteresis ($\mathcal{F}$), drift ($G_d$) and vibrational dynamics ($\Gv$). Modeling these three systems are the subject of Sections \ref{sec:hyst_model}, \ref{sec:drift_model}, and \ref{sec:vib_model} respectively. Section~\ref{sec:control_setup} develops the control structure and associated closed-loop equations. Section~\ref{sec:tune} explores two schemes to design the weighting matrices and their ramifications on robustness. The designs are evaluated in simulation and experiment in Section~\ref{sec:results}.
 
 % We want to look at a few different ways of driving the stage from point to point as rapidly as possible, yet still be practical. Inspired by our past work, we focus on the experimental comparison of two methods:
 % \begin{itemize}
@@ -137,89 +155,45 @@ The overall control structure we consider in this paper is illustrated in the bl
 % \end{itemize}
 
 \section{Experimental Testbed}\label{sec:testbed}
-The AFM in our lab consists of an Agilent 5400 which has been retrofitted with an nPoint NPXY100A piezo stage, which provides lateral movement of the sample. The NPXY100A, which is the focus of this paper, is driven by an nPoint C300. The C300 amplifies the low voltage ($\pm~10$ volts) control inputs to a high voltage signal which drives the piezo stage and provides signal conditioning for the capacitive position sensors in the stage. Although the C300 can implement a basic PID controller, in this work we always operate the C300 in open-loop mode. Unfortunately, even in open-loop mode, signals in the C300 still run through an internal DSP, which introduces around 360 $\mu$s of delay. 
+The AFM in our lab consists of an Agilent 5400 that has been retrofitted with an nPoint NPXY100A piezo stage, which provides lateral movement of the sample. The NPXY100A, which is the focus of this paper, is driven by an nPoint C300. The C300 amplifies the low voltage ($\pm~10$ volts) control inputs to a high voltage signal which drives the piezo actuators and provides signal conditioning for the capacitive position sensors in the stage. Although the C300 can implement a basic PID controller, in this work we always operate the C300 in open-loop mode. Unfortunately, even in open-loop mode, signals in the C300 still run through an internal DSP, which introduces around 360 $\mu$s of delay. 
 
-All control logic is programmed into a Xilinx Spartan-6 LX150 FPGA in a cRIO 9082 from National Instruments. Due to limitations in the digital to analog converter, the maximum sampling frequency is 100~kHz. In this work we use a sampling frequency of 25~kHz, which is based on the system dynamics (see Fig.~\ref{fig:Guz2stage_frf} in Section \ref{sec:vib_model}). The sampling frequency of 25~kHz, the approximate 360~$\mu$s of delay translates to about 9 samples.
+All control logic is programmed into a Xilinx Spartan-6 LX150 FPGA in a cRIO 9082 from National Instruments.
+% Due to limitations in the digital to analog converter, the maximum sampling frequency is 100~kHz.
+In this work we use a sampling frequency of 25~kHz, which is based on the system dynamics (see Fig.~\ref{fig:Guz2stage_frf} in Section \ref{sec:vib_model}). With 25~kHz sampling frequency, the 360~$\mu$s of delay translates to about 9 samples.
 
-In characterizing the limitations of this system, it will be helpful to enable direct measurements of both the high voltage output, $V_X$, and current, $I_X$, of the C300. These are obtained by re-routing the C300 drive signal as shown in Fig.~\ref{fig:c300_meas}. The voltage divider output provides a (scaled) measurement of the C300 high-voltage output and is given by
-\todo{I dont use this measurement anywhere except to produce the TF from ux to Vx in fig 6.}
+In characterizing the limitations of this system, it will be helpful to enable a direct measurement of the power amplifier current, $I_X$, of the C300. This measurement is obtained by re-routing the C300 drive signal through a low-side current sensing resistor (${R_{\text{sense}}=0.1\Omega}$) as shown in Fig.~\ref{fig:c300_meas}.
+The voltage across this resistor is amplified by an op-amp circuit so that
 \begin{equation}
-V_X = \frac{R_1 + R_2}{R_2}V_{div}
+I_{X} = \frac{1}{K_{op}R_{\text{sense}}}V_{op}\nonumber
 \end{equation}
-The impedance of the divider is high (about $32.5\text{M}\Omega$) to avoid loading the amplifier output.
-
-A small, $0.1~\Omega$ resistor on the return side of the piezo provides a current measurement of $I_X$. The voltage across this resistor is amplified by an op-amp circuit so that
-\begin{equation}
-I_{X} = \frac{1}{K_{op}R_{\text{sense}}}V_{op}
-\end{equation}
-where $K_{op}\approx 15.15$ is the gain of the operational amplifier.
+where $K_{op}\approx 151$ is the gain of the operational amplifier.
 
 
 \begin{figure}
-    \includegraphics[width=0.48\textwidth]{figures/c300_measurement_schematic.pdf}
-    \caption{Schematic of the augmented high voltage output measurement and current measurement used in characterizing the C300.}
+    \includegraphics[width=1\columnwidth]{figures/blocks/c300_measurement_cropped.pdf}
+    \caption{Schematic of the augmented current measurement used in characterizing the C300.}
     \label{fig:c300_meas}
   % \end{minipage}
 \end{figure}
 \section{System Modeling}
 
-To keep the discussion manageable, we will concentrate the discussion to the $X$-direction. We model the overall plant for the $X$-direction as three cascaded systems: $\mathcal{F}$ which models the hysteresis of the piezo, a drift model $G_d$ and a vibrational model $G_{vib}$. This cascaded structure is shown in Fig.~\ref{fig:ss_bd}. In general, the effects of hysteresis are most noticeable when moving across wide ranges. Thus, by using relatively small input signals, the drift and vibrational dynamics can be identified separately from the hysteresis. Here, we model both $G_{vib}$ and $G_d$ as linear, time-invariant discrete-time systems. The dynamics of drift are predominantly low frequency while vibrational aspects on the other hand are fast by comparison, which allows the two systems to be easily separated in the identification.
+To keep the discussion manageable, we will concentrate the discussion to the $X$-direction. We model the overall plant for the $X$-direction as three cascaded systems: $\mathcal{F}$ which models the hysteresis of the piezo, a drift model $G_d$ and a vibrational model $\Gv$. This cascaded structure is shown in Fig.~\ref{fig:ss_bd}. In general, the effects of hysteresis are most noticeable when moving across wide ranges. Thus, by using relatively small input signals, the drift and vibrational dynamics can be identified separately from the hysteresis. Here, we model both $\Gv$ and $G_d$ as linear, time-invariant discrete-time systems. The dynamics of drift are predominantly low frequency while vibrational aspects on the other hand are fast by comparison, which allows the two systems to be easily separated in the identification.
  Modeling these three components is the subject of the next three subsections.
 
-% \begin{figure*}
-%   \centering
-%   \begin{minipage}{0.45\textwidth}
-%   \includesvg[scale=01]{figures/G_uz2pow.svg}
-%   \caption{Frequency response from control input to high voltage signal (blue) and from high voltage input to stage position (red). The red curve is the FRF for both the vibrational and drift dynamics.}
-%   \label{fig:powfrf}
-% \end{minipage}
-% \hfill
-% \begin{minipage}{0.45\textwidth}
-%   \centering
-%   \includesvg[scale=0.8]{figures/frf_xdir.svg}
-%   \caption{Frequency response of the piezo stage in the $x$-direction. The dashed black curve is a 12th order model fit to the data using a subspace realization method.}
-%   \label{fig:frf_xdir}
-% \end{minipage}
-% \end{figure*}
 
-\subsection{Modeling $G_{vib}$}\label{sec:vib_model}
-Here, we are concerned with the transfer function from the low voltage control signal to the stage's position, $G_{X,u_X}$. To obtain an experimental frequency response of $G_{X,u_X}$, we use a stepped-sines method (single frequency at a time). The amplitude of the driving sinusoid is chosen to be small enough that the effects of hysteresis are minimized. After the system reaches steady-state, the input and output signals are demodulated into their first (complex) Fourier coefficients, the ratio of which yields the frequency response at that frequency, as shown in Fig.~\ref{fig:Guz2stage_frf}. 
-% One advantage of the stepped-sines methods is that we can consider the normalized residual energy in the output signal
-% \begin{equation}
-% E_r(\omega) = \frac{\sum_{k} |y_k|^2 - |Y_1(\omega)|^2}{\sum_{k} |y_k|^2}
-% \end{equation}
-% where $Y_1(\omega)$ is the first Fourier coefficient and $y_k$ is the output signal at time $k$. A very small $E_r$ indicates that nearly all of the energy is contained in $Y_1(\omega)$ and therefore that the system response is largely described by linear dynamics. Conversely, a large $E_r$ indicates that $y_k$ is corrupted by either noise or non-linearities. 
+\subsection{Modeling \Gv}\label{sec:vib_model}
+To obtain an experimental frequency response of $\Gv$, we use a stepped-sines method (single frequency at a time). The amplitude of the driving sinusoid is chosen to be small enough that the effects of hysteresis are minimized. After the system reaches steady-state, the input and output signals are demodulated into their first (complex) Fourier coefficients, the ratio of which yields the frequency response at that frequency. Fig.~\ref{fig:Guz2stage_frf} shows the resulting experimental FRF as the solid red curve.
 
 \begin{figure}
   \centering
   \includesvg[width=01\linewidth]{figures/G_uz2stage_Eres.svg}
-  \caption{The solid red curve (left axis) is the frequency response from control input to stage position output in the $X$ direction. The dashed-black curve is the model.}
+  \caption{The solid red curve is the frequency response from control input to stage position output in the $X$ direction. The dashed-black curve is the vibrational model, $\Gv$.}
   \label{fig:Guz2stage_frf}
 \end{figure}
-% However, to characterize the limitations of the C300 it will also be helpful to consider the transfer functions enumerated in Table~\ref{tab:TFS}. 
-% Note the large amounts of phase lag in both $G_{\text{pow}}$ and $G_{stage}$. This is due to the C300 including its own DSP which cannot be turned off, even when run in open-loop mode. 
 
-% \begin{table}
-%   \centering
-%   \begin{tabular}{ll}
-%     name & description\\
-%     \hline
-%     \(G_{y_{X},u_{X}}\) & \multirow{2}{2.5in}{T.F. from low voltage control to stage position.}\\
-%     &\\
-%     \(G_{y_{X},u_{X}}\) & \multirow{2}{2.5in}{T.F. from high-voltage C300 output voltage control to stage position.}\\
-%     &\\
-%     \(G_{I_{X},u_{X}}\) & \multirow{2}{2.5in}{T.F. from low voltage control to C300 output current.}\\
-%     &\\
-%     \(G_{I_{X},V_{X}}\) & \multirow{2}{2.5in}{T.F. from high-voltage C300 output to C300 output current.}\\
-%   \end{tabular}
-%   \label{tab:TFS}
-% \end{table}
+Obtaining a parametric model of $\Gv$ for control design involves two steps. We obtain a preliminary model using an Eigenspace Realization Algorithm (ERA) \cite{Jacques_sysidfrf}. In general, the ERA does not produce a model with poles at $z=0$, which is what we need in order to model the delay. Thus, the delay in the frequency response is divided out of the FRF before passing it to the ERA algorithm.
 
-
-Obtaining a parametric models of $G_{X,u_X}$ for control design involves two steps. We obtain a preliminary model using an Eigenspace Realization Algorithm (ERA) \cite{Jacques_sysidfrf}. In general, the ERA does not produce a model with poles at $z=0$, which is what we need in order to model the delay. Thus, the delay in the frequency response is divided out of the FRF before passing it to the ERA algorithm.
-% The ERA does a fair job of identifying the resonances and anti-resonances. However, it gets the relative degree wrong.
-
-The second step uses the model generated by the ERA as the initial guess to a non-linear least squares problem \cite{sidman_parametric_1991} which minimizes the ratio of the logarithm of the experimental frequency response to that of the model. Though Sidman et al. develop the idea for continuous time models, their strategy is easily adapted to fit a discrete time model. In this scenario, the optimization is given by
+The second step uses the model generated by the ERA as the initial guess to a non-linear least squares problem which minimizes the ratio of the logarithm of the experimental frequency response to that of the model~\cite{sidman_parametric_1991}. Though Sidman et al. develop the idea for continuous time models, their strategy is easily adapted to fit a discrete time model. In this scenario, the optimization is given by
 \begin{align}
 \min_{\theta} \sum_{i=1}^M| \log(G(e^{j\omega_iT_s})) - \log(\hat{G}(e^{j\omega_iT_s}|\theta))|^2
 \label{eqn:logfit}
@@ -230,28 +204,19 @@ where $\omega_i$ is each frequency in the experimental frequency response and $\
   { \prod_{l=0}^{n_{rp}-1}(z-a^r_l) \prod_{m=0}^{2n_{cp}-1}(z^2 +a^c_{2m}z + a^c_{2m+1})}z^{-p} \label{eqn:mode_struc}
 \end{equation}
 so that
-\todo{Do you think this is too much detail here?}
+% \todo{Do you think this is too much detail here?}
 \begin{equation}
-\theta = [b^r_0\dots b^r_{n_{rz}}, b^c_{0}\dots b^c_{2n_{cz}-1}, a^r_0\dots a^r_{n_{rp}}, a^c_{0}\dots a^c_{2n_{cp}-1}, k, p].
+\theta = [b^r_0\dots b^r_{n_{rz}}, b^c_{0}\dots b^c_{2n_{cz}-1}, a^r_0\dots a^r_{n_{rp}}, a^c_{0}\dots a^c_{2n_{cp}-1}, K, p].\nonumber
 \end{equation}
 Due to the logarithms in \eqref{eqn:logfit} and the multiplicative structure \eqref{eqn:mode_struc}, the Jacobian of $\log(\hat{G}(z|\theta))$ is surprisingly easy to calculate. Details can be found in \cite{sidman_parametric_1991}, though some modifications are required for the discrete-time case.
 
-The model structure \eqref{eqn:mode_struc} includes a fractional delay $z^{-p}$. This allows us to include the delay as a term in the decision variable and obviates the need to optimize over integers. This is further beneficial because we are not guaranteed that the latency from input to output is an exact integer and allowing a fractional delay helps the optimization to more accurately match the phase. In the final model, we round $p$ to the nearest integer. In this work, we do not model the modes above 1100~Hz. Thus, the optimization \eqref{eqn:logfit} is only done over frequency up to 1100~Hz. The final pole and zero locations for $G_{vib}$ are listed in Table \ref{tab:pzgvib}.
+The model structure \eqref{eqn:mode_struc} includes a fractional delay $z^{-p}$. This allows us to include the delay as a term in the decision variable and obviates the need to optimize over integers. This is further beneficial because we are not guaranteed that the latency from input to output is an exact integer and allowing a fractional delay helps the optimization to more accurately match the phase. In the final model, we round $p$ to the nearest integer. In this work, we do not model the modes above 1100~Hz. Thus, the optimization \eqref{eqn:logfit} is only done over frequency up to 1100~Hz. The final pole and zero locations for $\hGv$ are listed in Table \ref{tab:pzgvib}.
 
 \begin{table}
   \centering
-  \caption{Zero and pole locations of $G_{vib}$. }
+  \caption{Zero and pole locations of $\Gv$. }
   \label{tab:pzgvib}
-  \begin{tabular}{cc}
-    pole & zero\\
-    0.848155$\pm$0.187900 & 0.964821 $\pm$ 0.250813\\ 
-    0.962030$\pm$0.259730 & 0.992956 $\pm$ 0.093824\\ 
-    0.972209$\pm$0.213448 & 0.975116 $\pm$ 0.209867\\ 
-    0.978579$\pm$0.163808 & --\\ 
-    0.993712$\pm$0.091498 & --\\ 
-    0.917539 & 0.505483 \\ 
-    (9) 0.0 & 0.822878 \\ 
-  \end{tabular}
+  \input{Gvib_data.tex}
 \end{table}
 
 
@@ -261,59 +226,60 @@ The model structure \eqref{eqn:mode_struc} includes a fractional delay $z^{-p}$.
 
 % It has been noted before in the literature that the rate of the creep affect itself is hysteretic \cite{Jung_open_loop_2000}, which I think in this context would imply that the real pole-zero pairs of $G_{drift}$ shift depending on the control history.
 
-
-Drift is modeled as the strictly proper transfer function
+We model drift as the transfer function
 \begin{equation}
-G_d = \theta_5\frac{(z-\theta_1)(z-\theta_2)}{(z-\theta_3)(z-\theta_4)}.
+\hat{G}_d(z|\theta) = \theta_5\frac{(z-\theta_1)(z-\theta_2)}{(z-\theta_3)(z-\theta_4)}.\nonumber
 \end{equation}
-We give the stage a step input with relatively small amplitude (to minimize the effects of hysteresis). The stage response is shown as the solid-blue curve in Fig.~\ref{fig:drift_fit} while the simulated response of the vibrational model is shown as the dotted-black curve. 
+Due to the comparatively slow dynamics of drift, it is more attractive to identify the drift model in the time domain than the frequency domain. 
+We give the stage a step input with relatively small amplitude (to minimize the effects of hysteresis). The stage response is shown as the solid-blue curve in Fig.~\ref{fig:drift_fit} while the simulated response of the vibrational model is shown as the dotted-black curve. The piezo drift is evident in the slow increase of stage position after the vibrational dynamics have decayed. 
 
 \begin{figure}
   \includesvg[width=1\linewidth]{figures/drift_fit.svg}
-  \caption{The stage is given a step input (dash-dotted blue) with an amplitude of 0.15 volts, which results in the solid black output trajectory. The response of the combined $G_{vib}$ and $G_{d}$ models is shown as the dashed red, while the vibrational model alone is the dotted black curve.}
+  \caption{The stage is given a step input (dash-dotted black) with an amplitude of 0.15 volts, which results in the solid blue output trajectory. The response of the combined $\Gv$ and $G_{d}$ models is shown as the dashed red, while the vibrational model alone is the dotted black curve.}
   \label{fig:drift_fit}
 \end{figure}
 
-Let $\mathcal{Y}_{exp}$ be the step response data collected from the stage and  $\mathcal{Y}_{vib}$ be the response of the model $G_{vib}$ to the same input. The goal then is to solve the non-linear least squares problem
-\todo{I think this is a bit awkward}
+Let $\mathcal{Y}_{exp}$ represent the step response data collected from the stage and  $\mathcal{Y}_{vib}$ be the response of the model $\Gv$ to the same input. The goal then is to solve the non-linear least squares problem
+% \todo{I think this is a bit awkward}
 \begin{equation}
-  \min_{\theta}|| g_d(k|\theta)*\mathcal{Y}_{vib} - \mathcal{Y}_{exp}||
+  \min_{\theta}|| \hat{g}_d(k|\theta)*\mathcal{Y}_{vib} - \mathcal{Y}_{exp}||_2
   \label{eqn:fit_drift_cost}
 \end{equation}
-where $g_d(k|\theta)$ is the impulse response of $G_d(z|\theta)$, '$*$' represents the convolution operator and  $\theta$ is the vector of parameters. To the extent that $G_{vib}$ accurately models the vibrational dynamics, the inclusion of $\mathcal{Y}_{vib}$ in \eqref{eqn:fit_drift_cost} effectively nullifies the vibrational aspects in the optimization. This is possible because, since we have a SISO system, the step response of $G_{vib}G_d$ is the same as $G_dG_{vib}$.
-The non-linear optimization problem \eqref{eqn:fit_drift_cost} is solved with MATLAB's \texttt{lsqnonlin} and results in the red curve in Fig.~\ref{fig:drift_fit} which shows the simulated step response of $G_dG_{vib}$. 
+where $g_d(k|\theta)$ is the impulse response of $G_d(z|\theta)$, '$*$' represents the convolution operator and  $\theta$ is the vector of parameters. To the extent that $\Gv$ accurately models the vibrational dynamics, the inclusion of $\mathcal{Y}_{vib}$ in \eqref{eqn:fit_drift_cost} effectively nullifies the vibrational aspects in the optimization. This is possible because, since we have a SISO system, $\Gv$ and $G_d$ commute. 
+The non-linear optimization problem \eqref{eqn:fit_drift_cost} is solved with MATLAB's \texttt{lsqnonlin} and results in the red curve in Fig.~\ref{fig:drift_fit} which shows the simulated step response of $\hat{G}_d\hGv$. 
 
 
 \subsection{Hysteresis Modeling}\label{sec:hyst_model}
-In typical raster scanning applications, hysteresis manifests as a bowing of the otherwise linear ramps. To motivate the need for hysteresis compensation in a step tracking application, consider Fig. \ref{fig:hyst_resp_dem}, which shows an input signal of various filtered steps applied open-loop to the stage. The solid black curve is the stage response, while the dotted-black curve is the input (scaled by the nominal DC-gain of $G_dG_{vib}$), which shows good agreement for the first step, but is a much worse fit for the later steps, particularly those with large amplitudes. Effectively, the gain of the system depends on the control history, since for the same steady state value of control, the steady state value of the stage changes.
+In typical raster scanning applications, hysteresis manifests as a bowing of the trajectory as the stage tries to track the linear ramps in a triangle wave (see, e.g., Fig. 3 of \cite{Leang_IEEECS_2009}). To motivate the need for hysteresis compensation in a step tracking application, consider Fig. \ref{fig:hyst_resp_dem}, which shows an input signal of various filtered steps applied open-loop to the stage. The solid black curve is the stage response, while the dotted-black curve is the input (scaled by the nominal DC-gain of $G_d\Gv$), which shows good agreement for the first step, but much worse agreement with the later steps, particularly those with large amplitudes. Effectively, the gain of the system depends on the control history, since for the same steady state value of control, the steady state value of the stage changes.
 
-There are many models for hysteresis. Here, we opt for simplicity (and by proxy, fast computation) and use the Modified Prandtl-Ishlinksi Hysteresis model developed in \cite{kuhnen_modeling_2003}. This hysteresis model is composed of a linear combination of saturation operators cascaded with a linear combination of classic hysteretic play\footnote{The term ``play'' is derived from the operator's use in modeling mechanical slop.} operators. This cascaded structure is illustrated in Fig.~\ref{fig:ss_bd}. The overall input-output relationship of the hysteresis operator $\mathcal{F}[\cdot]$ in Fig.~\ref{fig:ss_bd} is
+There are many models for hysteresis \cite{croft_creep_1999, rakotondrabe_bouc_2011, Lui_hysteresis_2013}. Here, we opt for simplicity (and by proxy, fast computation) and use the Modified Prandtl-Ishlinksi Hysteresis model developed in \cite{kuhnen_modeling_2003}. This hysteresis model is composed of a linear combination of saturation operators cascaded with a linear combination of classic hysteretic play\footnote{The term ``play'' is derived from the operator's use in modeling mechanical slop.} operators. This cascaded structure is illustrated in Fig.~\ref{fig:ss_bd}. The overall input-output relationship of the modified hysteresis operator $\mathcal{F}[\cdot]$ is
 \begin{equation}
-  \mathcal{F}(u_X) = w_s^T\mathbf{S}\left[w_H^T \mathbf{H}[u_X, z]\right]
+  \mathcal{F}(u_X) = w_s^T\mathbf{S}\left[w_H^T \mathbf{H}[u_X, z]\right]\nonumber
 \end{equation}
 where $\mathbf{S}$ and $\mathbf{H}$ are vectors of elementary saturation and play operators respectively, and
-where $w_s$ and $w_H$ are the weights. The input-output relationship of the $i$th elementary saturation operator with associated threshold $d_s^i$ is defined as
+where $w_s$ and $w_H$ are vectors of weights. The input-output relationship of the $i$th elementary saturation operator with associated threshold $d_s^i$ is defined as
 \begin{align}
-  \xi_k=
-  S^i(\nu_k; d_S^i) &=
+  \mu_k=
+  S^i(\xi_k| d_S^i) &=
   \begin{cases}
-    \max\{\nu_k - d_S^i, 0\} & d_S^i >0\\
-    \xi & d_S^i = 0\\
-    \min\{\nu_k-d_S^i, 0\},  & d_S^i<0.
+    \max\{\xi_k - d_S^i, 0\} & d_S^i >0\nonumber\\
+    \xi_k & d_S^i = 0\nonumber\\
+    \min\{\xi_k-d_S^i, 0\},  & d_S^i<0.\nonumber
   \end{cases}
 \end{align}
-for some input $\nu_k$ and output $\xi_k$. 
+for an input $\xi_k$ and output $\mu_k$. 
+
 In contrast, the elementary play operators have memory. The $i$th elementary play operator with associated threshold $d_H^i$, output $\xi_k^i$ and input $\nu_k$ is defined by the recursive relationship
 \begin{align}
   \xi_k &=
-  H^i(\nu_k;\: d_H^i) =
-  \max\{\xi^i_{k-1}-d_H^i, \min\{\xi^i_{k-1} + d_H^i, \nu_k\} \}
+  H^i(\nu_k|\: d_H^i) =
+  \max\{\xi^i_{k-1}-d_H^i, \min\{\xi^i_{k-1} + d_H^i, \nu_k\} \}\nonumber
 \end{align}
-If the thresholds $d_H^i$ and $d_S^i$ are pre-defined, \cite{kuhnen_modeling_2003} shows that it is possible to fit the weights $w_S$ and $w_H$ as the solution to a quadratic program. The resulting fit (which also includes the drift and vibrational models) with 7 saturation operators and 7 hysteresis operators is shown in Fig.~\ref{fig:hyst_resp_dem} as the dashed red curve. As the inset in that figure shows, it is possible to improve on the fit. One common alternative to cascading the drift and hysteresis models is to put them in parallel with each other \cite{mokaberi_compensation_2008, Krejci_inverse_2001}. While this does indeed lead smaller residual, it gives worse closed-loop performance than the present method.
+If the thresholds $d_H^i$ and $d_S^i$ are pre-defined, \cite{kuhnen_modeling_2003} shows that it is possible to fit the weights $w_S$ and $w_H$ as the solution to a quadratic program. The resulting fit with 7 saturation operators and 7 hysteresis operators is shown in Fig.~\ref{fig:hyst_resp_dem} as the dashed red curve (which also includes the drift and vibrational models). As the inset in that figure shows, it is possible to improve on this fit. One common alternative to cascading the drift and hysteresis models is to put them in parallel with each other \cite{mokaberi_compensation_2008, Krejci_inverse_2001}. While this does indeed lead to a smaller residual, it gives worse closed-loop performance than the present method.
 
 \begin{figure}
   \includesvg[width=1\linewidth]{figures/hyst_response_ol.svg}
-  \caption{The stage is driven by a sequence of filtered step inputs shown in the dotted black curve. The resulting stage response is the solid black curve, which shows good agreement, e.g., at the first step, but much worse agreement for larger steady state values. The dashed red curve is the response of the overall combined model of $G_{vib}$, $G_{d}$, and the complex hysteresis model $\mathcal{F}$.}
+  \caption{The stage is driven by a sequence of filtered step inputs shown in the dotted black curve. The resulting stage response is the solid black curve, which shows good agreement, e.g., at the first step, but much worse agreement for larger steady state values. The dashed red curve is the response of the overall combined model of $\hGv$, $\hat{G}_{d}$, and the complex hysteresis model $\mathcal{F}$.}
   \label{fig:hyst_resp_dem}
 \end{figure}
 
@@ -322,75 +288,73 @@ If the thresholds $d_H^i$ and $d_S^i$ are pre-defined, \cite{kuhnen_modeling_200
 \begin{figure}[htbp]
 \centering
 \includesvg[width=1\linewidth]{figures/G_pow_and_current.svg}
-\caption{
-  Frequency responses for the power amplifier. The solid red curve is the transfer function from the low voltage command to the high voltage output $G_{V_X, u_X}$. The solid blue curve transfer function from high voltage output to current output. The solid black is the transfer function from low voltage control to power amplifier output current $G_{V_X, u_X}$, which is upper-bounded by the dotted-back curve representing $\tilde G_{I_X, u_x}$, a pure discrete derivative.}
+\caption{ The solid curve is the transfer function from low voltage control to power amplifier output current,  $G_{I_X, u_X}$, which is upper-bounded by the dotted and dashed curves, which represent a pure discrete derivative multiplied by the bounds \eqref{eqn:h1bound} and \eqref{eqn:duHinf}, respectively.}
 \label{fig:powTF}
 \end{figure}
 
-The high voltage output of the C300 is current limited to 100 mA. The solid black curve in Figure~\ref{fig:powTF} shows the transfer function from the low voltage input of the C300 to current flowing through the stage, $G_{I_X,u_X}$. Because the piezo actuators are highly capacitive, at frequencies below about 600~Hz, $G_{I_X,u_x}$ looks like a pure derivative.
-
-% If the electrical impedance of the piezo is modeled as a pure capacitance (a common assumption  ~\cite{fleming_megahertz_2009, Bazghaleh_digital_2013}), this translates to a rate of change limitation on the voltage control signal through the current-voltage relation $\dot v = \frac{1}{C} i(t)$.
-% It is tempting to think that we ought to constrain the rate of change of the power amplifier voltage output $V_X$, since this is the voltage actually running through the piezo. There are two difficulties with this approach. First, as seen in Fig~\ref{fig:powTF}, \(G_{V_{x},u_{x}}\) rolls off at about 250~Hz, which means that such a constraint will lead to a constraint on the states of \(G_{V_{x},u_{x}}\). Second, the transfer function \(G_{I_{x}, V_{X}}\) has a break frequency at about 700~Hz, where it begins increasing at 40~dB per decade. Thus, a rate of change limitation based on a pure capacitance would \emph{under}-estimate the actual current draw.
-% In the interest of computational simplicity, we would like to approximate $G_{I_X,u_X}$ with a simple derivative, because this will lead to a box constraint on the rate of change of $u(k)$.
-Noting that, for frequency less than about 600 Hz, $G_{I_X,u_X}$ increases at 20dB per decade (i.e., looks like a pure derivative), we factor $G_{I_X,u_X}$ as
+The high voltage output of the C300 is current limited to 100 mA. The solid black curve in Figure~\ref{fig:powTF} shows the transfer function from the low voltage input of the C300 to current flowing through the stage, $G_{I_X,u_X}$, which is measured via the sensing resistor and op-amp shown in Fig~\ref{fig:c300_meas}. Because the piezo actuators are highly capacitive, at frequencies below about 600~Hz, $G_{I_X,u_x}$ looks like a pure derivative.
+Thus, we can factor $G_{I_X,u_X}$ as
 \begin{align}
-  I_{X}(z) &= G_{I_X,u_X} u_X(z)\\
-          & = (z-1) G_o u_X(z)\\
+  I_{X}(z) &= G_{I_X,u_X} u_X(z)\label{eqn:Gix_statebound}\\
+          & = (z-1) G_o u_X(z)\nonumber\\
           & = G_o(z) \Delta u_X(z) \label{eqn:Gostatebound}
 \end{align}
-Equation \eqref{eqn:Gostatebound} will lead to a complicated constraint (similar to a state constraint) in the MPC optimization and it is not possible to solve that problem on our hardware. Instead, we would like to approximate $G_o$ as a constant, which will lead to a box constraint on $\Delta u_k$. Thus, we need a bound such that
+Ideally, one would enforce the current limit via a state-like constraint using \eqref{eqn:Gix_statebound} and a parametric model of $G_{I_X,u_X}$.
+Although it is likely possible to solve such a problem with a high-end FPGA using, e.g., the Alternating Direction Method of Multiplies as developed in~\cite{Jerez_Trans_2014}, it is not possible to solve that problem on our hardware. Instead, we would like to approximate $G_o$ as a constant, which will lead to a box constraint on $\Delta u_X$. Thus, we need a bound $(\Delta u_k)_{\text{max}}$ such that
 \begin{equation}
-  |\Delta u_X(k)| < (\Delta u_X)_{\text{max}} \implies |I_{\text{pow}}| < I_{\text{max}}.
+  |\Delta u_{X_k}| < (\Delta u_X)_{\text{max}} \implies |I_{\text{pow}}| < I_{\text{max}}.\label{eqn:du_bound0}
 \end{equation}
-It is straightforward to show such a bound is given by 
+It is straightforward to show that such a bound is given by 
 \begin{equation}
-\Delta u_X(k))_{\text{max}} = \frac{I_{\text{max}}}{||g_o||_1}
+(\Delta u_X)_{\text{max}} = \frac{I_{\text{max}}}{||g_o||_1}\label{eqn:h1bound}
 \end{equation}
-where $g_o$ is the impulse response of $G_o(z)$ and $||g_o||_1 = \sum_{k=0}^{\infty}|g_o(k)|$. The frequency response of this bound is shown in Fig. \ref{fig:powTF} as the dotted-black curve. In practice, we find that this bound is overly conservative. An alternative is to choose
+where $g_o$ is the impulse response of $G_o(z)$ and ${||g_o||_1 = \sum_{k=0}^{\infty}|g_o(k)|}$. The frequency response of this bound is shown in Fig. \ref{fig:powTF} as the dotted-black curve. In practice, we find that this bound is overly conservative. An alternative is to choose
 \begin{equation}
-(\Delta u)_{\text{max}} = ||G_o(z)||_{\infty}\approx 0.1980, \label{eqn:duHinf}
+(\Delta u_X)_{\text{max}} = ||G_o(z)||_{\infty}\approx 0.1980, \label{eqn:duHinf}
 \end{equation}
-which is the dashed-black curve in Fig.~\ref{fig:powTF}. Although \eqref{eqn:duHinf} is only sufficient to guarantee \eqref{eqn:Gostatebound} for sinusoidal inputs, in practice we find that enforcing \eqref{eqn:duHinf} does lead to the current staying under 100~mA.
+which results in the dashed-black curve in Fig.~\ref{fig:powTF}. Although \eqref{eqn:duHinf} is only sufficient to guarantee \eqref{eqn:du_bound0} for sinusoidal inputs, in practice we find that enforcing \eqref{eqn:duHinf} does lead to the current staying under 100~mA.
 
 % Notably, this bound is conservative, since for higher frequencies a pure derivative overestimates the amount of actual current draw. Ideally, we would use a parametric model of \(G_{I_{X},u_{X}}\) and enforce a constraint on the output of that model. However, such an approach renders the constraint set for $u_X$ complex and is it not feasible to solve that problem using the fast gradient method. In our experimental implementations, we will enforce \eqref{eqn:du_limit}.
 % However, in Section~\ref{sec:time_save_analysis} we will consider how much performance is given up through this method via a simulation study. 
 
-Finally, the slew rate limit used in the MPC/linear feedback controller must be discounted from \eqref{eqn:duHinf} to account for the inverse inverse drift compensator. This adjustment for the inverse drift operator follows essentially the same argument as above. We have
+Finally, the slew rate limit used in the MPC/linear feedback controller must be discounted from \eqref{eqn:duHinf} to account for the inverse drift compensator. This adjustment for the inverse drift operator follows essentially the same argument as above. We have
 \begin{equation}
-  (\Delta u)_{\text{max}} \leq \frac{(\Delta u_X)_{\text{max}}}{||G^{-1}_d(z)||_{\infty}} \approx 0.167
+  (\Delta u)_{\text{max}} \leq \frac{(\Delta u_X)_{\text{max}}}{||G^{-1}_d(z)||_{\infty}} \approx 0.167 \label{eqn:du_discount}
 \end{equation}
-\todo{should I say something about hysteresis inversion in the context}
-
-\section{Control Setup}
-The constraint \eqref{eqn:duHinf} can be remodeled as a pure saturating constraint if we work with an incremental form of \(G_{vib}\) which has as its input \({\Delta u_k\coloneqq u_k-u_{k-1}}\), rather than \(u_k\). This is attractive because it not only allows us to directly penalize the rate of change in the optimal control problem but also renders the constraint \eqref{eqn:duHinf} as a box constraint on $\Delta u$, enabling the use of the computationally attractive Fast Gradient Method. Details on the form of the FGM we use can be found in \cite{Jerez_Trans_2014, jerez_embedded_2013} while specifics about our implementation are discussed in \cite{braker_application_2017}
-\todo{Do you think I need to talk more about the FGM?}
+% \todo{should I say something about hysteresis inversion in the context}
+\section{Control Setup}\label{sec:control_setup}
+The constraint \eqref{eqn:du_discount} can be remodeled as a pure saturating constraint if we work with an incremental form of \(\Gv\) which has as its input \({\Delta u_k\coloneqq u_k-u_{k-1}}\), rather than \(u_k\). This is attractive because it not only allows us to directly penalize the rate of change in the optimal control problem but also renders the constraint \eqref{eqn:du_discount} as a box constraint on $\Delta u$, enabling the use of the computationally efficient Fast Gradient Method. Details on the form of the FGM we use can be found in \cite{Jerez_Trans_2014, jerez_embedded_2013} while specifics about our implementation are discussed in \cite{braker_application_2017}.
+% \todo{Do you think I need to talk more about the FGM?}
 % Putting a hard limit on $\Delta u$ in the linear feedback case is also simplified.
 \subsection{The Incremental Form}\label{sec:incremental}
-To develop the required incremental form, we augment the dynamics of \(G_{vib}\) with a state \(\x_{\text{u}}(k)\) such that
+To develop the required incremental form, we augment the dynamics of \(\hGv=\{A,B,C,0\}\) with a state \(\x_{\text{u}}(k)\) such that
 \begin{equation*}
-  \x_{u_k} = u_{k-1}.
+  \x_{u_k} = u_{k-1}.\nonumber
 \end{equation*}
 It follows that
 \begin{subequations}
 \begin{align}
-  \begin{bmatrix}\x_{k+1}\\\x_{u_{k+1}}\end{bmatrix}
+  % \begin{bmatrix}\x_{k+1}\\\x_{u_{k+1}}\end{bmatrix}
+  \xd_{k+1}
   &=
     \begin{bmatrix}
       A & B\\ 0 & 1
     \end{bmatrix}
-    \begin{bmatrix}\x_k\\\x_{u_k}\end{bmatrix}
+                  \xd_k
+    % \begin{bmatrix}\x_k\\\x_{u_k}\end{bmatrix}
     +
     \begin{bmatrix}
       B\\1
     \end{bmatrix}
   \Delta u_k \label{eqn:deltadyn} \\
-  \y_k & = \begin{bmatrix}C & 0\end{bmatrix}\begin{bmatrix}\x_k\\\x_{u_k}\end{bmatrix}\\
+  \y_k & = \begin{bmatrix}C & 0\end{bmatrix}\xd_k\\
+                              % \begin{bmatrix}\x_k\\\x_{u_k}\end{bmatrix}\\
     \xd_k& \coloneqq
     \begin{bmatrix}\x_k\\\x_{u_k} \end{bmatrix}
   % \xd(0) & = \begin{bmatrix}\x(0)\\u(-1)\end{bmatrix}. \label{eqn:x0_aug}
 \end{align}\label{eqn:ssdelta}%
 \end{subequations}
-We call this system \(\Gd = \{\Ad, \Bd, \Cd, 0\}\), which has \({\bar{n}_s=22}\) states, 9 of which model delay.
+We call this system \(\Gd = \{\Ad, \Bd, \Cd, 0\}\), which has \({\bar{n}_s=23}\) states, 9 of which model delay.
 To solve the setpoint tracking problem, we work in the error
 coordinates of \(\Gd\).
 For a constant reference \(r_{ss}\), in steady state we have \({\du_{ss}=0}\) and \({\xdss =N_{\xd}r_{ss}}\) where \({N_{\xd}\in\mathds{R}^{\bar{n}}}\) is found by solving
@@ -407,7 +371,7 @@ The error state, \({\xd_{e_k}=\xd_k - \xdss}\) has dynamics
               because $\xdss$ is in the nullspace of $(I - \Ad)$.
               
 \subsection{Observer Design}\label{sec:dist_est}
-To achieve zero-offset tracking (to constant disturbances), we employ the disturbance estimator outlined in \cite{maeder_offset-free_2007}. The disturbance dynamics are modeled as a pure integrating output disturbance. The estimator dynamics are then given by
+To achieve zero-offset tracking (to constant disturbances), we employ the disturbance estimator outlined in \cite{maeder_offset-free_2007}. The disturbance dynamics are modeled as a pure integrating disturbance. The estimator dynamics are then given by
 \begin{align}
   \begin{bmatrix} \hat{\x}_{k+1}\\ \hat{d}_{k+1} \end{bmatrix}
   &= A_m
@@ -424,7 +388,7 @@ where $\hat{x}$ is our estimate of $x_k$ (not $\bar{x}_k$), $\hat{d}_k$ is the d
   B_m =
   \begin{bmatrix}
     B \\ 0
-  \end{bmatrix} \\
+  \end{bmatrix} \nonumber\\
   C_m &= 
     \begin{bmatrix}
     C \\ C_d
@@ -432,23 +396,26 @@ where $\hat{x}$ is our estimate of $x_k$ (not $\bar{x}_k$), $\hat{d}_k$ is the d
   L_m = \begin{bmatrix} L_x\\L_d \end{bmatrix} \label{eqn:CmLm}
 \end{align}
 It is shown in \cite{maeder_offset-free_2007} that the gains $L_x$ and $L_d$ may be designed separately such that the closed-loop poles $A_m - L_mC_m$ are the same as $\sigma(A-L_xC)\cup \sigma(A_d-L_dC_d)$.
-We set $L_x$ equal to the steady state solution of the discrete LQR problem applied to the dual of $G$, where $Q = Q_w + \alpha BB^T$ and $\alpha$ is a turning parameter. We design $L_d$ such that the disturbance pole is placed at $z=0.8$.
+We set $L_x$ equal to the steady state solution of the discrete LQR problem applied to the dual of $\hGv$, where $Q = Q_w + \alpha BB^T$ and $\alpha$ is a tuning parameter. We design $L_d$ such that the disturbance pole is placed at $z=0.8$.
 
-To achieve zero offset tracking, disturbance estimators re-compute the steady-state target $\x_{ss}$ at each time-step. For an output disturbance model ($B_d=0$ and $C_d=I$), this simply means that the reference is adjusted by subtracting $\hat d_k$. In other words, at each time step, we need to compute
+To achieve zero offset tracking, disturbance estimators re-compute the steady-state target $\x_{ss}$ at each time-step. Here, we use an output disturbance model, so that $B_d=0$ and $C_d=I$, which means that the reference is adjusted by subtracting $\hat d_k$. In other words, at each time step, we need to compute
 \begin{equation}
-  x_{e} = \hat{x}_k - N_x(r_k - \hat{d}_k).
+  \bar{x}_{e} =
+  \begin{bmatrix}\hat{x}_k\\x_{u_k}
+  \end{bmatrix}
+  - N_{\bar{x}}(r_k - \hat{d}_k).\nonumber
 \end{equation}
-This is slightly simpler than the case for an input disturbance model ($C_d=0$ and $B_d\neq0$), which involves an additional vector-scalar multiplication and an additional vector-vector addition (see (21) in \cite{maeder_offset-free_2007}). It is shown in \cite{maeder_offset-free_2007} that output disturbance and input disturbance models are equivalent provided 1 is not an eigenvalue of $A$, which is the case here, because we do not estimate the state $x_u$. Thus, due to the computational savings, we use the output disturbance formulation. 
+This is slightly simpler than the case for an input disturbance model ($C_d=0$ and $B_d\neq0$), which involves an additional vector-scalar multiplication and an additional vector-vector addition (see (21) in \cite{maeder_offset-free_2007}). It is shown in \cite{maeder_offset-free_2007} that output disturbance and input disturbance estimators are equivalent provided 1 is not an eigenvalue of $A$, which is the case here, because we do not estimate the state $x_u$. Thus, due to the computational savings, we use the output disturbance formulation. 
 \subsection{Closed-Loop Equations}
 Let us derive the closed loop equations for the block diagram of Fig.~\ref{fig:ss_bd} with the drift and hysteresis operators set to the identity and with the controller given by a partitioned feedback gain ${K = [K_x\: K_u]}$. Similarly, the observer gain is partitioned as in \eqref{eqn:CmLm}.
 In closed-loop we do not estimate $\x_u$, because it is perfectly known and we do not compute the state-feedback portion of the control with $\hat d$ because the disturbance is uncontrollable from $u_k$.  
-From~\eqref{eqn:ssdelta} and \eqref{eqn:obsdyn} we have
+From~\eqref{eqn:ssdelta}, \eqref{eqn:obsdyn} and \eqref{eqn:yhat} we have
 \begin{align}
   \hat{\x}_{k+1} &= A \hat{x}_k + Bu_k + L_x(y - \hat{y})\label{eqn:xhat}\\
   \hat{d}_{k+1}  &= \hat{d}_k  + L_d (y - \hat{y}) \label{eqn:dhat}\\
   x_{u_{k+1}}     &= x_{u_k}  + \Delta{u}_k,\label{eqn:xu}
 \end{align}
-where $\hat{y}$ is given by \eqref{eqn:yhat} and the control increment $\Delta u_k$ and control $u_k$ are given by
+where $y_k$ is the plant output. The control increment $\Delta u_k$ and control $u_k$ are given by
 \begin{align}
   \Delta u_k &= -\begin{bmatrix}
     K_x & K_u
@@ -460,7 +427,7 @@ where $\hat{y}$ is given by \eqref{eqn:yhat} and the control increment $\Delta u
                \bar{N}(r_k - \hat{d}_k).\label{eqn:deltau}\\
   u_k &= \Delta u_k + x_{u_k}\label{eqn:uk}.
 \end{align}
-In \eqref{eqn:deltau}, $\bar{N}\triangleq KN_x$ is the feedforward control gain, where $N_{\bar{x}}$ is defined by \eqref{eqn:nxnu}.
+In \eqref{eqn:deltau}, $\bar{N}\triangleq KN_{\bar{x}}$ is the feedforward control gain, where $N_{\bar{x}}$ is defined by \eqref{eqn:nxnu}.
 We can write \eqref{eqn:xhat}-\eqref{eqn:uk} as the combined state space system
 \begin{align}
 \tilde{\x}_{k+1} &= \tilde{A}\tilde{\x}_k + \tilde{L}y_k + \tilde{B}\bar{N}r_k\label{eqn:cntrldyn}\\
@@ -478,21 +445,25 @@ where
   \tilde{x}_k = \begin{bmatrix} \hat{x}_k \\ x_{u_k} \\ \hat{d}_k\end{bmatrix},\\
   \tilde{K} &= \begin{bmatrix}K_x & K_u-1 & \bar{N}\end{bmatrix},\\
 \end{align*}
-Taking the $z$ transform of \eqref{eqn:cntrldyn} and \eqref{eqn:ukx}, we obtain
+Taking the $\mathcal{Z}$-transform of \eqref{eqn:cntrldyn} and \eqref{eqn:ukx}, we obtain
 \begin{align}
-  u(z) =&  \bar{N}(1-\tilde{K}(zI-\tilde{A})^{-1}\tilde{B})r(z) \label{eqn:uz}\\
-       & -\tilde{K}(zI - \tilde{A})^{-1}\tilde{L}y(z).\nonumber
+  u(z) =&  \bar{N}(1-\tilde{K}(zI-\tilde{A})^{-1}\tilde{B})r(z) \nonumber\\
+       & -\tilde{K}(zI - \tilde{A})^{-1}\tilde{L}y(z).\label{eqn:uz}
 \end{align}
-If $G(z)$ (which need not be the same as our model $G_{vib}$) is the transfer function of the plant, then z-transform of the output $y$ subject to an output disturbance $d$ and control input $u$ is $y(z) = G(z)u(z) + G(z)d(z)$. Combining this expression with \eqref{eqn:uz} we obtain 
+If $G(z)$ (which need not be the same as our model $\Gv$) is the transfer function of the plant, then the $\mathcal{Z}$-transform of the output $y$ subject to an output disturbance $d$ and control input $u$ is $y(z) = G(z)u(z) + d(z)$. Combining this expression with \eqref{eqn:uz} we obtain 
 \begin{align}
-  y(z) &= \frac{G(z)\bar{N}(1-D_2(z))}{1 + G(z)D_1(z)} r(z) + \frac{G(z)}{1 + G(z)D_1(z)}d(z)\label{eqn:cltf}
+  y(z) &= \frac{G(z)\bar{N}(1-D_2(z))}{1 + G(z)D_1(z)} r(z) + \frac{1}{1 + G(z)D_1(z)}d(z)\label{eqn:cltf}
 \end{align}
 where
-\begin{align}
+\begin{align*}
   D_1(z) &= \tilde{K}(zI -\tilde{A})^{-1}\tilde{L}\\
   D_2(z) &= \tilde{K}(zI -\tilde{A})^{-1}\tilde{B}.
-\end{align}
-Thus, the loop gain is given by $L(z) = G(z)D_1(z)$ and we define the sensitivity function $\mathcal{S}(z)\triangleq (1+L(z))^{-1}$. The closed-loop poles are the transmission zeros of $1+L(z)$ and which are the union of the controller poles and observer poles, which can be seen through the separation principle or manipulation of the matrix pencil describing the transmission zeros. Moreover, in the first term of \eqref{eqn:cltf}, the observer poles are canceled by the transmission zeros of $(1-D_2(z))$. Of course, these properties only hold when the observer is a perfect model of the plant. 
+\end{align*}
+Thus, the loop gain is given by $L(z) = G(z)D_1(z)$ and we define the sensitivity function
+\begin{equation}
+  \mathcal{S}(z)\triangleq \frac{1}{1+L(z)}.\label{eqn:Sens}
+\end{equation}
+The closed-loop poles are the transmission zeros of $1+L(z)$ and which are the union of the controller poles and observer poles, which can be seen through the separation principle or manipulation of the matrix pencil describing the transmission zeros. Moreover, in the first term of \eqref{eqn:cltf}, the observer poles are canceled by the transmission zeros of $(1-D_2(z))$. Of course, these properties only hold when the observer is a perfect model of the plant. 
 
 The advantage in representing the closed-loop dynamics as \eqref{eqn:cltf} is that it exposes cleanly how to analyze the robustness of our designs. Due to hysteresis, the gain margin is of particular importance. 
 
@@ -504,89 +475,95 @@ The advantage in representing the closed-loop dynamics as \eqref{eqn:cltf} is th
 % \end{figure}
 
 
-\section{Control Designs}
-We consider two methods, Model Predictive Control(MPC) and Saturated Linear Feedback (SLF).
-\begin{itemize}
-\item\emph{Saturated Linear state feedback (SLF)} The basic idea here to use standard linear state feedback which is saturated (on $\Delta u$) but to de-rate the design such that the closed-loop system is stable up to a certain reference size. 
-\item\emph{Constrained Model Predictive Control (MPC)} The goal with MPC is that, instead of fully de-rating the design to account for the slew rate constraint, to directly account for the constraint as part of the control law itself. Due to limitations on the implementation, MPC must still be de-rated to some extent to be implementable, since the length of control horizon needed to achieve stabilty over the full range of the stage becomes large for an overly aggressive design.
-\end{itemize}
-
-Both the MPC and linear state feedback controllers can be described by the optimization
-\begin{align}
-V(v) &= \min_{v} z^T_{N}Pz_{N} + \sum_{i=0}^{N-1}z_{i}^{T}Qz_{i} + z^T_iSu_i + v^{T}_{i}Rv_{i} \label{eqn:optcost}\\
- \text{s.t.} \quad z_{i+1} &= \Ad z_{i} + \Bd v_{i}\\
-z_{0} &= [\hat{x}^T_{k}, x^T_{u_k}]^T - N_{\bar{x}}(r_k-\hat{d}_k)\\
-|v_i | & \leq (\Delta u)_{\text{max}}.\label{eqn:cntrl_constraint}
-\end{align}
-where $Q$ and $R$ are symmetric matrices and the matrices $Q,R,S$ satisfy
-\begin{equation}
-  \begin{bmatrix}
-    Q & S\\S^T &R
-  \end{bmatrix} > 0
-\end{equation}
-The terminal cost $P$ is the solution of the DARE. The solution of \eqref{eqn:optcost} results in a sequence of $N$ optimal controls, $\{v_i\}_{i=0}^{N-1}$. In the case of MPC, one sets $\Delta u_k = v_0$ and discards the remaining elements. The process is repeated at the next time step. Note that in the case of MPC, the saturator in Fig. \ref{fig:ss_bd} is superfluous because the optimal control satisfies the constraints by design.
-
-In the case of linear feedback, $N=1$ and we eliminate the constraint on the control \eqref{eqn:cntrl_constraint} and thus the optimal control is simply $-Kx_k$, where
-\begin{equation}
-  K = (\Bd^TP\Bd + R)^{-1}(\Bd^TP\Ad + S^T).
-\end{equation}
-
-The motivation for MPC here is that we hope that by directly accounting for the constraints, additional performance can be obtained. There are two perspectives one might take here. First, by directly accounting for the constraints, we should be able to use a more aggressive control (smaller $\gamma$) while maintaining stability compared to SLF.
-We will show that in simulation, this idea does indeed lead to a significantly decreased settling time. However, the desire to decrease $\gamma$ must be tempered by its affect on both robustness and disturbance rejection, because these things are a metric for how the control will perform in practice. Unfortunately, we will see that decreasing $\gamma$ tends to degrade both properties for the weighting matrices we consider. 
-
-Alternatively, one could use the same $\gamma$ for both the MPC design and SLF design (which implies, roughly,  the same set of disturbance rejection and robustness properties) and hope that the direct handling of constraints significantly improves performance. This is the perspective taken, e.g., in \cite{Wills_CDC_2005}. While this will indeed be the case for certain sizes of setpoints (e.g., setpoints which are near the stability boundary for SLF), we will see that the difference between MPC and SLF is marginal for the majority of the movement range.
-
-% \subsection{The ``it doesn't work'' argument}
-% This needs to essentially say: we consider three methods (1) pz-cancell, (2) constant zeta (3) constant sigma. None of these three provide enough motivation for MPC.
-
-
-\subsection{Control Weight Selection}
-Let $Q = F^TF$ for some vector $F\in\mathds{R}^{\bar{n}_s}$, $S=F$, and $R=1+\gamma$, where $\gamma$ is a scalar parameter. Consider the fictitious output
-\begin{equation}
-  \eta_k = F\xd_k + \Delta u_k. \label{eqn:fictout}
-\end{equation}
-Then \eqref{eqn:optcost} can be written as
-\begin{align}
-  J &= \sum_{i=0}^{N-1} \eta_i^T\eta_i + \gamma\Delta u_i^T \Delta u_i.
-    % &= \sum_{i=0}^{N-1} \hat{x_i}^TQ\hat{x_i} + 2x_i^TSu_i + u_i^T(R_o+\gamma)u_i
-\end{align}
-As the control weight $\gamma$ becomes small, the closed-loop poles of the unconstrained LQR
-will move to the zeros of $\{A, B, F, 1\}$ (when the solution is within the constraint set defined by \eqref{eqn:cntrl_constraint}). This is illustrated, e.g., in Fig.~\ref{fig:lqr_locus_cs}. One can usually take $\gamma$ to be small enough that the difference between the desired pole location and its actual location is negligible. The direct feedthrough in \eqref{eqn:fictout} results in the cross-weighting term $S$ and is necessary if we wish to endow the fictitious system with $\bar{n}_s$ zeros in order to place all $\bar{n}_s$ poles.
-
-Through elementary block row and column operations, it is straightforward to show that the zeros of
-$\{A, B, F, 1\}$ are the same as the solutions of the generalized eigenvalue problem
-\begin{equation}
-  \begin{bmatrix}
-    (A - BF) & 0\\
-    0 & 1
-  \end{bmatrix} - \begin{bmatrix}zI & 0\\0 & 0\end{bmatrix} = 0.
-\end{equation}
-Thus, one may find $F$ via standard pole placement techniques.
-
+\section{Control Designs}\label{sec:tune}
 \begin{figure*}
-  \begin{minipage}{0.48\textwidth}
+  % \begin{minipage}{0.48\textwidth} 
+    \begin{subfigure}{0.48\textwidth}
   \includesvg[width=1\textwidth]{figures/lqr_locus_constsig_0p9.svg}
-  \caption{Root locus for $R_o + \gamma$. Note that for clarity, the plant zeros are not shown. The black 'x's indicate the poles of the open-loop plant. The blue circles indicate the fictitious zeros, which are at the location of the desired poles. }
+\caption{}
   \label{fig:lqr_locus_cs}
-\end{minipage}
+\end{subfigure}
 \hfill
-\begin{minipage}{0.48\textwidth}
-  \includesvg[width=1\textwidth]{figures/lqr_locus.svg}
-  \caption{Root locus for $R_o + \gamma$. Note that for clarity, the plant zeros are not shown. The black 'x's indicate the poles of the open-loop plant. The blue circles indicate the fictitious zeros, which are at the location of the desired poles.}
+\begin{subfigure}{0.48\textwidth}
+  \includesvg[width=1\textwidth]{figures/lqr_locus_choozezet.svg}
+  \caption{}
   \label{fig:lqr_locus_cz}
-\end{minipage}
+\end{subfigure}
+\caption{Root locus for $1 + \gamma$. Note that for clarity, the plant zeros are not shown. The black $\times$'s indicate the poles of the open-loop plant. The black circles indicate the fictitious zeros, which are at the location of the desired poles. (left) The constant-$\sigma$ scheme with $\sigma=0.9$. (right) The chosen-$\zeta$ scheme.}
+\label{fig:lqr_locus}
 \end{figure*}
 
-Certainly, in the case of the LQR state feedback controller, one could simply use a pole-placement design to start with. However, the method here has two advantages: (1) it permits a straightforward comparison to the MPC design (which requires weighting matrices, not simple pole locations) and (2) the design becomes parametrized by the single parameter $\gamma$ which makes de-rating the design easy. In contrast, with standard pole-placement it is not clear how to ``back-off'' the design if the slew rate constraint is violated to the extent that instability results. 
+%Both the MPC and linear state feedback controllers can be described by the optimization
+Consider the optimal control problem
+\begin{subequations}
+\begin{align}
+\min_{v}\:\:& z^T_{N}Pz_{N} + \sum_{i=0}^{N-1}z_{i}^{T}Qz_{i} + 2z^T_iSv_i + v^{T}_{i}Rv_{i} \label{eqn:optcost}\\
+  % \text{s.t.}&\nonumber\\
+  \text{s.t.}\:\:  z_{i+1} =& \Ad z_{i} + \Bd v_{i}\\
+z_{0} =& [\hat{x}^T_{k}, x^T_{u_k}]^T - N_{\bar{x}}(r_k-\hat{d}_k)\\
+|v_i | \leq& (\Delta u)_{\text{max}}.\label{eqn:cntrl_constraint}
+\end{align}\label{eqn:optcon2}
+\end{subequations}
+where $Q$ and $R$ are symmetric matrices and the matrices $Q,R,S$ satisfy \eqref{eqn:schur0} and \eqref{eqn:schur1}.
+The terminal cost $P$ is the solution of the DARE. 
+
+We consider two control strategies based on \eqref{eqn:optcon2}:
+\par\noindent\emph{Constrained Model Predictive Control (MPC)} With this strategy, one solves \eqref{eqn:optcost} online, which results in a sequence of $N$ optimal controls, $\{v_i\}_{i=0}^{N-1}$.
+One then sets $\Delta u_k = v_0$ and discards the remaining $v_i$. The process is repeated at the next time step. With MPC, the saturator in Fig.~\ref{fig:ss_bd} is superfluous because the optimal control satisfies the constraints by design. The goal with MPC is to directly account for the slew rate constraint as part of the control law itself and hope that this results in increased performance.
+% Due to limitations on the implementation, MPC must still be de-rated to some extent to be implementable, since the length of control horizon needed to achieve stabilty over the full range of the stage becomes large for an overly aggressive design.
+% \item
+\par\noindent\emph{Saturated Linear state feedback (SLF)}
+  Here, we eliminate the constraint \eqref{eqn:cntrl_constraint}. Thus,
+  \begin{equation*}
+    \Delta u_k =v_0 = -K[\hat{x}^T_k, x_{u_k}]^T
+  \end{equation*}
+  where 
+\begin{equation*}
+  K = (\Bd^TP\Bd + R)^{-1}(\Bd^TP\Ad + S^T),
+\end{equation*}
+which is the LQR feedback gain associated with $Q$, $R$, and $S$. 
+In contrast to MPC, with SLF, the saturator in Fig.~\ref{fig:ss_bd} is necessary to avoid exceeding our current limit. While this scheme is much more computationally efficient that MPC, the fact that the constraint is not directly accounted for typically means that the performance requirements must be relaxed to maintain stability (e.g., by increasing the control weight $R$), due to the saturator.
+
+In the next two subsections, we deal with the problem of designing the weighting matrices $Q$, $R$, and $S$.
+
+\subsection{Control Weight Selection}
+Let $Q = FF^T$ for some vector $F\in\mathds{R}^{\bar{n}_s}$, $S=F$, and $R=1+\gamma$ where $\gamma$ is a scalar parameter. Consider the fictitious output
+\begin{equation}
+  \eta_k = F^T\xd_k + v_k. \label{eqn:fictout}
+\end{equation}
+Then running cost portion of \eqref{eqn:optcost} can be written as
+\begin{equation}
+   \sum_{i=0}^{N-1} \eta_i^T\eta_i + \gamma v_i^T v_i.
+    % &= \sum_{i=0}^{N-1} \hat{x_i}^TQ\hat{x_i} + 2x_i^TSu_i + u_i^T(R_o+\gamma)u_i
+\end{equation}
+As the control weight $\gamma$ becomes small, the closed-loop poles of the unconstrained LQR
+will move to the zeros of $\{A, B, F^T, 1\}$. This is illustrated in Fig.~\ref{fig:lqr_locus} for two different $F$ vectors (discussed further late in this subsection). With this selection of $Q$ and $S$, \eqref{eqn:schur1} becomes
+\begin{equation}
+FF^T\left(1 - \frac{1}{1+\gamma} \right)\geq 0
+\end{equation}
+which holds for all $\gamma\geq 0$. However, numerical difficulties tend to arise in computing $P$ when $\gamma$ is too close to zero. Nonetheless, one can usually take $\gamma$ to be small enough that the difference between the desired pole locations and their actual locations is negligible. The direct feedthrough in \eqref{eqn:fictout} results in the cross-weighting term $S$ and is necessary if we wish to endow the fictitious system with $\bar{n}_s$ zeros in order to place all $\bar{n}_s$ poles.
+
+Through elementary block row and column operations, it is straightforward to show that the zeros of
+$\{A, B, F^T, 1\}$ are the same as the solutions of the generalized eigenvalue problem
+\begin{equation*}
+  \begin{bmatrix}
+    (A - BF^T) & 0\\
+    0 & 1
+  \end{bmatrix} - \begin{bmatrix}zI & 0\\0 & 0\end{bmatrix} = 0.
+\end{equation*}
+Thus, one may find $F$ via standard pole placement techniques.
+
+Certainly, in the case of the LQR state feedback controller, one could simply use a pole-placement design to start with. However, the method here has two advantages: (1) it permits a straightforward comparison to the MPC design (which, in the present formulation, requires weighting matrices, not simple pole locations) and (2) the design becomes parametrized by the scalar parameter $\gamma$ which makes de-rating the design easy. In contrast, with standard pole-placement it is not clear how to ``back-off'' the design if the slew rate constraint is violated to the extent that instability results. 
+
+% \subsection{Selecting Desired Poles}
+We consider two methods to choose a set of desired pole locations. The first method we call ``constant-$\sigma$''. The idea is to move all complex poles such that they lie on a circle with a specified radius, which endows them all with the same time constant. Here, we select the radius as $\sigma=0.9$.
+
+The second scheme keeps the natural frequency of each complex pole unchanged but specifies a damping ratio $\zeta$ (which we call ``choose-$\zeta$''). This is the same scheme we considered in \cite{braker_fast_2017, braker_application_2017}.
+
+For both cases, we place the 9 delay poles at the roots of unity with a radius chosen more less arbitrarily at ${\sigma=0.25}$. Fig.~\ref{fig:lqr_locus} shows root locus-like plots for each scenario as a function of $\gamma$. As $\gamma$ approaches zero, the closed-loop poles approach the designed fictitious zeros, which are indicated by black circles. 
 
 
-\subsection{Selecting Desired Poles}
-We consider two methods to choose a set of desired pole locations. The first method we call ``constant-$\sigma$'' (CS). The idea is to move all complex poles such that they lie on a circle with a specified radius, which endows them all with the same time constant. Here, we select the radius as $r=0.9$.
-
-The second scheme keeps the natural frequency of each complex pole unchanged but specifies a damping ratio $\zeta$ (which we call ``choose-$\zeta$'' or CZ). This is the same scheme we considered in \cite{braker_fast_2017, braker_application_2017}.
-
-For both cases, we place the 9 delay poles at $z=0$ at the roots of unity with a radius chosen more less arbitrarily at $r=0.25$. Figs.~\ref{fig:lqr_locus_cs} and \ref{fig:lqr_locus_cz} root locus-like plots for each scenario. As $\gamma$ approaches zero, the closed-loop poles approach the placed zeros, which are indicated by black circles. 
-
+\subsection{Selecting $\gamma$}
 \begin{figure*}
   % \begin{subfigure}[b]{0.3\textwidth}
   \begin{subfigure}[t]{0.48\textwidth}
@@ -604,129 +581,129 @@ For both cases, we place the 9 delay poles at $z=0$ at the roots of unity with a
     \label{fig:GainS}
     % \end{minipage}
   \end{subfigure}
-  \caption{Robustness and performance metrics for the constant-$\sigma$ and chooze-$\zeta$ state weighting scheme. (left) Phase and Gain Margins as $\gamma$ is increased. (right) Gain of $S(z)$ and (unconstrained) settling times as $\gamma$ is increased. The markers indicate different choices of $\gamma$. The 'x' corresponds to the minimum the sensitivity function gain; the circle corresponds to the minimum $\gamma$ choice for SLF; the square is the minimum $\gamma$ choice for MPC.}
+  \caption{Robustness and performance metrics for the constant-$\sigma$ and chooze-$\zeta$ state weighting scheme. (left) Phase and Gain Margins as $\gamma$ is increased. (right) Gain of $S(z)$ and (unconstrained) settling times as $\gamma$ is increased. The markers indicate different choices of $\gamma$. The 'x' corresponds to the minimum of the sensitivity function gain; the circle corresponds to the minimum $\gamma$ choice for SLF; the square is the minimum $\gamma$ choice for MPC.}
+  \label{fig:robmetrics}
 \end{figure*}
+In principle, one would like to select the smallest control weight $\gamma$ that stabilizes all possible setpoints for either SLF or MPC with a certain control horizon. We call this the \emph{minimum-$\gamma$} (MG) scheme. The motivation for MPC here is that, by directly accounting for the constraint, we can use a smaller $\gamma$ than we can for SLF. To consider this approach, we need to determine the smallest $\gamma$ that will still yield a stable trajectory (for the nominal plant) subject to our slew rate constraint. To determine this, we run a series of simulations across a grid of $\gamma$'s. For each $\gamma$ in the grid, simulations are run for a reference of $r=2.5~\mu$m up to $r=75~\mu$m in increments of $2.5~\mu$m. If instability occurs, we move up to the next $\gamma$ in the grid. The smallest $\gamma$ which is stable for all setpoints in the range $2.5, 75$ is what we consider to be the minimum $\gamma$. This set of simulations is run for both the SLF case as well as the MPC case for $N=12$, for both the constant-$\sigma$ and choose-$\zeta$ pole placement schemes.
 
-\subsection{Selecting $\gamma$}
-In principle, one would like to select the smallest control weight $\gamma$ that stabilizes all possible setpoints for either SLF or MPC with a certain control horizon. We call this the \emph{minimum-$\gamma$} (MG) scheme. We will see in Section~\ref{sec:results} that this choice yields a compelling reduction in settle-time for the MPC control \emph{in simulation}, but very poor performance in experiment.
+For both the constant-$\sigma$ and choose-$\zeta$ scenarios, Fig.~\ref{fig:gmpm} shows the gain margin (GM) and phase margin (PM) plotted as $\gamma$ increases and Fig.~\ref{fig:GainS} plots the low frequency gain of $\mathcal{S}$ as $\gamma$ increases. The minimum acceptable values of $\gamma$ found in the parameter sweep are marked with a circles for SLF and squares for MPC. It is clear that these small values of $\gamma$ will yield poor stability margins for either MPC or SLF, but are worse for MPC.
 
-Alternatively, we consider selecting $\gamma$ to balance the trade-off between nominal settling-time with the need for robustness and disturbance rejection. We call this choice the ``robust-optimal'' or RO. As measures of robustness we mean the classical measures of gain and phase margin (GM and PM)) while for disturbance rejection, we are thinking primarily of the low frequency gain of the Sensitivity function $\mathcal{S}$. Certainly, both MPC and SLF are, in general, non-linear making these metrics insufficient to describe their global behavior. However, for any setpoint, both SLF and MPC behave linearly in a neighborhood around that setpoint. In other words, while the beginning of a setpoint tracking maneuver may saturate the SLF controller or put the MPC on its constraint boundary, the latter part of that same maneuver will be governed by linear dynamics. In that sense, the metrics GM and PM still give good insight. % INTO WHAT??? 
+Certainly, both MPC and SLF are, in general, non-linear making these classical metrics insufficient to describe their global behavior. However, for any setpoint, both SLF and MPC behave linearly in a neighborhood around that setpoint. In other words, while the beginning of a setpoint tracking maneuver may saturate the SLF controller or put the MPC on its constraint boundary, the latter part of that same maneuver will be governed by linear dynamics. In that sense, the metrics GM and PM still give good insight.
+ \footnote{In discussing robustness, recall that, in contrast to the continuous time case, the full-state feedback discrete time LQR controller does not have a guaranteed infinite gain margin nor a guaranteed phase margin greater than $60^{\circ}$ \cite{andersson_moore}. For both continuous time and discrete time, the robustness properties can be arbitrarily bad when an observer is used in lieu of full state feedback~\cite{doyle_guaranteed_1978}. In the continuous time case, the full state feedback robustness may be recovered asymptotically using, e.g., the loop transfer recover (LTR) of \cite{doyle_robustness_1979}. In general, this result does not translate to discrete-time. Most efforts at obtaining LTR like results for discrete-time assume that (1) a current estimator is used and (2) $CB\neq 0$. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. For our system model model, $CB=0$, because the relative degree is 12. These two factors preclude discrete time LTR.} % INTO WHAT???
 
-In discussing stability, recall that, in contrast to the continuous time case, the full-state feedback LQR controller does not have a guaranteed infinite gain margin nor a guaranteed phase margin greater than $60^{\circ}$ \cite{andersson_moore}. For both continuous time and discrete time, the robustness properties can be arbitrarily bad when an observer is used in lieu of state feedback~\cite{doyle_guaranteed_1978}. In the continuous time case, the full state feedback robustness may be recovered asymptotically using, e.g., the loop transfer recover (LTR) of \cite{doyle_robustness_1979}. In general, this result does not translate to discrete-time. Most efforts at obtaining LTR like results for discrete-time assume that (1) a current estimator is used and (2) $CB\neq 0$. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. For our system model model, $CB=0$, because the relative degree is 12. These two factors preclude discrete time LTR. 
+% We will see in Section~\ref{sec:results} that this choice yields a compelling reduction in settle-time for the MPC control \emph{in simulation}, but very poor performance in experiment.
+Thus, as an alternative to the minimum-$\gamma$ approach, we consider selecting the $\gamma$ which minimizes the low frequency gain of $\mathcal{S}$. This $\gamma$ is marked by an $\times$ in Fig.~\ref{fig:GainS}. The corresponding points on the GM and PM curves in Fig.~\ref{fig:gmpm} are similarly marked by an $\times$. We call this the ``robust-$\gamma$'' choice.  For the constant-$\sigma$ and choose-$\zeta$ pole placement scenarios, the low frequency gain of $\mathcal{S}(z)$ achieves a minimum at ${\gamma=129}$ and $\gamma=62$, respectively. Both of these control weights are large enough that there will be no stability problems due to saturation, i.e., we can track any setpoint across the stage. 
 
 
-For both the constant-$\sigma$ and choose-$\zeta$ scenarios, Fig.~\ref{fig:gmpm} shows the GM and PM plotted as $\gamma$ increases. It is clear that taking the \emph{minimum-$\gamma$} approach will yield very small stability margins. Fig.~\ref{fig:GainS} shows how the low-frequency gain of $\mathcal{S}(z)$ changes with increasing $\gamma$ as well as how the nominal (i.e., unconstrained) settling-time to a unit step increases. As one might expect, the settling time increases with increasing $\gamma$. For both the constant-$\sigma$ and choose-$\zeta$ scenarios, the low frequency gain of $\mathcal{S}(z)$ achieves a minimum at ${\gamma=129}$ and $\gamma=42$, respectively. Both of these control weights are large enough that there will be no stability problems due to saturation, i.e., we can track any setpoint across the stage.
+Table~\ref{tab:gmpms} summarizes the different values of $\gamma$ selected and the resulting robustness metrics for the two pole placement schemes for MPC and SLF.
 
-To consider the minimum-$\gamma$ approach, we need to determine the smallest $\gamma$ that will still yield a stable trajectory (for the nominal plant) under our slew rate constraint. To determine this, we run a series of simulations across a grid of $\gamma$'s. For each $\gamma$ in the grid, simulations are run from a reference of $r=0.5$ up to $r=14$ in increments of $0.5$. If instability occurs, we move up to the next $\gamma$ in the grid. The smallest $\gamma$ which is stable for all setpoints in the range $0.5, 15$ is what we consider the minimum $\gamma$. This set of simulations is run for both the SLF case as well as the several control horizons in the MPC case. Table~\ref{tab:gmpms} summarizes this discussion for a control horizon of $N=12$.
-% The values of $\gamma$ for longer control horizons do not vary appreciably. 
-
-\begin{table}
-  \caption{For each control scheme, this table summarizes the associated control weight $\gamma$ as well as the resulting GM, PM, and low-frequency gain of $\mathcal{S}(z)$.}
+\begin{table}[httb!]
+  \caption{For each control scheme, this table summarizes the associated control weight $\gamma$ as well as the resulting GM, PM, and low-frequency gain of $\mathcal{S}(z)$. The units for GM and $|\mathcal{S}|$ are decibels and the units for PM are degrees.}
   \label{tab:gmpms}
-  \begin{tabular}{ccccc}
+  \scriptsize
+  \begin{tabular}{cccccc}
     % scheme& $\gamma$ &GM [dB]& PM [deg] & $|\mathcal{S}|$ [dB]\\
 \input{rob_data}    
   \end{tabular}
 \end{table}
 
+
 \section{Results}\label{sec:results}
-\begin{figure*}
-  \begin{minipage}{0.48\textwidth}
-    \includesvg[width=1\textwidth]{figures/perc_increase_Ipow_lowgain_rmax14.svg}
-    \caption{For the choose-$\zeta$ method, percentage increase over the discrete minimum time trajectory.}
-  \end{minipage}
-  \hfill
-  \begin{minipage}{0.48\textwidth}
-    \includesvg[width=1\textwidth]{figures/perc_increase_Ipow_lowgain_rmax14_constsig.svg}
-    \caption{For the constant-$\sigma$ method, percentage increase over the discrete minimum time trajectory.}
-  \end{minipage}
-\end{figure*}
+
+We tested the MPC and SLF control laws for both pole placement schemes (constant-$\sigma$ and choose-$\zeta$) and both $\gamma$ selection schemes by giving the stage a sequence of 23 reference commands. The first 20 references we selected randomly within the range $[-35~\mu$\text{m}, $35\mu\text{m}]$. We chose the final three references as $35\mu$m, $-35\mu$m, and $0\mu$m, to exercise the full range of the stage. The sequence of references is shown in the top plots of Figs. \ref{fig:const_sig_y} and \ref{fig:choose_zet_y}.
+
+Settling times are computed in an absolute sense. Specifically, the settle boundary is 70~$\mu$m/512, which would correspond to settling within one pixel of a 512 by 512 pixel image for the given range.
+The settling times for each reference command are compiled into Table~\ref{tab:ts_CS} for the constant-$\sigma$ scheme and Table~\ref{tab:ts_CZ} for the chosen-$\zeta$ scheme. Each row corresponds to a different reference command, as indicated in the first column. The second column shows the overall change in setpoint. Columns 3 through 6 show the simulation settling time and columns 7 through 10 show the experimental settling times. The colormap codes the settling times where dark blue is fastest flowing toward dark red as the slowest. 
+
+In simulation, it is clear that for both the constant-$\sigma$ and choose-$\zeta$ schemes, choosing the minimum achievable $\gamma$ is faster in simulation than the robust choice. In both cases, MPC reduces the total settle time, though this improvement is marginal in the constant-$\sigma$ case. As one might expect from the poor gain and phase margins and large gain of $\mathcal{S}$ achieved by the minimum-$\gamma$ approach, these results do not translate to experiment.
+On the other hand, in the experiments, choosing the $\gamma$ which minimizes the low frequency gain of $\mathcal{S}$ achieves much better results. Here, the constant-$\sigma$ scheme is about 40\% faster than the choose-$\zeta$ scheme.
+
+Figs.~\ref{fig:const_sig_y} and \ref{fig:choose_zet_y} show the output trajectories for the constant-$\sigma$ scheme (Fig. ~\ref{fig:const_sig_y}) and choose-$\zeta$ scheme (Fig. \ref{fig:choose_zet_y}). Large amounts of overshoot can be seen in the top row of Fig.~\ref{fig:choose_zet_y}, which are the minimum $\gamma$ trajectories and can be attributed to the excessively low stability margins associated with that choice. For each figure, the two columns of smaller plots zoom in on two references. Here it can be seen that the choose-$\zeta$ schemes eliminates some of the residual (though small) oscillations present in the constant-$\sigma$ scheme.
 
 
-\begin{table*}
-  \begin{minipage}{1\textwidth}
-  \caption{Columns from left to right: Linear simulation, constant-$\sigma$, robust-optimal (LS-CSRO); MPC simulation, constant-$\sigma$, robust-optimal (MPC-CSRO); Linear Experiment, constant-$\sigma$, robust-optimal (LE-CSRO);
-    MPC Experiment, constant-$\sigma$, robust-optimal (MPCE-CSRO);
-    Linear simulation, constant-$\sigma$, minimum-$\gamma$ (LS-CSMG);
-    MPC simulation, constant-$\sigma$, minimum-$\gamma$ (MPCS-CSMG);
-    Linear Experiment, constant-$\sigma$, minimum-$\gamma$ (LE-CSMG);
-    MPC Experiment, constant-$\sigma$, minimum-$\gamma$ (MPCE-CSMG);
-  }
-   \input{manystepsdata.tex}
-   \label{tab:ts_CS}
- \end{minipage}
- \begin{minipage}{1\textwidth}
-     \caption{Columns from left to right: Linear simulation, constant-$\sigma$, robust-optimal (LS-CSRO); MPC simulation, constant-$\sigma$, robust-optimal (MPC-CSRO); Linear Experiment, constant-$\sigma$, robust-optimal (LE-CSRO);
-    MPC Experiment, choose-$\zeta$, robust-optimal (MPCE-CZRO);
-    Linear simulation, choose-$\zeta$, minimum-$\gamma$ (LS-CZMG);
-    MPC simulation, choose-$\zeta$, minimum-$\gamma$ (MPCS-CZMG);
-    Linear Experiment, choose-$\zeta$, minimum-$\gamma$ (LE-CGMG);
-    MPC Experiment, choose-$\zeta$, minimum-$\gamma$ (MPCE-CZMG);
-  }
-   \input{manystepsdata_choosezeta.tex}
-   \label{tab:ts_CZ}
- \end{minipage}
-   \begin{centering}
-    \includesvg[scale=1]{figures/ts_colorbar.svg}
-  \end{centering}
-\end{table*}
-We tested the MPC and SLF control laws for both pole placement schemes (CS and CZ) and both $\gamma$ selection schemes by giving the stage a sequence of 23 reference commands. The first 20 references we selected randomly over the range $[-35~\mu$\text{m}, $35\mu\text{m}]$. We chose the final three references references we selected as $35\mu$m, $-35\mu$m, and $0\mu$m, to exercise the full range of the stage. The sequence of references is shown in the top plots of Figs \ref{fig:const_sig_y} and \ref{fig:choose_zet_y}.
+Notably, for the robust-$\gamma$ choice, $\gamma$ is still small enough that for larger moves, the control rate saturates. This can be most clearly seen in the left $\Delta u_k$ plot of Fig.~\ref{fig:const_sig_y}. Nonetheless, the difference between using MPC or SLF is marginal in both simulation and experiment. 
 
 
-Settling times are computed in an absolute sense. Specifically, the settle boundary is 70~$\mu$m/512, which would correspond to settling within one pixel of a 512 by 512 pixel image.
-The settling times for each reference command are compiled into Table~\ref{tab:ts_CS} for the constant-$\sigma$ scheme and Table~\ref{tab:ts_CZ} for the chosen-$\zeta$ scheme. Each row corresponds to a different reference command, as indicated in the first column. The second column shows the overall change in setpoint. Columns 3 through 6 show the simulation settling time and columns 7 through 10 show the experimental settling times.
+% % ------------------------ ORPHAN ----------------------------------------
+% Alternatively, one could use the same $\gamma$ for both the MPC design and SLF design (which implies, roughly,  the same set of disturbance rejection and robustness properties) and hope that the direct handling of constraints improves performance. This is the perspective taken, e.g., in \cite{Wills_CDC_2005}. While this will indeed be the case for certain sizes of setpoints (e.g., setpoints which are near the stability boundary for SLF), we will see that the difference between MPC and SLF is marginal for the majority of the movement range.
+% % ------------------------ END ORPHAN ----------------------------------------
 
-In simulation, it is clear that for both the CS and CZ schemes, choosing the minimum achievable $\gamma$ is significantly faster in simulation. In both cases, MPC reduces the total settle time, though this improvement is marginal in the CS case. As one might expect from the poor gain and phase margins achieved by the minimum-$\gamma$ approach, these results do not translate to experiment.
+Finally, the bottom row of Fig.~\ref{fig:const_sig_y} and \ref{fig:choose_zet_y}  shows the actual current $I_X$ measured in the experiments. In general, we find that for every reference, the current draw stays below the 100~mA limit of the C300. 
 
-On the other hand, in the experiments, choosing the $\gamma$ which minimizes the low frequency gain of $\mathcal{S}$ achieves much better results. Here, the CS scheme is about 40\% faster than the CZ scheme. In both cases, the difference between using MPC or SLF is marginal in both simulation and experiment.
-
-Figures~\ref{fig:const_sig_y} and \ref{fig:choose_zet_y} show the output trajectories for the CS scheme (Fig. ~\ref{fig:const_sig_y}) and CZ scheme (Fig. \ref{fig:choose_zet_y}). Large amounts of overshoot can be seen in the top row of Fig.~\ref{fig:choose_zet_y}, which are the minimum $\gamma$ trajectories and can be attributed to the excessively low stability margins associated with that choice. The bottom row plots in the two figures zooms in on two references. Here it can be seen that the CZ schemes eliminates some of the residual (though small) oscillations present in the CS scheme.
-
-
-Finally, Fig.~REF shows the actual current measured in the experiments.
 \begin{figure*}
   \begin{minipage}{1\columnwidth}
     \includesvg[width=1\columnwidth]{figures/step_exps_const_sig_y.svg}
-  \caption{(top) All the step inputs. (bottom left) best. (bottom right) worst}
+  \caption{Experimental trajectories for the constant-$\sigma$ pole placement scheme. The top panel shows all 23 step responses. The two columns zoom in on the two responses indicated by the red ellipses. (second row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current. The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.}
   \label{fig:const_sig_y}
 \end{minipage}
+\hfill
 \begin{minipage}{1\columnwidth}
   \includesvg[width=1\columnwidth]{figures/step_exps_choose_zet_y.svg}
-  \caption{(top) All the step inputs. (bottom left) best. (bottom right) worst}
+  \caption{Experimental trajectories for the choose-$\zeta$ pole placement scheme. The top panel shows all 23 step responses. The two columns zoom in on the two responses indicated by the red ellipses. (second row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current. The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.}
   \label{fig:choose_zet_y}
 \end{minipage}
 \end{figure*}
 
-\begin{figure*}
-  \includesvg[width=1\columnwidth]{figures/ts_vs_delref_sim.svg}
-  \includesvg[width=1\columnwidth]{figures/ts_vs_delref.svg}
-  \caption{(left) Simulated and settling-time vs reference size for the 8 different control schemes. (left) Shows the same set of steps for the experimental results. }
-  \label{fig:ts_vs_delr}
-\end{figure*}
 
+% \begin{figure*}
+%   % \begin{minipage}{1\columnwidth}
+%   \begin{subfigure}[t]{1\columnwidth}
+%     \includesvg[width=1\columnwidth]{figures/step_exps_const_sig_Ipow.svg}
+%   % \caption{}
+% \end{subfigure}
+% % \end{minipage}
+% % \begin{minipage}{1\columnwidth}
+% \begin{subfigure}[t]{1\columnwidth}
+%   \includesvg[width=1\columnwidth]{figures/step_exps_choose_zet_Ipow.svg}
+%   % \caption{}
+% \end{subfigure}
+% % \end{minipage}
+% \caption{Measured power amplifier current for the constant-$\sigma$ (left) and choose-$\zeta$ (right) schemes.
+% \textcolor{red}{It's hard to see anything useful in these figures. Maybe it would make more sense to show only ``best'' and ``worst''}}
+% \label{fig:Ipow_exp}
+% \end{figure*}
 
-% Additionally, in simulation we consider two additional techniques:
-% \begin{itemize}
-% \item\emph{Discrete time, minimum time optimal control (DTMT)}
-% \item\emph{Constrained, Finite horizon LQR (CLQR)} The optimization is the same as the MPC optimization, just over a much longer horizon. Similarly to the DTMT idea, this would be implemented in a feedforward/tracking configuration. However, the broader goal of considering this scheme is that it shows how much optimality we have sacrificed with a relatively short horizon in MPC.
-% \end{itemize}
-% These schemes are used as benchmarks against which to judge the performance of SLF and MPC. Certainly, one could apply the control trajectories either CLQR or DTMT in a feedforward manner and track the optimal state sequences, as we have considered before in past work \cite{braker_fast_2017}. However, such a technique has several disadvantages: (1) the entire sequence of setpoints must be known before hand, eliminating the possibility of adjusting them in real time. (2) Computing each optimal trajectory requires defining an initial condition, which becomes problematic when, for example, performing short $\mu$-path scans and (3) transferring the data defining each trajectory in real-time increases the burden on the I/O bus.
+% ----------------------------------------------------------------------------------------------
+\begin{table*}
+  % \begin{minipage}{1\textwidth}
+  \caption{The first two columns show the reference value and overal change in setpoint. The first four colored columns are the result of simulation and the last four colored columns the experimental settling times. The last (un-colored row) of each table is the sum off settling times together for the respective experiment. Refer to Table~\ref{tab:gmpms} for a summary of the abbreviations heading each column.}
+  \begin{subtable}{1\textwidth}
+    \caption{Settling times for the constant-$\sigma$ pole placement scheme. }
+  % \scriptsize
+    \begin{tabular}{ccccccc|cccc}
+      \scriptsize
+      &    &               &\multicolumn{4}{c|}{simulation}  &\multicolumn{4}{c}{experiment} \\ 
+      \input{manystepsdata.tex}
+      \label{tab:ts_CS}
+    \end{tabular}
+\end{subtable}
+\begin{subtable}{1\textwidth}
+  \caption{Settling times for the chose-$\zeta$ pole placement scheme. }
+  % \scriptsize
+  \begin{tabular}{ccccccc|cccc}
+    \scriptsize
+    &    &               &\multicolumn{4}{c|}{simulation}  &\multicolumn{4}{c}{experiment} \\ 
+    \input{manystepsdata_choosezeta.tex}
+  \end{tabular}
+  \label{tab:ts_CZ}
+\end{subtable}
+\begin{centering}
+  \includesvg[scale=1]{figures/ts_colorbar.svg}
+\end{centering}
+\end{table*}
 
 \section{Conclusions}
 
 
-As we noted in Section~\ref{sec:powcharct}, a slew rate constraint on the low-voltage input is conservative. An alternative would be to formulate the optimal control problem such the output of the power amplifier current model was constrained. Such an MPC problem could no longer be solved with the FGM, though with a larger FPGA the problem could be solved with Alternating Direction Method of Multipliers (ADMM) \cite{Jerez_Trans_2014}. Although, the ADMM represents a substantial increase in both hardware requirements and implementation complexity, it is possible that MPC would be beneficial in that case. 
+As we noted in Section~\ref{sec:powcharct}, a slew rate constraint on the low-voltage input is conservative. An alternative would be to formulate the optimal control problem such that the output of the power amplifier current model was constrained. Such an MPC problem could no longer be solved with the FGM, though with a larger FPGA the problem could be solved with Alternating Direction Method of Multipliers (ADMM) \cite{Jerez_Trans_2014}. Although the ADMM represents a substantial increase in both hardware requirements and code complexity, it is possible that MPC would be beneficial in that case. However, such an alternative formulation would only change the constraints, not the cost. Thus, the robustness properties explored in this paper would remain unchanged. 
 
-On the other hand, despite the impressive recent advances in FPGA-based QP solvers, computing a linear feedback law will always yield a significantly faster achievable sample rate. Moreover, it has been shown that continuous time robustness properties are recovered in the limit as the sampling frequency approaches 0. Thus, while in this paper we have compared MPC and linear feedback using the same sampling frequency, an interesting line for further investigation is how much does robustness increase when the sampling rate decreases?
+On the other hand, despite the impressive recent advances in FPGA-based QP solvers, computing a linear feedback law will always yield a significantly faster achievable sample rate. Moreover, it has been shown that continuous time robustness properties are recovered in the limit as the sampling frequency approaches 0. Thus, while in this paper we have compared MPC and linear feedback using the same sampling frequency, an interesting line for further investigation is: How much does robustness increase when the sampling frequency increases?
 
+% We will show that in simulation, this idea does indeed lead to a significantly decreased settling time. However, the desire to decrease $\gamma$ must be tempered by its affect on both robustness and disturbance rejection, because these things are a metric for how the control will perform in practice. Unfortunately, we will see that decreasing $\gamma$ tends to degrade both properties for the weighting matrices we consider. 
 
 
 \bibliographystyle{IEEEtran}
 \bibliography{/home/arnold/bib_pdf/main_bibliography.bib}
 
-\renewcommand{\theequation}{A-\arabic{equation}}
-% redefine the command that creates the equation no.
-\setcounter{equation}{0}  % reset counter 
-\setcounter{section}{0}
 
 \end{document}
