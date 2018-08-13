@@ -44,6 +44,8 @@ classdef SimAFM
       self.Nx = Nx;
       if isnumeric(controller)
         self.Nbar = controller*Nx;
+      else
+        self.Nbar = 0;
       end
       self.sys_obs = sys_obs;
       self.L = L;
@@ -240,7 +242,7 @@ classdef SimAFM
       umax = 0;
       
       fid = fopen(data_path, 'w+');
-      fprintf(fid, '%d, %.5f, 0, %f, %.12f\n', Ns, ref_f_1, umax, self.du_max);
+      fprintf(fid, '%d, %.5f, 0, %f, %.12f,  %.12f\n', Ns, ref_f_1, umax, self.du_max, self.Nbar);
       
       
       if isnumeric(self.controller)

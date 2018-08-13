@@ -19,7 +19,7 @@ classdef StepRef
       % n_space is an integer, number of samples for each ref. Should be
       % scalar. 
       p = inputParser;
-      p.addparameter('yscaling', 1);
+      p.addParameter('yscaling', 1);
       p.parse(varargin{:});
       
       self.yscaling = p.Results.yscaling;
