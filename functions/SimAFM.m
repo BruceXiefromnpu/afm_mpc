@@ -5,6 +5,7 @@ classdef SimAFM
     controller;
     Nx;
     Nbar;
+    useNbar;
     sys_obs;
     L;
     du_max;
@@ -38,24 +39,10 @@ classdef SimAFM
     % varargin is name-value pairs of 
     % 'thenoise', 'step_amp', 'r', 'w', 'rp', 'wp', 'gdrift',
     % 'gdrift_inv', 'nw', 'nf'.
-      
-      self.PLANT = PLANT;
-      self.controller = controller;
-      self.Nx = Nx;
-      if isnumeric(controller)
-        self.Nbar = controller*Nx;
-      else
-        self.Nbar = 0;
-      end
-      self.sys_obs = sys_obs;
-      self.L = L;
-      self.du_max = du_max;
-      self.isfxp = isfxp;
-      self.x0_obs = sys_obs.b*0;
-      self.x0 = PLANT.b*0;
+    
+      fi_zero = fi(0, 1, 16, 11);
       kd_sys =  tf(1,1, PLANT.Ts);
       
-      fi_zero = fi(0, 1, 16, 11);
       p = inputParser();
       p.addParameter('thenoise', []);
       p.addParameter('step_amp', 0);
@@ -71,6 +58,7 @@ classdef SimAFM
       p.addParameter('gdrift_inv', kd_sys);
       p.addParameter('nw', 0);
       p.addParameter('nf', 0);
+      p.addParameter('useNbar', false)
       p.parse(varargin{:});
       
       self.thenoise = p.Results.thenoise;
@@ -83,6 +71,26 @@ classdef SimAFM
       self.ws = p.Results.ws;
       self.dp = p.Results.dp;
       self.wsp = p.Results.wsp;
+      self.useNbar = p.Results.useNbar;
+      
+      
+      self.PLANT = PLANT;
+      self.controller = controller;
+      self.Nx = Nx;
+      if self.useNbar
+        if ~isnumeric(controller)
+          error('useNbar only makes sense if controller is feedback gain, K')
+        end
+        self.Nbar = controller*Nx;
+      else
+        self.Nbar = [];
+      end
+      self.sys_obs = sys_obs;
+      self.L = L;
+      self.du_max = du_max;
+      self.isfxp = isfxp;
+      self.x0_obs = sys_obs.b*0;
+      self.x0 = PLANT.b*0;
       
       
       self.gdrift = p.Results.gdrift;
@@ -266,28 +274,30 @@ classdef SimAFM
                'sys_obs_fp'])
       end
       
-      AllMatrix = packMatrixDistEst(self.sys_obs_fp,...
-                                    double(self.L), double(K), double(self.Nx));
-      % keyboard
+      if self.useNbar
+        AllMatrix = packMatrixDistEst(self.sys_obs_fp,...
+          double(self.L), double(K), []);
+      else
+        AllMatrix = packMatrixDistEst(self.sys_obs_fp,...
+          double(self.L), double(K), double(self.Nx));
+      end
+
       % These get written all as one column
-      for k=1:size(AllMatrix,1)
+      for k=1:size(AllMatrix,1)-1
         fprintf(fid, '%.12f, ', AllMatrix(k,:));
       end
-      fprintf('\n');
-      for k=1:size(MPC_mat, 1)
+      fprintf(fid, '%.12f\n', AllMatrix(end,:));
+      %fprintf('\n');
+      
+      for k=1:size(MPC_mat, 1)-1
         fprintf(fid, '%.12f, ', MPC_mat(k,:));  
       end
-      fprintf(fid, '\n');
+      fprintf(fid, '%.12f\n', MPC_mat(end,:));
       fclose(fid);
-      
-      
-      
       
     end % write control data
   
    end %methods
-  
-  
 end
 
 % allmatrix = packMatrix(sys_obs, L, K, Nx)
