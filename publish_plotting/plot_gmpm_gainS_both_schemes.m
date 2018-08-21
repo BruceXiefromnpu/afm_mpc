@@ -156,12 +156,12 @@ figure(f5);
 ax2 = axes('Position', [0.1100 0.1300 0.7750 0.8150], 'YAxisLocation', 'left');
 [h_sens1, h_ts1] = plot_sens_ts(gams, Sens_gain1, TS_s1, ax2, f5,...
   'Ts_color', PM_colr, 'Ts_LS', PM_ls1, 'Sens_color', GM_colr, 'Sens_LS', GM_ls1);
-h_sens1.DisplayName = 'Gain of S (constant-$\sigma$)';
+h_sens1.DisplayName = 'Gain of $\mathcal{S}$ (constant-$\sigma$)';
 h_ts1.DisplayName = 'Nominal settle-time (constant-$\sigma$)';
 
 [h_sens2, h_ts2] = plot_sens_ts(gams, Sens_gain2, TS_s2, gca(), f5,...
   'Ts_color', PM_colr, 'Ts_LS', PM_ls2, 'Sens_color', GM_colr, 'Sens_LS', GM_ls2);
-h_sens2.DisplayName = 'Gain of S (choose-$\zeta$)';
+h_sens2.DisplayName = 'Gain of $\mathcal{S}$ (choose-$\zeta$)';
 h_ts2.DisplayName = 'Nominal settle-time (choose-$\zeta$)';
 
 leg2 = legend([h_sens1, h_sens2, h_ts1, h_ts2]);
@@ -250,7 +250,7 @@ function [h_sens, h_ts] = plot_sens_ts(gams, Sens_gain_s, TS_s, ax, Fig, varargi
   hold on
   grid on
   xlabel('$\gamma$')
-  ylabel('Gain of $S(z)$ [dB]')
+  ylabel('Gain of $\mathcal{S}(z)$ [dB]')
   
   yyaxis right
   h_ts = semilogx(gams, TS_s*1000, Ts_opts{:});

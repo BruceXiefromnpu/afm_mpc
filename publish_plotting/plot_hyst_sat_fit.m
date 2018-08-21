@@ -42,7 +42,7 @@ ht = 3;
 
 ax1 = axes('Units', 'inches', 'Position', [0.4550 0.35 3 2.58]);
 h1 = plot(tvec, ux*dcgain(Gvib*gdrift), ':k');
-h1.DisplayName = '$u_k G_d(0) G_{vib}(0)$';
+h1.DisplayName = '$u_k G_d(0) G_{\textrm{vib}}(0)$';
 hold on
 h2 = plot(tvec, yx, 'k');
 h2.DisplayName = 'Stage Response';

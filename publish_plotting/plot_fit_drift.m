@@ -48,10 +48,10 @@ h1 = plot(t_exp, y_exp, '-b');
 h1.DisplayName = 'Exp. Step Response';
 
 h2 = plot(t_exp, ydrift_est0, '--r');
-h2.DisplayName = '$G_{vib}G_d$';
+h2.DisplayName = '$G_{\textrm{vib}}G_d$';
 
 h3 = plot(t_exp, y_vib, ':k');
-h3.DisplayName = '$G_{vib}$';
+h3.DisplayName = '$G_{\textrm{vib}}$';
 leg1 = legend([h0, h1, h2, h3]);
 xlim([0, 0.28])
 ylim([-0.005, 0.17])
