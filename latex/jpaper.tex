@@ -212,19 +212,24 @@ Due to the logarithms in \eqref{eqn:logfit} and the multiplicative structure \eq
 The model structure \eqref{eqn:mode_struc} includes a fractional delay $z^{-p}$. This allows us to include the delay as a term in the decision variable and obviates the need to optimize over integers. This is further beneficial because we are not guaranteed that the latency from input to output is an exact integer multiple of the sample period and allowing a fractional delay helps the optimization to more accurately match the phase. In the final model, we round $p$ to the nearest integer. In this work, we do not model the modes above 1100~Hz. Thus, the optimization \eqref{eqn:logfit} is only done over frequency up to 1100~Hz. The final pole and zero locations for $\hGv$ are listed in Table \ref{tab:pzgvib}.
 
 \begin{table}
-  \centering
-  \caption{Zero and pole locations of $\Gv$. }
-  \label{tab:pzgvib}
+  % \centering
+  \begin{minipage}[T]{.6\linewidth}
+    \small
+    \label{tab:pzgvib}
+  % \caption{Zero and pole locations of $\Gv$. }
   \input{Gvib_data.tex}
+\end{minipage}% !important
+% \hfill
+\begin{minipage}[T]{.3\linewidth}
+  \includesvg[scale=.8]{figures/pzplot.svg}
+\end{minipage}
+\caption{Pole and zero locations of $G_{\textrm{vib}}$.}
 \end{table}
 
 
 \subsection{Drift Modeling}\label{sec:drift_model}
-
 % It is very common in the literature to fit a drift model to a single step input \cite{liu_creep_2013, croft_creep_1999}. This does not seem to be sufficient.
-
 % It has been noted before in the literature that the rate of the creep affect itself is hysteretic \cite{Jung_open_loop_2000}, which I think in this context would imply that the real pole-zero pairs of $G_{drift}$ shift depending on the control history.
-
 We model drift as the transfer function
 \begin{equation}
 \hat{G}_d(z|\theta) = \theta_5\frac{(z-\theta_1)(z-\theta_2)}{(z-\theta_3)(z-\theta_4)}.\nonumber
@@ -246,7 +251,6 @@ Let $\mathcal{Y}_{\text{exp}}$ represent the step response data collected from t
 \end{equation}
 where $\hat{g}_d(k|\theta)$ is the impulse response corresponding to $\hat{G}_d(z|\theta)$, `$*$' represents the convolution operator, and  ${\theta=[\theta_1\dots\theta_5]}$ is the vector of parameters. To the extent that $\Gv$ accurately models the vibrational dynamics, the inclusion of $\mathcal{Y}_{\text{vib}}$ in \eqref{eqn:fit_drift_cost} effectively nullifies the vibrational aspects in the optimization. This is possible because, since we have a SISO system, $\Gv$ and $G_d$ commute. 
 The non-linear optimization problem \eqref{eqn:fit_drift_cost} is solved with MATLAB's \texttt{lsqnonlin} and results in the red curve in Fig.~\ref{fig:drift_fit}, which shows the simulated step response of $\hat{G}_d\hGv$. 
-
 
 \subsection{Hysteresis Modeling}\label{sec:hyst_model}
 In typical raster scanning applications, hysteresis manifests as a bowing of the trajectory as the stage tries to track the linear ramps in a triangle wave (see, e.g., Fig. 3 of \cite{Leang_IEEECS_2009}). To motivate the need for hysteresis compensation in a step tracking application, consider Fig. \ref{fig:hyst_resp_dem}, which shows an input signal of various filtered steps applied open-loop to the stage. The solid black curve is the stage response, while the dotted-black curve is the input (scaled by the nominal DC-gain of $G_d\Gv$), which shows good agreement for the first step, but much worse agreement with the later steps, particularly those with large amplitudes. Effectively, the gain of the system depends on the control history, since for the same steady-state value of control, the steady-state value of the stage changes.
@@ -290,7 +294,6 @@ If the thresholds $d_H^i$ and $d_S^i$ are pre-defined, \cite{kuhnen_modeling_200
 \caption{ The solid curve is the transfer function, $G_{I_X, u_X}$, from low voltage control to power amplifier output current, which is upper-bounded by the dotted and dashed curves, which represent a pure discrete derivative multiplied by the bounds \eqref{eqn:h1bound} and \eqref{eqn:duHinf}, respectively.}
 \label{fig:powTF}
 \end{figure}
-
 The high voltage output of the C300 is current limited to 100 mA. The solid black curve in Figure~\ref{fig:powTF} shows the transfer function from the low voltage input of the C300 to current flowing through the stage, $G_{I_X,u_X}$, which is measured via the sensing resistor and op-amp shown in Fig~\ref{fig:c300_meas}. Because the piezo actuators are highly capacitive, at frequencies below about 600~Hz, $G_{I_X,u_x}$ looks like a pure derivative.
 Thus, we can factor $G_{I_X,u_X}$ as
 \begin{align}
