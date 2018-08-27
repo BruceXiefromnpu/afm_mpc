@@ -283,7 +283,7 @@ modelFit.models.G_deluz2powI = G_deluz2Ipow;
 modelFit.models.g_deluz2pow_1norm = nm1;
 modelFit.models.du_max_nm1 = delumax;
 modelFit.models.Gvib = Gvib;
-modelFit.models.gdrift_1p0 = gdrift;
+modelFit.models.gdrift = gdrift;
 modelFit.models.hyst = hyst;
 modelFit.models.hyst_sat = hyst_sat;
 if saveon

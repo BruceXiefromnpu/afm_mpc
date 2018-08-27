@@ -22,10 +22,10 @@ Z_real = count_mults(z_real);
 
 for k = 1:length(P_imag)
   if k <=size(Z_imag,1)
-    str = sprintf('%s%g$\\pm$%f & %f $\\pm$ %f\\\\ \n', str,...
+    str = sprintf('%s%.4g$\\pm$%.4f & %.4f $\\pm$ %.4f\\\\ \n', str,...
       real(P_imag(k,1)), imag(P_imag(k,1)), real(Z_imag(k,1)), imag(Z_imag(k,1)));
   else
-    str = sprintf('%s%g$\\pm$%f & --\\\\ \n', str,real(P_imag(k,1)), imag(P_imag(k,1)));
+    str = sprintf('%s%.4g$\\pm$%.4f & --\\\\ \n', str,real(P_imag(k,1)), imag(P_imag(k,1)));
   end
   
 end
@@ -50,9 +50,9 @@ function str = real_mult_str(PZ_real, row_idx)
 % PZ_real should be a matrix containing the pole OR zero locations in the first
 % column, and their multiplicities in the second column.
   if PZ_real(row_idx,2) == 1
-    str = sprintf('%g', PZ_real(row_idx, 1));
+    str = sprintf('%.4g', PZ_real(row_idx, 1));
   elseif PZ_real(row_idx,2) > 1
-    str = sprintf('(%d) %g', PZ_real(row_idx, 2), PZ_real(row_idx, 1));
+    str = sprintf('(%d) %.4g', PZ_real(row_idx, 2), PZ_real(row_idx, 1));
   else
     str = ''
   end

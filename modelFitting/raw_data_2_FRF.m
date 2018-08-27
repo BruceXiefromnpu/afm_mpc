@@ -112,6 +112,11 @@ if save_fig
   saveas(F5, '../figures/pow-amp/G_uz2Current.svg');
 end
 
+model_path = strrep(FC_path, '.csv', '.mat');
+
+try 
+  load(model_path)
+end
 
 modelFit.frf.G_uz2powV = G_uz2powV;
 modelFit.frf.G_uz2stage = G_uz2stage;
@@ -125,7 +130,7 @@ modelFit.frf.freq_s    = freqs;
 
 
 if save_data
-        save(strrep(FC_path, '.csv', '.mat'), 'modelFit');
+        save(model_path, 'modelFit');
 end
 
 

@@ -12,6 +12,8 @@ saveon = true; % set this to 0 to avoid saving the computed FRFs.
 % addpath('functions')
 
 addpath('/home/arnold/gradschool/sysID/matlab/functions')
+addpath('/home/arnold/matlab/afm_mpc_journal/functions/canon')
+addpath('/home/arnold/matlab/afm_mpc_journal/functions')
 
 
 [plants, frf_data] = CanonPlants.plants_ns14();
@@ -50,20 +52,20 @@ ax2 = axes('Position', [0.1300 0.1100 0.85 0.3643]);
 
 h1 = frfBode(frf_data.G_uz2stage, frf_data.freqs_Hz, [ax1, ax2],  'Hz',...
   '-r', 'LineWidth', 1);
-h1.DisplayName = '$G_{vib}$ (FRF)';
+h1.DisplayName = '$G_{\textrm{vib}}$ (FRF)';
 
 F2.CurrentAxes = ax1;
 ylim([-100, 15])
 title('Control signal to stage output')
 
 h2 = frfBode(G, frf_data.freqs_Hz, [ax1, ax2], 'Hz', '--k', 'LineWidth', 1);
-h2.DisplayName = '$G_{vib}$ (model)';
+h2.DisplayName = '$G_{\textrm{vib}}$ (model)';
 
 xlim([frf_data.freqs_Hz(1), frf_data.freqs_Hz(end)])
 ylim([-2500, 15])
 leg1 = legend([h1, h2]);
 set(leg1, 'Position', [0.1897 0.5967 0.3396 0.1147], 'Box', 'off',...
-  'FontSize', 8);
+  'FontSize', 8, 'Interpreter', 'latex');
 set(ax1, 'XTickLabel', [], 'YLim', [-80, 20])
 if saveon
   saveas(F2, fullfile(PATHS.jfig, 'G_uz2stage_Eres.svg'))

@@ -101,7 +101,6 @@ classdef ManyStepExps < handle
       p.addParameter('do_color', true);
       p.addParameter('ts_vec', []);
       p.addParameter('colormap', []);
-      
       p.parse(varargin{:});
       do_color = p.Results.do_color;
       ts_vec   = p.Results.ts_vec;
@@ -162,8 +161,13 @@ classdef ManyStepExps < handle
           % Indexes from slowest to fastest.
           if do_color
             idx = find(ts_vec == ts_kj);
-            str_dat_cols = sprintf('%s &\\cellcolor[rgb]{%.4f, %.4f, %.4f} %.2f', str_dat_cols, ...
-              mp_fine(idx, 1), mp_fine(idx,2), mp_fine(idx, 3), 1000*ts_kj);
+            if idx <40
+              textcolor_iter = 'white';
+            else
+              textcolor_iter = 'black';
+            end
+            str_dat_cols = sprintf('%s &\\cellcolor[rgb]{%.4f, %.4f, %.4f} \\textcolor{%s}{%.2f}',...
+              str_dat_cols, mp_fine(idx, 1), mp_fine(idx,2), mp_fine(idx, 3), textcolor_iter, 1000*ts_kj);
           else
             str_dat_cols = sprintf('%s & %.2f', str_dat_cols,  1000*ts_kj);
           end
