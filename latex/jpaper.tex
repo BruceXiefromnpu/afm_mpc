@@ -186,7 +186,7 @@ To obtain an experimental frequency response of $\Gv$, we use a stepped-sines me
 \begin{figure}
   \centering
   \includesvg[width=01\linewidth]{figures/G_uz2stage_Eres.svg}
-  \caption{The solid red curve is the frequency response from control input to stage position output in the $X$ direction. The dashed-black curve is the vibrational model, $\Gv$.}
+  \caption{The solid red curve is the frequency response from control input to stage position output in the $X$ direction. The dashed-black curve is the vibrational model, $\hat{G}_{\textrm{vib}}$.}
   \label{fig:Guz2stage_frf}
 \end{figure}
 
@@ -212,18 +212,18 @@ Due to the logarithms in \eqref{eqn:logfit} and the multiplicative structure \eq
 The model structure \eqref{eqn:mode_struc} includes a fractional delay $z^{-p}$. This allows us to include the delay as a term in the decision variable and obviates the need to optimize over integers. This is further beneficial because we are not guaranteed that the latency from input to output is an exact integer multiple of the sample period and allowing a fractional delay helps the optimization to more accurately match the phase. In the final model, we round $p$ to the nearest integer. In this work, we do not model the modes above 1100~Hz. Thus, the optimization \eqref{eqn:logfit} is only done over frequency up to 1100~Hz. The final pole and zero locations for $\hGv$ are listed in Table \ref{tab:pzgvib}.
 
 \begin{table}
+  \caption{Pole and zero locations of $G_{\textrm{vib}}$.}
+  \label{tab:pzgvib}
   % \centering
   \begin{minipage}[T]{.6\linewidth}
     \small
-    \label{tab:pzgvib}
   % \caption{Zero and pole locations of $\Gv$. }
-  \input{Gvib_data.tex}
+    \input{Gvib_data.tex}
 \end{minipage}% !important
 % \hfill
 \begin{minipage}[T]{.3\linewidth}
   \includesvg[scale=.8]{figures/pzplot.svg}
 \end{minipage}
-\caption{Pole and zero locations of $G_{\textrm{vib}}$.}
 \end{table}
 
 
@@ -586,11 +586,16 @@ For both cases, we place the 9 delay poles at the roots of unity with a radius c
   \caption{Robustness and performance metrics for the constant-$\sigma$ and choose-$\zeta$ state weighting schemes. (left) Phase and Gain Margins as $\gamma$ is increased. (right) Low-frequency gain of $\mathcal{S}(z)$ and (unconstrained) settling times as $\gamma$ is increased. The markers indicate different choices of $\gamma$. The `$\times$' corresponds to the minimum of the sensitivity function gain; the circle corresponds to the minimum $\gamma$ choice for SLF; the square is the minimum $\gamma$ choice for MPC.}
   \label{fig:robmetrics}
 \end{figure*}
+\begin{figure}
+  \includesvg[scale=1]{figures/sens_bode.svg}
+  \caption{Sensitivity function $\mathcal{S}$ magnitude the CS (black) and CZ (red) two control design schemes. For each scheme, the different selections of $\gamma$ are shown as indicated in the legend. }
+  \label{fig:sens_bode}
+\end{figure}
 In principle, one would like to select the smallest control weight $\gamma$ that stabilizes all possible setpoints for either SLF or MPC with a certain control horizon. We call this the \emph{minimum-$\gamma$} (MG) scheme. The motivation for MPC here is that, by directly accounting for the constraint, we can use a smaller $\gamma$ than we can for SLF. To consider this approach, we need to determine the smallest $\gamma$ that will still yield a stable trajectory (for the nominal plant) subject to our slew rate constraint. To determine this, we run a series of simulations across a grid of $\gamma$'s. For each $\gamma$ in the grid, simulations are run for a reference of $r=2.5~\mu$m up to $r=75~\mu$m in increments of $2.5~\mu$m. If instability occurs, we move up to the next $\gamma$ in the grid. The smallest $\gamma$ which is stable for all setpoints in the range $2.5, 75$ is what we consider to be the minimum $\gamma$. This set of simulations is run for both the SLF case as well as the MPC case for $N=12$, for both the constant-$\sigma$ and choose-$\zeta$ pole placement schemes.
 
 For both the constant-$\sigma$ and choose-$\zeta$ scenarios, Fig.~\ref{fig:gmpm} shows the gain margin (GM) and phase margin (PM) plotted as $\gamma$ increases and Fig.~\ref{fig:GainS} plots the low-frequency gain of $\mathcal{S}$ as $\gamma$ increases. The minimum acceptable values of $\gamma$ found in the parameter sweep are marked with circles for SLF and squares for MPC. It is clear that these small values of $\gamma$ will yield poor stability margins for either MPC or SLF, but are worse for MPC.
 
-Certainly, both MPC and SLF are, in general, non-linear making these classical metrics insufficient to describe their global behavior. However, for any setpoint, both SLF and MPC behave linearly in a neighborhood around that setpoint. In other words, while the beginning of a setpoint tracking maneuver may saturate the SLF controller or put the MPC on its constraint boundary, the latter part of that same maneuver will be governed by linear dynamics. In that sense, the metrics GM and PM still give good insight.\footnote{In discussing robustness, recall that, in contrast to the continuous-time case, the full-state feedback discrete-time LQR controller does not have a guaranteed infinite gain margin nor a guaranteed phase margin greater than $60^{\circ}$ \cite{andersson_moore}. For both continuous-time and discrete-time, the robustness properties can be arbitrarily bad when an observer is used in lieu of full-state feedback~\cite{doyle_guaranteed_1978}. In the continuous-time case, the full-state feedback robustness may be recovered asymptotically using, e.g., the loop transfer recovery (LTR) method of \cite{doyle_robustness_1979}. In general, this result does not translate to discrete-time. Most efforts at obtaining LTR-like results for discrete-time assume that (1) a current estimator is used and (2) $CB\neq 0$. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. For our system model, $CB=0$, because the relative degree is 12. These two factors preclude discrete-time LTR.} % INTO WHAT???
+Certainly, both MPC and SLF are, in general, non-linear making these classical metrics insufficient to describe their global behavior. However, for any setpoint, both SLF and MPC behave linearly in a neighborhood around that setpoint. In other words, while the beginning of a setpoint tracking maneuver may saturate the SLF controller or put the MPC on its constraint boundary, the latter part of that same maneuver will be governed by linear dynamics. In that sense, the metrics GM and PM still give good insight.\footnote{In discussing robustness, recall that, in contrast to the continuous-time case, the full-state feedback discrete-time LQR controller does not have a guaranteed infinite gain margin nor a guaranteed phase margin greater than $60^{\circ}$ \cite{andersson_moore}. For both continuous-time and discrete-time, the robustness properties can be arbitrarily bad when an observer is used in lieu of full-state feedback~\cite{doyle_guaranteed_1978}. In the continuous-time case, the full-state feedback robustness may be recovered asymptotically using, e.g., the loop transfer recovery (LTR) method of \cite{doyle_robustness_1979}. In general, this result does not translate to discrete-time. Most efforts at obtaining LTR-like results for discrete-time assume that (1) a current estimator is used and (2) $CB\neq 0$ \cite{Maciejowski_asymptotic_1985,guaracy_discrete_2015}. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. For our system model, $CB=0$, because the relative degree is 12. These two factors preclude discrete-time LTR.} % INTO WHAT???
 
 % We will see in Section~\ref{sec:results} that this choice yields a compelling reduction in settle-time for the MPC control \emph{in simulation}, but very poor performance in experiment.
 Thus, as an alternative to the minimum-$\gamma$ approach, we consider selecting the $\gamma$ which minimizes the low-frequency gain of $\mathcal{S}$. This $\gamma$ is marked by an $\times$ in Fig.~\ref{fig:GainS}. The corresponding points on the GM and PM curves in Fig.~\ref{fig:gmpm} are similarly marked by an $\times$. We call this the ``robust-$\gamma$'' choice.  For the constant-$\sigma$ and choose-$\zeta$ pole placement scenarios, the low-frequency gain of $\mathcal{S}(z)$ achieves a minimum at ${\gamma=129}$ and $\gamma=62$, respectively. Both of these control weights are large enough that there will be no stability problems due to saturation, i.e., we can track any setpoint across the stage. 
@@ -634,13 +639,13 @@ Finally, the bottom row of Fig.~\ref{fig:const_sig_y} and \ref{fig:choose_zet_y}
 \begin{figure*}
   \begin{minipage}{1\columnwidth}
     \includesvg[width=1\columnwidth]{figures/step_exps_const_sig_y.svg}
-  \caption{Experimental trajectories for the constant-$\sigma$ pole placement scheme. The top panel shows all 23 step responses. The two columns zoom in on the two responses indicated by the red ellipses. (second row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current. The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.}
+  \caption{Experimental trajectories for the constant-$\sigma$ pole placement scheme. The top panel shows all 24 step responses. The two columns zoom in on the two responses indicated by the red ellipses. (second row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current. The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.}
   \label{fig:const_sig_y}
 \end{minipage}
 \hfill
 \begin{minipage}{1\columnwidth}
   \includesvg[width=1\columnwidth]{figures/step_exps_choose_zet_y.svg}
-  \caption{Experimental trajectories for the choose-$\zeta$ pole placement scheme. The top panel shows all 23 step responses. The two columns zoom in on the two responses indicated by the red ellipses. (second row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current. The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.}
+  \caption{Experimental trajectories for the choose-$\zeta$ pole placement scheme. The top panel shows all 24 step responses. The two columns zoom in on the two responses indicated by the red ellipses. (second row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current. The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.}
   \label{fig:choose_zet_y}
 \end{minipage}
 \end{figure*}

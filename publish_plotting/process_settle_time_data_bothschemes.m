@@ -341,9 +341,9 @@ a1 = annotation('arrow');
 set(a1, 'Units', 'inches', 'X', [0.6792 0.6792], 'Y', [2.75, 2.1]+2.5); 
 % "worst"
 el2 = annotation('ellipse');
-set(el2, 'Units', 'inches', 'Position', [2.45 2.9750+2.6 0.1358 0.1750], 'Color', 'r');
+set(el2, 'Units', 'inches', 'Position', [2.68 2.9750+2.5 0.13 0.160], 'Color', 'r');
 a2 = annotation('arrow');
-set(a2, 'Units', 'inches', 'X', [2.5129 2.3825], 'Y', [3.01, 2.2]+2.6);
+set(a2, 'Units', 'inches', 'X', [2.75 2.6], 'Y', [2.9, 2.2]+2.6);
 
 % Even though we want to zoom in, its maybe easiest to stick with our framework
 % and plot the whole thing, then adjust xlim and ylim.
@@ -364,7 +364,7 @@ set(ax3, 'XLim', [1.9998, 2.0438]);
 set(ax3, 'YLim', [-.05, .1]*5);
 
 leg = legend(hands);
-set(leg, 'FontSize', 8, 'Box', 'off',...
+set(leg, 'FontSize', 7, 'Box', 'off',...
   'Position', [0.6239 0.6766 0.3634 0.1307])
 
 
