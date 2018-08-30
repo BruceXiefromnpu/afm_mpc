@@ -5,9 +5,9 @@ saveon = false;
 
 Ts = 40e-6;
 if 1
-  u_max = 3;
-  n_space = 5000;
-  n_up = 6;
+  u_max = 8.8;
+  n_space = 8000;
+  n_up = 5;
   step_sz = u_max/n_up;
   
   imps = [0;step_sz*ones(n_up, 1); -step_sz*ones(2*n_up-1,1)];
@@ -41,7 +41,7 @@ if 1
   eta = randn(length(t_vec), 1)*0.01;
   u_vec = u_vec + eta;
   % lpf
-  w1 = 400*2*pi;
+  w1 = 100*2*pi;
   F = tf(w1, [1, w1])
   F = c2d(F*F, Ts);
   u_vec = lsim(F, u_vec, t_vec);
@@ -93,7 +93,10 @@ if ~dry_run
     hystData.umax = umax;
     hystData.impulse_idx = impulse_idx;
     % hystData.u_reset = u_reset;
-    save(fullfile(PATHS.sysid, 'hysteresis/hystID_data_6-15-2018_01.mat'), 'hystData')
+    data_path = fullfile(PATHS.sysid, ['hysteresis/hystID_data_', date(), '_01.mat']);
+    fprintf('\n\n--------------------------\n');
+    fprintf('data path: %s\n', data_path);
+    save(data_path, 'hystData')
   end
 end
 
