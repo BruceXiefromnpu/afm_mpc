@@ -5,7 +5,9 @@ saveon = true;
 % load('hystID_data_4-30-2018_01.mat')
 addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
 addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
-hyst_file = 'hystID_data_5-4-2018_01.mat';
+% hyst_file = 'hystID_data_5-4-2018_01.mat';
+hyst_file = 'hystID_data_27-Aug-2018_01.mat';
+
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
 load(hyst_path)
 

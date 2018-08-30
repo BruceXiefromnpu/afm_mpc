@@ -221,20 +221,20 @@ figure(f5);
 ax2 = axes('Position', [0.1100 0.1300 0.7750 0.8150], 'YAxisLocation', 'left');
 [h_sens1, h_ts1] = plot_sens_ts(gams, Sens_gain1, TS_s1, ax2, f5,...
   'Ts_color', PM_colr, 'Ts_LS', PM_ls1, 'Sens_color', GM_colr, 'Sens_LS', GM_ls1);
-h_sens1.DisplayName = 'Gain of $\mathcal{S}$ (constant-$\sigma$)';
+h_sens1.DisplayName = 'Gain of $\mathcal{S}(z)/(z-1)|_{z=1}$ (constant-$\sigma$)';
 h_ts1.DisplayName = 'Nominal settle-time (constant-$\sigma$)';
 
 [h_sens2, h_ts2] = plot_sens_ts(gams, Sens_gain2, TS_s2, gca(), f5,...
   'Ts_color', PM_colr, 'Ts_LS', PM_ls2, 'Sens_color', GM_colr, 'Sens_LS', GM_ls2);
-h_sens2.DisplayName = 'Gain of $\mathcal{S}$ (choose-$\zeta$)';
+h_sens2.DisplayName = 'Gain of $\mathcal{S}(z)/(z-1)|_{z=1}$ (choose-$\zeta$)';
 h_ts2.DisplayName = 'Nominal settle-time (choose-$\zeta$)';
 
 leg2 = legend([h_sens1, h_sens2, h_ts1, h_ts2]);
-set(leg2, 'Position', [0.1100 0.4663 0.6503 0.2091], 'Box', 'off')
+set(leg2, 'Position', [0.1152 0.4316 0.7184 0.2091], 'Box', 'off')
 set(ax2, 'XTick', [0.01, 0.1, 1, 10, 100])
 yyaxis(ax2, 'left')
 ylim([32, 52])
-%%
+%
 figure(f5)
 % idx_csro, idx_czro, idx_csmg_lin, idx_csmg_mpc, idx_czmg_lin, idx_czmg_mpc
 plot(gams(idx_csro), Sens_gain1(idx_csro), 'xk')
@@ -282,14 +282,8 @@ yyaxis(ax1, 'right')
 plot(gams(idx_czmg_mpc), PM_s2(idx_czmg_mpc), 'sk')
 
 leg1 = legend([hgm1, hgm2, hpm1, hpm2]);
-%%
-
-f6 = figure(6);
-
-[Sens_CS_MG, ~, Hyr, ~, Loop] = ss_loops_delta_dist(G, G_recyc, G_obsDist, K_lqr, LxLd);
 
 
-%%
 if saveon
    saveas(f4, fullfile(PATHS.jfig, pmgm_figfile))
    saveas(f5, fullfile(PATHS.jfig, sens_ts_figfile))
@@ -321,7 +315,7 @@ function [h_sens, h_ts] = plot_sens_ts(gams, Sens_gain_s, TS_s, ax, Fig, varargi
   hold on
   grid on
   xlabel('$\gamma$')
-  ylabel('Gain of $\mathcal{S}(z)$ [dB]')
+  ylabel('Gain of $\mathcal{S}(z)/(z-1)|_{z=1}$ [dB]')
   
   yyaxis right
   h_ts = semilogx(gams, TS_s*1000, Ts_opts{:});
