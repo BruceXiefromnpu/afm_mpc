@@ -228,6 +228,9 @@ classdef SimAFM
       end
       % provides Y, U, dU, Xhat, U_nominal      
       
+      % hyst_sat_data = struct('u_gdinv', u_gdinv, 'u_sinv', u_sinv,...
+      %   'u_hinv', u_hinv, 'dp', dp, 'wsp', wsp, 'rp', rp, 'wp', wp)
+
       % provides Y, U, dU
     end
    
@@ -289,12 +292,13 @@ classdef SimAFM
       fprintf(fid, '%.12f\n', AllMatrix(end,:));
       %fprintf('\n');
       
-      for k=1:size(MPC_mat, 1)-1
-        fprintf(fid, '%.12f, ', MPC_mat(k,:));  
+      if ~isempty(MPC_mat)
+        for k=1:size(MPC_mat, 1)-1
+          fprintf(fid, '%.12f, ', MPC_mat(k,:));
+        end
+        fprintf(fid, '%.12f\n', MPC_mat(end,:));
+        fclose(fid);
       end
-      fprintf(fid, '%.12f\n', MPC_mat(end,:));
-      fclose(fid);
-      
     end % write control data
   
    end %methods

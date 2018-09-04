@@ -152,12 +152,12 @@ fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_
 fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 
 
-%%
+%
 % ----------------------------------------------------------------
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
-% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-30-2018_01_amp_1p4.mat'))
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
+% % % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
 
 
 Ts = modelFit.frf.Ts;
@@ -218,8 +218,9 @@ ax = gca;
 % ------------------- Fit Hysteresis + Sat -------------------------------------
 
 fprintf('============================================\n')
-hyst_file = 'hystID_data_5-4-2018_01.mat';
-% hyst_file = 'hystID_data_6-1-2018_01.mat';
+% hyst_file = 'hystID_data_5-4-2018_01.mat';
+
+hyst_file = 'hystID_data_27-Aug-2018_01.mat';
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
 load(hyst_path)
 
@@ -243,7 +244,8 @@ yprime = lsim(1/(gdrift*dcgain(Gvib)), yx, tvec);
 hyst_sat = struct('r', r, 'w', w, 'rp', rp, 'wp', wp,...
                   'd', d, 'ws', ws, 'dp', dp, 'wsp', wsp);
 
-
+fprintf('r w d ws\n')                
+[r, w, d, ws]
 
 clear PIHyst
 [r2, w2] = PIHyst.fit_hyst_weights(downsample(ux, 100), downsample(yprime, 100), Nhyst);
@@ -251,7 +253,7 @@ clear PIHyst
 u_pisat = PIHyst.hyst_play_sat_op(ux, r, w, d, ws, w*0);
 u_pi  = PIHyst.hyst_play_op(ux, r2, w2, w*0);
 
-figure(1000); clf
+figure(1002); clf
 plot(tvec, yprime)
 hold on
 plot(tvec, u_pisat)
@@ -260,7 +262,7 @@ grid on
 y_hyst_sat = lsim(Gvib*gdrift, u_pisat, tvec);
 y_hyst = lsim(Gvib*gdrift, u_pi, tvec);
 
-figure(2000); clf
+figure(2002); clf
 plot(tvec, yx)
 hold on
 plot(tvec, y_hyst_sat)
@@ -272,7 +274,7 @@ grid on
 
 hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2);
 
-
+%%
 % modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
 % modelFit.models.G_deluz2powI = G_deluz2Ipow;
 % modelFit.models.g_deluz2pow_1norm = nm1;
@@ -285,7 +287,7 @@ modelFit.models.du_max_nm1 = delumax;
 modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift = gdrift;
 modelFit.models.hyst = hyst;
-modelFit.models.hyst_sat = hyst_sat;
+modelFit.models.hyst_sat_lpf = hyst_sat;
 if saveon
     save(modelFit_file, 'modelFit');
 end
