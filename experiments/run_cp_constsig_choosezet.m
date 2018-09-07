@@ -62,7 +62,7 @@ saveon = true;
 %
 % For all cases, drift and hysteresis compensation remains
 % unchanged. 
-md = 1;
+md = 5;
 
 % !!!!!! These gamas should match the data in table II !!!!!!
 if md == 1
@@ -87,6 +87,10 @@ elseif md ==4
   gam_lin = 61.4;
   gam_mpc = 61.4;
   exp_id_str = 'choose-zet-rob-opt';
+elseif md == 5
+  gam_mpc = .11;
+  gam_lin = 12;
+  exp_id_str = 'const-sig-same-sig';
 end
 
 
@@ -126,14 +130,19 @@ end
 
 % Get a ref trajectory to track.
 N  = 800;
-r1 =7;
+r1 =1.37;
 r2 = -r1;
-trajstyle =4;
+trajstyle =1;
 if trajstyle == 1
-  step_ref = StepRef([r1, r2], N);
+  step_ref = StepRef([r1], N);
   yref = step_ref.yref;
   yref.Data = yref.Data*1;
   step_descr = 'single_step';
+elseif trajstyle == 2
+  step_ref = StepRef([r1, r2], N);
+  yref = step_ref.yref;
+  yref.Data = yref.Data*1;
+  step_descr = 'two_step';  
 elseif trajstyle == 4
   step_root = fullfile(PATHS.exp, 'step-exps');
   load(fullfile(step_root, 'many_steps_data_rand_ymax7.mat'), 'step_ref');
@@ -177,12 +186,12 @@ du_max = du_max_orig/norm(plants.gdrift_inv, Inf);
 % du_max = 1000;
 
 
-if md == 1 || md == 2
+if md == 1 || md == 2 || md == 5
   cmplx_rad = 0.9;
   [Q1, R0, S1, P_x] = build_control_constsigma(plants.sys_recyc, cmplx_rad);
   % gam_lin = 100;
   % gam_mpc = 100;
-elseif md ==3 || md ==4
+elseif md ==3 || md ==4 
   can_cntrl = CanonCntrlParams_ns14();
   % % % % can_cntrl = can_cntrl.aggressive_params();
   [Q1, R0, S1, P_x] = build_control(plants.sys_recyc, can_cntrl);
@@ -225,7 +234,7 @@ CON.add_input_con('box', [-du_max, du_max]);
 mpcProb.CON = CON;
 
 Hmpc = mpcProb.H; Mmpc = mpcProb.M;
-maxIter = 100;
+maxIter = 20;
 fprintf('condition of H = %.1f\n', mpcProb.kappa);
 
 fgm_fp = FGMprob_1(plants.sys_recyc, N_mpc, Q1, Qp, R0+gam_mpc, S1, du_max, maxIter);
@@ -441,25 +450,23 @@ if do_sim_mpcfxp
 
 end
 % return
-
+%
 if saveon
   save(fullfile(save_root, [step_descr, '_linfxp_sim_', exp_id_str, '_',...
-    datestr(now, 'mm-dd-yyyy'), '.mat']), 'sim_exp_fxpl');
+    datestr(now, 'mm-dd-yyyy'), '02.mat']), 'sim_exp_fxpl');
        
   save(fullfile(save_root, [step_descr, '_mpcfxp_sim_', exp_id_str, '_',...
-    datestr(now, 'mm-dd-yyyy'), '.mat']), 'sim_exp_fxpm');
+    datestr(now, 'mm-dd-yyyy'), '02.mat']), 'sim_exp_fxpm');
 end
 
 sims_fxpm.sys_obs_fp = sys_obsDist;
 sims_fxpm.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 
-mpc_dat_path = 'Z:\mpc-journal\step-exps\MPCControls01.csv';
-traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
-if ispc & do_sim_mpcfxp
-  sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
-end
-%
 
+traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
+%
+%
+% return
 
 %--------------------------------------------------------------------------
 % --------------------------- LINEAR Experiment ---------------------------
@@ -555,9 +562,9 @@ fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
 save(fullfile(save_root, [step_descr, '_lin_EXP_', exp_id_str, '_',...
-    datestr(now, 'mm-dd-yyyy'), '.mat']), 'afm_exp_lin')
+    datestr(now, 'mm-dd-yyyy'), '02.mat']), 'afm_exp_lin')
 
-%
+%%
 %--------------------------------------------------------------------------
 % -------------- MPC Experiment -------------------------------------------
 
@@ -567,8 +574,13 @@ if 1
   reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
             'verbose', true, 'dry_run', dry_run)
 end
-
-
+%
+if ispc & do_sim_mpcfxp
+  mpc_dat_path = 'Z:\mpc-journal\step-exps\MPCControls01.csv';
+  sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
+  'pp'
+end
+%
 SettleTicks = 20000;
 Iters = 500;
 Iters = length(yref.Data)-1;
