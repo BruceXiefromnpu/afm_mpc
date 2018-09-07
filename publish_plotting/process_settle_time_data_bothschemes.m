@@ -23,7 +23,7 @@ step_ref.yscaling = 5;
 step_ref.plot(Fig);
 step_ref.plot_settle_boundary(Fig, TOL, tol_mode);
 
-
+%%
 
 % ----------------------------------------------------------------
 % --------- Load Constant sigma data --------- -------------------
@@ -250,7 +250,7 @@ set(xlab, 'Units', 'inches', 'HorizontalAlignment', 'center',...
 if saveon
   saveas(Fig15, fullfile(PATHS.jfig, 'ts_vs_delref.svg'))
 end
-
+%%
 % Again try lucy's suggestion of plotting the settle-times vs |delta-ref|.
 % This time for the simulations.
 Fig16 = mkfig(16, width, height); clf
@@ -390,11 +390,11 @@ hands_Ipow = step_exps_CS.plotIpow_selected(5:8, ax6);
 set(ax6, 'XLim', [0.20, 0.215]);
 grid(ax6, 'on')
 ax6.YLabel.String='$I_{pow}$ [mA]';
-xlabel(ax6, 'time [ms]')
+xlabel(ax6, 'time [s]')
 
 hands_Ipow = step_exps_CS.plotIpow_selected(5:8, ax7);
 set(ax7, 'XLim', [2.1, 2.115]);
-xlabel(ax7, 'time [ms]')
+xlabel(ax7, 'time [s]')
 % set(ax5, 'XTick', [2.1, 2.125, 2.15])
 grid(ax7, 'on')
 
@@ -483,11 +483,11 @@ hands_Ipow = step_exps_CZ.plotIpow_selected(5:8, ax6);
 set(ax6, 'XLim', [0.20, 0.215]);
 grid(ax6, 'on')
 ax6.YLabel.String='$I_{pow}$ [mA]';
-xlabel(ax6, 'time [ms]')
+xlabel(ax6, 'time [s]')
 
 hands_Ipow = step_exps_CZ.plotIpow_selected(5:8, ax7);
 set(ax7, 'XLim', [2.1, 2.115]);
-xlabel(ax7, 'time [ms]')
+xlabel(ax7, 'time [s]')
 % set(ax5, 'XTick', [2.1, 2.125, 2.15])
 grid(ax7, 'on')
 

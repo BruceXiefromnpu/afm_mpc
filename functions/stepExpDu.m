@@ -209,8 +209,10 @@ classdef stepExpDu
       
       if isempty(varargin)
         hline = plot(ax, self.(traj_name).Time, self.(traj_name).Data*scale, plot_opts{:});
+        hold(ax, 'on');
       else
         hline = plot(ax, self.(traj_name).Time, self.(traj_name).Data*scale, varargin{:});
+        hold(ax, 'on');
       end
       hline.DisplayName = self.name;
     end

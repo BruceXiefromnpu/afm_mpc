@@ -123,10 +123,10 @@ Given a discrete-time state-space system $\{A,B,C,0\}$ with state $x_k$, and con
 \min_{v}\:\:& z^T_{N}Pz_{N} + \sum_{i=0}^{N-1}z_{i}^{T}Qz_{i} + 2z^T_iSv_i + v^{T}_{i}Rv_{i} \\
  \text{s.t.} \quad z_{i+1} &= A z_{i} + B v_{i}\\
 z_{0} &= x_{k}, \\
-v_i  &\in \mathds{U}
+v_i  &\in \mathds{U} \label{eqn:ucon0}
 \end{align}\label{eqn:optcost0}%
 \end{subequations}
-where $\mathds{U}$ is a convex set, $P$ solves the Discrete Algebraic Riccati Equation (DARE), $Q$ and $R$ are symmetric matrices and, together with $S$, satisfy
+where $\mathds{U}$ is a polyhedron, $P$ solves the Discrete Algebraic Riccati Equation (DARE), $Q$ and $R$ are symmetric matrices and, together with $S$, satisfy
 \begin{align}
   R &> 0 \label{eqn:schur0}\\
   Q - SR^{-1}S^T &\geq 0. \label{eqn:schur1}
@@ -136,20 +136,25 @@ where $\mathds{U}$ is a convex set, $P$ solves the Discrete Algebraic Riccati Eq
 %     Q & S\\S^T &R
 %   \end{bmatrix} > 0.
 % \end{equation}
-The solution to the quadratic program (QP) \eqref{eqn:optcost0} results in a sequence of optimal controls $v_0\dots v_{N-1}$. One sets $u_k = v_0$ and repeats the process at the next time step.
+In this paper, we restrict $\mathds{U}$ to model actuator constraints (e.g., saturation). The solution to the quadratic program (QP) \eqref{eqn:optcost0} results in a sequence of optimal controls $v_0\dots v_{N-1}$. One sets $u_k = v_0$ and repeats the process at the next time step. If one eliminate the constraint \eqref{eqn:ucon0}, then the control action reduces to the linear state-feedback. That is, $v_0=-Kx_k$ where
+\begin{equation*}
+  K = (\Bd^TP\Bd + R)^{-1}(\Bd^TP\Ad + S^T),
+\end{equation*}
+is the solution to the LQR problem associated with $Q$, $R$ and $S$. 
 
-Historically, one of the challenges of applying MPC to systems with fast dynamics is the computational demand imposed by solving a QP within a small sample period. However, advances in both hardware and algorithms have mitigated this issue. For example, \cite{Jerez_Trans_2014} shows that when $\mathds{U}$ is a simple box (i.e., a saturating constraint), sample rates of up to 1 MHz can be achieved with high-end FPGAs using an algorithm called the Fast Gradient Method (FGM). In recent work, we applied the FGM formulation of \cite{Jerez_Trans_2014} to our piezo stage and showed that, given a particular set of weighting matrices, we could increase the stabilizable range of setpoints compared to simply saturating an equivalent linear feedback \cite{braker_application_2017}.
+Historically, one of the challenges of applying MPC to systems with fast dynamics is the computational demand imposed by solving a QP within a small sample period. However, advances in both hardware and algorithms have mitigated this issue. For example, \cite{Jerez_Trans_2014} shows that when $\mathds{U}$ is a simple box (i.e., a saturating constraint), sample rates of up to 1 MHz can be achieved with high-end FPGAs using an algorithm called the Fast Gradient Method (FGM).
 
-An alternative to MPC with respect to constraint violation is to simply relax the performance criteria, e.g., by increasing the control weight and institute a linear feedback law. Because MPC is considerably more difficult and expensive to implement, an important question is  ``how much \emph{time} is actually saved with MPC?" Explorations following this line of reasoning have not seen much attention in the applied MPC literature. 
+The classical counterpoint to MPC's ability to explicitly handle constraints is to low-pass filter the input or to de-rate the control law (e.g., by increasing the control weight). Here, we are concerned with the latter. Despite the advances in online QP solvers, MPC is still considerably more difficult to implement requires more computation time and/or hardware resources compared to linear feedback. Thus, it is important to understand the extent to which MPC results in improved performance.
+
+In recent work, we applied the FGM formulation of \cite{Jerez_Trans_2014} to our piezo stage and showed that, given a particular set of weighting matrices, we could increase the stabilizable range of setpoints compared to simply saturating an equivalent linear feedback \cite{braker_application_2017}.
+
+MPC has been applied before to AFMs and, more generally, piezo actuated stages. In the Rana papers, an analog inner control loop is utilized to damp the resonances. However, the only way to guarantee control constraints in such a situation is with state constraints, which was not done ~\cite{rana_spiral_2014, rana_MPC}. Moreover, they give little detail on how the controller was tuned nor do they provide a comparison to a linear feedback law.
+
+An alternative to MPC with respect to constraint violation is to simply relax the performance criteria, e.g., by increasing the control weight and institute a linear feedback law. Because MPC is considerably more difficult and expensive to implement, an important question is  ``how much \emph{time} is actually saved with MPC?" Explorations following this line of reasoning have not seen much attention in the applied MPC literature.
 
 
-In simulation, we found that this increases the settling time. In experiment, we found that the relaxed-criteria linear controller actually led to a faster settling time than a more aggressive MPC controller. 
 
-Implicit in the justification for MPC (that it explicitly handles constraints) is that a stricter performance criteria actually results in improved performance. 
-
-
-
-One question which naturally arises from that study is ``how much \emph{time} is actually saved with MPC?", which is the question In essence, the stabilizable set of setpoints using saturated linear feedback can be expanded by relaxing the performance criteria.
+One question which naturally arises from that study is ``how much \emph{time} is actually saved with MPC?", which is the question In essence, the stabilizable set of setpoints using saturated linear feedback can be expanded by relaxing the performance criteria. 
 In other words, given a range of setpoints we wish to be able to visit, to what extent does the additional aggressiveness permitted by MPC reduce the settling time and is this reduction significant enough to warrant the additional complexity?
 
 Moreover, we did not give any consideration to the robustness of our scheme~\cite{braker_application_2017}.
@@ -162,15 +167,6 @@ This is a limitation shared with other relevant applications of MPC to mechatron
 
 
 
-
-This of course requires one to decide a priori on a range of setpoints. The situation is similar in MPC, but then the link is between control horizon and setpoint size. 
-
-
-While it is hardly a surprising result that de-rating a control law results in better performance through improved robustness, this effect seems little explored in the MPC literature. 
-
-In some other cases where MPC has been applied to AFM, an analog inner control loop is utilized.  The only way to guarantee control constraints in such a situation is with state constraints, which was not done ~\cite{rana_spiral_2014, rana_MPC}. 
-
-Although efforts have been made to characterize the robustness of MPC, those results typically assumes direct measurements of the state~\cite{santos_tool_2004, rodrigues_uncertainty_2003, kothare_robust_1996}, which is often unrealistic.
 
 A related limitation of \cite{braker_application_2017} is that we did not consider the effects of drift and hysteresis and only considered tracking a single setpoint with the stage starting at rest. When tracking a \emph{sequence} of setpoints across the range of the stage, the effects of hysteresis become much more prominent. Thus, in this paper, we employ inverse drift and hysteresis compensation. However, these inversions are not perfect, which contributes to the need for good stability margins.
 
