@@ -423,7 +423,7 @@ if do_sim_mpcfxp
   [y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref, dist_traj);
   name = sprintf('FXP MPC Sim. (%s)', exp_id_str);
   fxpm_Opts = stepExpDuOpts('pstyle', '--g', 'TOL', TOL, 'step_ref', step_ref,...
-    'controller', K_lqr, 'name',  name);
+    'controller', fgm_fxp, 'name',  name);
   
   sim_exp_fxpm = stepExpDu(y_fxpm, U_full_fxpm, dU_fxpm, fxpm_Opts);
   
@@ -526,7 +526,7 @@ ufull_exp = timeseries(AFMdata(:,4), t_exp);
 Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
-expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', fgm_fxp,...
+expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', K_lqr,...
   'pstyle', '-b', 'name', sprintf('AFM Stage (Linear) (%s)', exp_id_str));
 
 afm_exp_lin = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
@@ -630,7 +630,7 @@ Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
 
-expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', K_lqr,...
+expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', fgm_fxp,...
   'pstyle', '--m', 'name', sprintf('AFM Stage (MPC, %s), ', exp_id_str));
 
 afm_exp_mpc = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
