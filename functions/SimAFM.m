@@ -284,21 +284,22 @@ classdef SimAFM
         AllMatrix = packMatrixDistEst(self.sys_obs_fp,...
           double(self.L), double(K), double(self.Nx));
       end
-
-      % These get written all as one column
-      for k=1:size(AllMatrix,1)-1
-        fprintf(fid, '%.12f, ', AllMatrix(k,:));
-      end
-      fprintf(fid, '%.12f\n', AllMatrix(end,:));
-      %fprintf('\n');
       
+      % These get written all as one row. AllMatrix is already a single a
+      % column.
+      fprintf(fid, '%.12f, ', AllMatrix(1:end-1));
+      fprintf(fid, '%.12f\n', AllMatrix(end));
+            
+      % MPC_mat is a matrix, not a column vector already!
       if ~isempty(MPC_mat)
         for k=1:size(MPC_mat, 1)-1
           fprintf(fid, '%.12f, ', MPC_mat(k,:));
         end
-        fprintf(fid, '%.12f\n', MPC_mat(end,:));
+        fprintf(fid, '%.12f, ', MPC_mat(end,1:end-1));
+        fprintf(fid, '%.12f\n', MPC_mat(end,end));
         fclose(fid);
       end
+      
     end % write control data
   
    end %methods

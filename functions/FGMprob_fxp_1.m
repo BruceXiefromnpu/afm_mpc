@@ -54,7 +54,7 @@ classdef FGMprob_fxp_1 < CondensedMPCProb
               error(['Hessian must be positive definite. Smallest ',...
                      'eigenvalue is mu = %f'], mu)
            end
-
+           self.kappa = cond(H);
            self.I_HL   = fi(eye(N) - H/L, 1, nw, nf);
            self.ML     = fi(M/L, 1, nw, nf);
            
