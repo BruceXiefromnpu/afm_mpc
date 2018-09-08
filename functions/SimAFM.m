@@ -119,9 +119,12 @@ classdef SimAFM
       %  ref_f : (scalar) the setpoint to track
       % Outputs
       % -------
-      %  Y : (timeseries) Plant Output
-      %  U : (timeseries) Accumulated deltaU
+      %  Y         : (timeseries) Plant Output
+      %  U_full    : U_nominal after running through gd_inv and HSat_inv
+      %  U_nominal : (timeseries) Accumulated deltaU
       %  dU : (timeseries) deltaU(k) Control (ie, output of MPC block)
+      %  Xhat : state estimation sequence
+      %  Xerr : errer state trajectory
       %
       % ------------------------------------------------------------------- %
       % Pull out all the data stored in self to expose it to
@@ -165,8 +168,12 @@ classdef SimAFM
       Ts = PLANT.Ts;
       x0 = sim_obj.x0;
       
-      
-      thenoise = sim_obj.thenoise;
+      if isempty(sim_obj.thenoise)
+        thenoise = ref_traj;
+        thenoise.Data = thenoise.Data*0;
+      else
+        thenoise = sim_obj.thenoise;
+      end
       %thenoise = timeseries(ref_traj.Time*0, ref_traj.Time);
       
       sim_obj.step_amp = 0;
