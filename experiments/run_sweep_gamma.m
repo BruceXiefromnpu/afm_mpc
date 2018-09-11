@@ -79,7 +79,7 @@ elseif md ==2
   gam_lin_min = 2.9;
   gam_mpc_min = 0.2;
   gam_rob = 61.4;
-  gam_s = [gam_mpc_min, gam_lin_min, 40, 80, gam_rob, 200, 300, 400, 600,];
+  gam_s = [  40, 80, gam_rob, 200, 300, 400, 600,];
   sort([gam_mpc_min, gam_lin_min, gam_rob, [20:20:200]]);
   exp_id_str = 'choose-zet';
 end
@@ -126,7 +126,7 @@ thenoise = timeseries(mvnrnd(0, rw, length(yref.Time))*0, yref.Time);
 F_yudu = figure(60); clf
 subplot(3,1,1)
 hold on, grid on;
-step_ref.plot(F_yudu, '-k', 'LineWidth', 0.5)
+step_ref.plot(F_yudu, '-k', 'LineWidth', 0.5);
 
 F_y = figure(61); clf
 hold on, grid on
@@ -255,7 +255,7 @@ for idx_gam = 1:length(gam_s)
     h22 = sim_exp_fxpl.ploty(F_y);
     legend([h22]);
     
-    try; [~, F_state] = plotState(Xhat_fxpl, F_state, [], [], '--r'); end
+    try [~, F_state] = plotState(Xhat_fxpl, F_state, [], [], '--r'); end
 
     ts_sum_sim_results(idx_gam, 2) = sum(Ts_vec_fxpl);
   else
@@ -421,7 +421,7 @@ for idx_gam = 1:length(gam_s)
     num = num{1};
     den = den{1};
     
-    umax = 10.3;
+    umax = 11;
     ymax = max(yref.Data)*1.3;
 
     clear e;
@@ -570,11 +570,11 @@ end
 end
 
 ts_sum_exp_results(:,2:end,:)*1000
-%%
+%
 save(fullfile(save_root, ['ts_total', exp_id_str, '_',...
   datestr(now, 'mm-dd-yyyy'), '.mat']), 'ts_sum_sim_results', 'ts_sum_exp_results');
 
-
+%%
 function handle_vec =  make_legend_vec(varargin)
   
 %   handle_vec = gobjects();
