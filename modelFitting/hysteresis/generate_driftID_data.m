@@ -4,7 +4,7 @@ Ts = 40e-6;
 dry_run = false;
 saveon = true;
 
-step_amp = 1;
+step_amp = 0.15;
 step_start_idx = 3000;
 step_end_idx = 10500;
 u = zeros(step_end_idx, 1);
@@ -42,7 +42,8 @@ if ~dry_run
     driftData.t_exp = t_exp;
     driftData.u_exp = u_exp;
     driftData.y_exp = y_exp;
-    save(fullfile(PATHS.sysid, 'hysteresis','driftID_data_06-05-2018_01_amp_1p0.mat'), 'driftData')
+    % save(fullfile(PATHS.sysid, 'hysteresis','driftID_data_06-05-2018_01_amp_1p0.mat'), 'driftData')
+    save(fullfile(PATHS.sysid, 'hysteresis','driftID_data_09-10-2018_01_amp_0p15.mat'), 'driftData')
   end
 end
 

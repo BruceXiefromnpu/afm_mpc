@@ -3,14 +3,16 @@ clc
 
 saveon = false;
 
+addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions'))
+addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions', 'canon'))
 if ~ispc
 addpath('~/gradschool/sysID/matlab/functions')
 else
   addpath('C:\Users\arnold\Documents\labview\sysID\matlab\functions\')
 end
 % modelFit_file = 'FRF_data_current_stage.mat';
-data_fname = 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat';
-% data_fname = 'x-axis_sines_infoFourierCoef_9-10-2018-01.mat';
+% data_fname = 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat';
+data_fname = 'x-axis_sines_infoFourierCoef_9-10-2018-03.mat';
 modelFit_file = fullfile(PATHS.sysid, 'FRF_data', data_fname);
 
 load(modelFit_file)
@@ -38,16 +40,16 @@ subplot(2,1,1)
 title('log fit')
 
 Nd2 = 10;
-ns2 = 14;
-k_estmax = 273;
+ns2 = 16;
+k_estmax = 273+75;
 ss_opts = frf2ss_opts('Ts', Ts);
 
 f2ss = frf2ss(G_uz2stage_frf, omegas, Nd2, ss_opts); % 12
 sys_stage = f2ss.realize(ns2); % 12
-                               
+%         
 Z = zero(sys_stage);
 Z_eject = zpk([], Z(find(abs(Z) > 1)), 1, Ts);
-Z_eject = Z_eject/dcgain(Z_eject);
+Z_eject = Z_eject/dcgain(Z_eject)
 sys_stage = minreal(Z_eject*sys_stage);
 
 frfBode(sys_stage, freqs, F3, 'Hz', '--k');
@@ -74,6 +76,11 @@ fprintf('LG says delay = %.2f\n', p);
 frfBode(sys_stage_log, freqs, F4,  'Hz', '--k');
 plotPZ_freqs(sys_stage_log, F4);
 
+[plants2, frf_data2] = CanonPlants.plants_ns14();
+frfBode(frf_data2.G_uz2stage, frf_data2.freqs_Hz, F4, 'Hz', 'b')
+
+% frfBode(plants2.G_uz2stage, frf_data2.freqs_Hz, F4, 'Hz', '--g')
+
 figure(50);
 pzplot(sys_stage_log);
 
@@ -94,7 +101,7 @@ pzplot(sys_stage_log);
 % 
 % plotPZ_freqs(sys_stage_log, F4);
 %
-
+%%
 % ---------------------------------------------------------------- %
 % --------- Second, we work on the powI system -------------------- %
 
@@ -297,8 +304,8 @@ modelFit.models.du_max_nm1 = delumax;
 modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift = gdrift;
 modelFit.models.hyst = hyst;
-modelFit.models.hyst_sat_lpf = hyst_sat;
-if 1%saveon
+modelFit.models.hyst_sat = hyst_sat;
+if saveon
     save(modelFit_file, 'modelFit');
 end
 
