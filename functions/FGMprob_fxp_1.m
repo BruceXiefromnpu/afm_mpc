@@ -94,7 +94,7 @@ classdef FGMprob_fxp_1 < CondensedMPCProb
           end
           n_ws = self.n_warmstart;
           self.zi_mat = self.warm_start_data(1:n_ws/2);
-          self.yi_mat = self.warm_start_data(n_ws/2+1:end);;
+          self.yi_mat = self.warm_start_data(n_ws/2+1:end);
         end
 
         function [uk] = solve(self, xk_1)

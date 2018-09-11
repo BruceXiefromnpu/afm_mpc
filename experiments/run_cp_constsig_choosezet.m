@@ -22,7 +22,7 @@ addpath(fullfile(getMatPath(), 'afm_mpc_journal', '/models'));
 %labview reads data here
 controlDataPath = fullfile(PATHS.step_exp, controlParamName);
 % labview saves experimental results/data here
-dataOut_path    = fullfile(PATHS.step_exp, outputDataName);
+data_out_path    = fullfile(PATHS.step_exp, outputDataName);
 % labview reads desired trajectory here
 refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 % location of the vi which runs the experiment.
@@ -52,7 +52,7 @@ plotstate = false;
 plotpoles = false;
 plotdriftpoles = false;
 plotdriftbode = false;
-saveon = true;
+saveon = false;
 
 % We need four modes in this script:
 % 1). Constant sigma, minimum-gamma 
@@ -62,7 +62,7 @@ saveon = true;
 %
 % For all cases, drift and hysteresis compensation remains
 % unchanged. 
-md = 5;
+md = 4;
 
 % !!!!!! These gamas should match the data in table II !!!!!!
 if md == 1
@@ -72,8 +72,10 @@ if md == 1
   exp_id_str = 'const-sig-min-gam';
 elseif md == 2
   % 2). Constant sigma, rob-optimal
-  gam_lin = 129.2;
-  gam_mpc = 129.2;
+  gam_lin = 129;
+  gam_mpc = 129;
+  %   gam_lin = 141;
+  %   gam_mpc = 141;
   exp_id_str = 'const-sig-rob-opt';
 elseif md ==3
 % 3). Choose zeta, minimum-gamma
@@ -86,6 +88,8 @@ elseif md ==4
 % 4). Choose zeta, rob-optimal
   gam_lin = 61.4;
   gam_mpc = 61.4;
+% gam_lin = 29.45;
+% gam_mpc = 29.45;
   exp_id_str = 'choose-zet-rob-opt';
 elseif md == 5
   gam_mpc = .11;
@@ -131,8 +135,8 @@ end
 % Get a ref trajectory to track.
 N  = 800;
 r1 =1.37;
-r2 = -r1;
-trajstyle =1;
+r2 = 0;
+trajstyle =4;
 if trajstyle == 1
   step_ref = StepRef([r1], N);
   yref = step_ref.yref;
@@ -423,7 +427,7 @@ if do_sim_mpcfxp
   [y_fxpm, U_full_fxpm, U_nom_fxpm, dU_fxpm, Xhat_fxpm, Xerr_fxpm] = sims_fxpm.sim(yref, dist_traj);
   name = sprintf('FXP MPC Sim. (%s)', exp_id_str);
   fxpm_Opts = stepExpDuOpts('pstyle', '--g', 'TOL', TOL, 'step_ref', step_ref,...
-    'controller', K_lqr, 'name',  name);
+    'controller', fgm_fxp, 'name',  name);
   
   sim_exp_fxpm = stepExpDu(y_fxpm, U_full_fxpm, dU_fxpm, fxpm_Opts);
   
@@ -467,7 +471,7 @@ traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
 %
 %
 % return
-
+%%
 %--------------------------------------------------------------------------
 % --------------------------- LINEAR Experiment ---------------------------
 %
@@ -494,7 +498,7 @@ Iters = length(yref.Data)-1;
 num = num{1};
 den = den{1};
 
-umax = 10.3;
+umax = 11;
 ymax = max(yref.Data)*1.3
 % ymax = 1.5;
 clear e;
@@ -508,14 +512,14 @@ if 1
    'r_s', plants.hyst_sat.rp, 'w_s', plants.hyst_sat.wp, 'N_hyst', 1*length(plants.hyst_sat.rp),...
    'sat_ds', plants.hyst_sat.dp, 'sat_ws', plants.hyst_sat.wsp, 'N_sat', 1*length(plants.hyst_sat.dp),...
    'du_max', du_max,'dry_run', false,...
-   'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
+   'read_file', true, 'umax', umax, 'ymax', ymax, 'outputDataPath', data_out_path,...
    'traj_path', traj_path, 'control_data_path', fxplin_dat_path);
 
  vi.Run
 end
 %
 % Now, read in data, and save to structure, and plot.
-AFMdata = csvread(dataOut_path);
+AFMdata = csvread(data_out_path);
 
 t_exp = (0:size(AFMdata,1)-1)'*Ts;
 y_exp = timeseries(AFMdata(:,1), t_exp);
@@ -526,7 +530,7 @@ ufull_exp = timeseries(AFMdata(:,4), t_exp);
 Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
-expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', fgm_fxp,...
+expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', K_lqr,...
   'pstyle', '-b', 'name', sprintf('AFM Stage (Linear) (%s)', exp_id_str));
 
 afm_exp_lin = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
@@ -541,7 +545,7 @@ try
   legend([h1(1), h2(1), h3(1), H_linexp(1), H_mpcexp(1)]); 
 end
 plot(y_exp.Time, yy, ':k')
-%
+
 H_linexp2 = afm_exp_lin.ploty(F_y);
 
 % legend([h12, h22, h32, H_mpcexp2])
@@ -561,10 +565,11 @@ fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
+if saveon
 save(fullfile(save_root, [step_descr, '_lin_EXP_', exp_id_str, '_',...
     datestr(now, 'mm-dd-yyyy'), '02.mat']), 'afm_exp_lin')
-
-%%
+end
+%
 %--------------------------------------------------------------------------
 % -------------- MPC Experiment -------------------------------------------
 
@@ -603,7 +608,7 @@ if 1
    'r_s', plants.hyst_sat.rp, 'w_s', plants.hyst_sat.wp, 'N_hyst', 1*length(plants.hyst_sat.rp),...
    'sat_ds', plants.hyst_sat.dp, 'sat_ws', plants.hyst_sat.wsp, 'N_sat', 1*length(plants.hyst_sat.dp),...
    'du_max', du_max,'dry_run', false,...
-   'umax', umax, 'ymax', ymax, 'outputDataPath', dataOut_path,...
+   'umax', umax, 'ymax', ymax, 'outputDataPath', data_out_path,...
    'traj_path', traj_path, 'control_data_path', mpc_dat_path);
 else
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
@@ -618,7 +623,7 @@ vi.Run
 ticks_bench = vi.GetControlValue('Loop Ticks (benchmark)');
 fprintf('Actual loop ticks: %d\n', ticks_bench);
 % Now, read in data, and save to structure, and plot.
-AFMdata = csvread(dataOut_path);
+AFMdata = csvread(data_out_path);
 
 t_exp = (0:size(AFMdata,1)-1)'*Ts;
 y_exp = timeseries(AFMdata(:,1), t_exp);
@@ -630,7 +635,7 @@ Ipow_exp = timeseries(AFMdata(:,5), t_exp);
 xhat_exp = timeseries(AFMdata(:,6:end), t_exp);
 yy = xhat_exp.Data*sys_obsDist.c';
 
-expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', K_lqr,...
+expOpts = stepExpDuOpts('TOL', TOL, 'step_ref', step_ref, 'controller', fgm_fxp,...
   'pstyle', '--m', 'name', sprintf('AFM Stage (MPC, %s), ', exp_id_str));
 
 afm_exp_mpc = stepExpDu(y_exp, ufull_exp, du_exp, expOpts);
@@ -664,10 +669,11 @@ fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift_constsig_7-9-2018.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
+if saveon
 save(fullfile(save_root, [step_descr, '_mpc_EXP_', exp_id_str, '_',...
   datestr(now, 'mm-dd-yyyy'), '.mat']), 'afm_exp_mpc');
 
-
+end
 
 
 

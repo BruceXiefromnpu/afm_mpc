@@ -3,9 +3,15 @@ clc
 
 saveon = false;
 
+if ~ispc
 addpath('~/gradschool/sysID/matlab/functions')
+else
+  addpath('C:\Users\arnold\Documents\labview\sysID\matlab\functions\')
+end
 % modelFit_file = 'FRF_data_current_stage.mat';
-modelFit_file = fullfile(PATHS.sysid, 'FRF_data', 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat');
+data_fname = 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat';
+% data_fname = 'x-axis_sines_infoFourierCoef_9-10-2018-01.mat';
+modelFit_file = fullfile(PATHS.sysid, 'FRF_data', data_fname);
 
 load(modelFit_file)
 
@@ -156,11 +162,15 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % ----------------------------------------------------------------
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
+%%
+% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_09-10-2018_01_amp_0p15.mat'))
+
 % % % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
 
 
 Ts = modelFit.frf.Ts;
+
 G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
 
 
@@ -219,8 +229,8 @@ ax = gca;
 
 fprintf('============================================\n')
 % hyst_file = 'hystID_data_5-4-2018_01.mat';
-
-hyst_file = 'hystID_data_27-Aug-2018_01.mat';
+hyst_file = 'hystID_data_10-Sep-2018_01.mat';
+% % % hyst_file = 'hystID_data_27-Aug-2018_01.mat';
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
 load(hyst_path)
 
@@ -288,7 +298,7 @@ modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift = gdrift;
 modelFit.models.hyst = hyst;
 modelFit.models.hyst_sat_lpf = hyst_sat;
-if saveon
+if 1%saveon
     save(modelFit_file, 'modelFit');
 end
 

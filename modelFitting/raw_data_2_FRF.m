@@ -31,7 +31,8 @@ clc
 
 
 % FC_data_file = 'x-axis_sines_infoFourierCoef_4-16-2018stage-01.csv';
-FC_data_file = 'x-axis_sines_infoFourierCoef_5-30-2018-01.csv';
+% FC_data_file = 'x-axis_sines_infoFourierCoef_5-30-2018-01.csv';
+FC_data_file = 'x-axis_sines_infoFourierCoef_9-10-2018-03.csv';
 dataRoot = fullfile(PATHS.sysid, 'FRF_data'); 
 FC_path = fullfile(dataRoot, FC_data_file);
 

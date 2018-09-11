@@ -45,7 +45,7 @@ P = path();
   if ~dry_run
     clear vi;
     vipath_reset = 'C:\Users\arnold\Documents\MATLAB\afm_mpc_journal\labview\reset_piezo.vi';
-        [e, vi] = setupVI(vipath_reset, 'Abort', 0,...
+        [e, vi] = setup_VI(vipath_reset, verbose, 'Abort', 0,...
       'umax', umax+0.25, 'TsTicks', 1600, 'u_in', u_reset);
     vi.Run;
     stage_dat = vi.GetControlValue('stage_data_out');

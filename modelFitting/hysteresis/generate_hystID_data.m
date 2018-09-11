@@ -64,9 +64,10 @@ end
 
 
 %%
-
-reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
+dry_run = false
+reset_piezo('t1', 15, 't_final', 25, 'umax', 10, 'k1', 0.55,...
             'verbose', true, 'dry_run', dry_run)
+          %%
 if ~dry_run
   umax = 10;
   clear vi;
