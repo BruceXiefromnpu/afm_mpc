@@ -194,16 +194,16 @@ classdef stepExpDu
     % be passed into the plot() function and thus should be name value pairs
     % appropriate to plot().
 
-      if isa(fig_ax, 'matlab.ui.Figure')
+      if isa(fig_ax, 'matlab.ui.Figure') && isvalid(fig_ax(1))
         F1 = figure(fig_ax);
         ax = gca();
-      elseif isa(fig_ax, 'matlab.graphics.axis.Axes')
+      elseif isa(fig_ax, 'matlab.graphics.axis.Axes') && isvalid(fig_ax(1))
         F1 = fig_ax.Parent();
         ax = fig_ax;
       else
         F1 = figure();
         ax = gca();
-        varargin = {fig_ax, varargin{:}};
+        % varargin = {fig_ax, varargin{:}}; % what does this do???
       end
       plot_opts = self.get_plot_opts();
       

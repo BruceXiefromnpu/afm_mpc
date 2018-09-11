@@ -61,7 +61,7 @@ saveon = true;
 %
 % For all cases, drift and hysteresis compensation remains
 % unchanged. 
-md = 5;
+md = 2;
 
 % !!!!!! These gamas should match the data in table II !!!!!!
 if md == 1
@@ -86,7 +86,7 @@ elseif md == 5
 end
 
 % ------- Load Plants -----
-[plants, frf_data] = CanonPlants.plants_ns14;
+[plants, frf_data] = CanonPlants.plants_ns12;
 Ts  = plants.SYS.Ts;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -98,8 +98,8 @@ Ts  = plants.SYS.Ts;
 % Get a ref trajectory to track.
 N  = 800;
 r1 =1.37;
-r2 = -r1;
-trajstyle =1;
+r2 = 0;
+trajstyle =2;
 if trajstyle == 1
   step_ref = StepRef([r1], N);
   yref = step_ref.yref;
@@ -153,7 +153,7 @@ du_max = du_max_orig/norm(plants.gdrift_inv, Inf);
 
 if md == 1 || md == 2 || md == 5
   cmplx_rad = 0.9;
-  [Q1, R0, S1, P_x] = build_control_constsigma(plants.sys_recyc, cmplx_rad);
+  [Q1, R0, S1, P_x] = build_control_constsigma_ns12(plants.sys_recyc, cmplx_rad);
 elseif md ==3 || md ==4 
   can_cntrl = CanonCntrlParams_ns14();
   % % % % can_cntrl = can_cntrl.aggressive_params();
@@ -315,7 +315,7 @@ sims_fxpm.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 
 traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
 
-%
+%%
 %--------------------------------------------------------------------------
 % -------------- MPC Experiment -------------------------------------------
 
@@ -325,7 +325,7 @@ if 1
   reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
             'verbose', true, 'dry_run', dry_run)
 end
-
+%%
 if ispc & do_sim_mpcfxp
   mpc_dat_path = 'Z:\mpc-journal\step-exps\MPCControls01.csv';
   sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
@@ -345,7 +345,7 @@ umax = 3.3;
 ymax = max(yref.Data)*1.3
 clear e;
 clear vi;
-%%
+%
 % -----------------------RUN THE Experiment--------------------------------
 vipath =['C:\Users\arnold\Documents\MATLAB\afm_mpc_journal',...
   '\labview\fixed-point-host\play_FXP_AFMss_MPC_distEst_singleAxisN22.vi'];
