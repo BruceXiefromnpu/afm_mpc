@@ -12,7 +12,7 @@ else
 end
 % modelFit_file = 'FRF_data_current_stage.mat';
 % data_fname = 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat';
-data_fname = 'x-axis_sines_infoFourierCoef_9-10-2018-03.mat';
+data_fname = 'x-axis_sines_infoFourierCoef_9-10-2018-02.mat';
 modelFit_file = fullfile(PATHS.sysid, 'FRF_data', data_fname);
 
 load(modelFit_file)
@@ -26,7 +26,7 @@ G_uz2powI_frf = modelFit.frf.G_uz2powI;
 omegas = freqs*2*pi;
 Ts = modelFit.frf.Ts;
 
-%
+
 % --------------------------------------------------------------- %
 % --------- First, we work on the stage system ----------------- %
 % 
@@ -40,12 +40,16 @@ subplot(2,1,1)
 title('log fit')
 
 Nd2 = 10;
-ns2 = 16;
+ns2 = 12;
 k_estmax = 273+75;
 ss_opts = frf2ss_opts('Ts', Ts);
 
 f2ss = frf2ss(G_uz2stage_frf, omegas, Nd2, ss_opts); % 12
 sys_stage = f2ss.realize(ns2); % 12
+%%%
+plants = CanonPlants.plants_ns14();
+sys_stage = plants.G_uz2stage;
+%%%
 %         
 Z = zero(sys_stage);
 Z_eject = zpk([], Z(find(abs(Z) > 1)), 1, Ts);
@@ -170,8 +174,8 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
 %%
-% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_09-10-2018_01_amp_0p15.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
+% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_09-10-2018_01_amp_0p15.mat'))
 
 % % % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
 
@@ -290,7 +294,10 @@ grid on
 [rp2, wp2] = PIHyst.invert_hyst_PI(r2, w2);
 
 hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2);
-
+%%
+frfBode(gdrift*Gvib, freqs, F4, 'Hz', '--m')
+%%
+plotPZ_freqs(gdrift*Gvib, F4);
 %%
 % modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
 % modelFit.models.G_deluz2powI = G_deluz2Ipow;

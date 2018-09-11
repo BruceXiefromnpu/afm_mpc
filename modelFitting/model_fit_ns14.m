@@ -3,8 +3,9 @@ clc
 
 saveon = false;
 
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
 if ~ispc
-addpath('~/gradschool/sysID/matlab/functions')
+  addpath('~/gradschool/sysID/matlab/functions')
 else
   addpath('C:\Users\arnold\Documents\labview\sysID\matlab\functions\')
 end
@@ -163,10 +164,11 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
 %%
-% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_09-10-2018_01_amp_0p15.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
 
-% % % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
+
+% % % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_09-10-2018_01_amp_0p15.mat'))
+% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
 
 
 Ts = modelFit.frf.Ts;
@@ -228,9 +230,10 @@ ax = gca;
 % ------------------- Fit Hysteresis + Sat -------------------------------------
 
 fprintf('============================================\n')
-% hyst_file = 'hystID_data_5-4-2018_01.mat';
-hyst_file = 'hystID_data_10-Sep-2018_01.mat';
-% % % hyst_file = 'hystID_data_27-Aug-2018_01.mat';
+hyst_file = 'hystID_data_5-4-2018_01.mat';
+
+% hyst_file = 'hystID_data_10-Sep-2018_01.mat';
+% hyst_file = 'hystID_data_27-Aug-2018_01.mat';
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
 load(hyst_path)
 
