@@ -17,7 +17,10 @@ function [Q, R0, S, Px] = build_control_constsigma(G_recyc, cmplx_rad)
   
   z = tzero(G_recyc);
   z = sort_by_w(z(imag(z)~=0));
-  Px(2:3) = z(1:2);
+  %Px(2:3) = z(1:2);
+  Px(4:5) = z(3:4);
+  
+  
 %   Px(1) = [];
   [Chat, Dhat] = place_zeros(G_recyc, Px);
   Q = Chat'*Chat;
