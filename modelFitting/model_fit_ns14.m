@@ -11,7 +11,7 @@ else
 end
 % modelFit_file = 'FRF_data_current_stage.mat';
 data_fname = 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat';
-% data_fname = 'x-axis_sines_infoFourierCoef_9-10-2018-01.mat';
+data_fname = 'x-axis_sines_infoFourierCoef_9-11-2018-01.mat';
 modelFit_file = fullfile(PATHS.sysid, 'FRF_data', data_fname);
 
 load(modelFit_file)
@@ -39,22 +39,26 @@ subplot(2,1,1)
 title('log fit')
 
 Nd2 = 10;
-ns2 = 14;
+ns2 = 12
 k_estmax = 273;
 ss_opts = frf2ss_opts('Ts', Ts);
 
 f2ss = frf2ss(G_uz2stage_frf, omegas, Nd2, ss_opts); % 12
 sys_stage = f2ss.realize(ns2); % 12
-                               
+
+p = [0.865+0.226j; 0.865-0.226j];
+
 Z = zero(sys_stage);
-Z_eject = zpk([], Z(find(abs(Z) > 1)), 1, Ts);
+P = pole(sys_stage);
+Z_eject = zpk([P(end-4:end-3); p], [Z(find(abs(Z) > 1)); Z(end-4:end-3)], 1, Ts);
 Z_eject = Z_eject/dcgain(Z_eject);
 sys_stage = minreal(Z_eject*sys_stage);
 
 frfBode(sys_stage, freqs, F3, 'Hz', '--k');
 plotPZ_freqs(sys_stage, F3);
-
-
+%
+plants = CanonPlants.plants_ns14;
+sys_stage = plants.G_uz2stage;
 figure(F4);
 subplot(2,1,1)
 ylm = ylim;
@@ -95,7 +99,7 @@ pzplot(sys_stage_log);
 % 
 % plotPZ_freqs(sys_stage_log, F4);
 %
-
+%%
 % ---------------------------------------------------------------- %
 % --------- Second, we work on the powI system -------------------- %
 
@@ -164,10 +168,8 @@ fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
 %%
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
-
-
-% % % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_09-10-2018_01_amp_0p15.mat'))
+% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
+load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_09-10-2018_01_amp_1p0.mat'))
 % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
 
 
@@ -230,9 +232,8 @@ ax = gca;
 % ------------------- Fit Hysteresis + Sat -------------------------------------
 
 fprintf('============================================\n')
-hyst_file = 'hystID_data_5-4-2018_01.mat';
-
-% hyst_file = 'hystID_data_10-Sep-2018_01.mat';
+% hyst_file = 'hystID_data_5-4-2018_01.mat';
+hyst_file = 'hystID_data_10-Sep-2018_01.mat';
 % hyst_file = 'hystID_data_27-Aug-2018_01.mat';
 hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
 load(hyst_path)
@@ -293,16 +294,17 @@ hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2);
 % modelFit.models.g_deluz2pow_1norm = nm1;
 % modelFit.models.du_max_nm1 = delumax;
 modelFit.models.G_uz2stage = sys_stage_log;
-modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
-modelFit.models.G_deluz2powI = G_deluz2Ipow;
-modelFit.models.g_deluz2pow_1norm = nm1;
-modelFit.models.du_max_nm1 = delumax;
+% modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
+% modelFit.models.G_deluz2powI = G_deluz2Ipow;
+% modelFit.models.g_deluz2pow_1norm = nm1;
+% modelFit.models.du_max_nm1 = delumax;
 modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift = gdrift;
 modelFit.models.hyst = hyst;
-modelFit.models.hyst_sat_lpf = hyst_sat;
+modelFit.models.hyst_sat = hyst_sat;
+
 if 1%saveon
-    save(modelFit_file, 'modelFit');
+    save(modelFit_file, 'modelFit', '-append');
 end
 
 

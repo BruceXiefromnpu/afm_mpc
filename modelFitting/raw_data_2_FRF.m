@@ -31,8 +31,9 @@ clc
 
 
 % FC_data_file = 'x-axis_sines_infoFourierCoef_4-16-2018stage-01.csv';
-% FC_data_file = 'x-axis_sines_infoFourierCoef_5-30-2018-01.csv';
-FC_data_file = 'x-axis_sines_infoFourierCoef_9-10-2018-03.csv';
+FC_data_file = 'x-axis_sines_infoFourierCoef_5-30-2018-01.csv';
+% FC_data_file = 'x-axis_sines_infoFourierCoef_9-10-2018-03.csv';
+FC_data_file = 'x-axis_sines_infoFourierCoef_9-11-2018-01.csv';
 dataRoot = fullfile(PATHS.sysid, 'FRF_data'); 
 FC_path = fullfile(dataRoot, FC_data_file);
 
@@ -49,7 +50,7 @@ ssOpts = sweptSinesMeta('read', FC_path);
 Ts = ssOpts.Ts;
 
 [FC_s, E_s, freqs, ssOpts] = SweptSines.read_FC_data(FC_path, ssOpts);
-
+%%
 idx_uz = 1;
 idx_stage = 2;
 idx_powV = 3;
