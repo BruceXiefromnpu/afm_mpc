@@ -9,11 +9,14 @@ if ~ispc
 else
   addpath('C:\Users\arnold\Documents\labview\sysID\matlab\functions\')
 end
-% modelFit_file = 'FRF_data_current_stage.mat';
-data_fname = 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat';
-data_fname = 'x-axis_sines_infoFourierCoef_9-11-2018-01.mat';
-modelFit_file = fullfile(PATHS.sysid, 'FRF_data', data_fname);
 
+hash_opts = struct('Method', 'MD5', 'Format', 'hex', 'Input', 'file');
+
+% modelFit_file = 'FRF_data_current_stage.mat';
+fname_frf = 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat';
+fname_frf = 'x-axis_sines_infoFourierCoef_9-11-2018-01.mat';
+modelFit_file = fullfile(PATHS.sysid, 'FRF_data', fname_frf);
+frf_data_hash = DataHash(fname_frf);
 load(modelFit_file)
 
 freqs = modelFit.frf.freq_s(:);
@@ -25,7 +28,7 @@ G_uz2powI_frf = modelFit.frf.G_uz2powI;
 omegas = freqs*2*pi;
 Ts = modelFit.frf.Ts;
 
-%
+
 % --------------------------------------------------------------- %
 % --------- First, we work on the stage system ----------------- %
 % 
@@ -41,23 +44,25 @@ title('log fit')
 Nd2 = 10;
 ns2 = 14;
 k_estmax = 273;
-ss_opts = frf2ss_opts('Ts', Ts);
-
-f2ss = frf2ss(G_uz2stage_frf, omegas, Nd2, ss_opts); % 12
-sys_stage = f2ss.realize(ns2); % 12
-
-p = [0.865+0.226j; 0.865-0.226j];
-
-Z = zero(sys_stage);
-P = pole(sys_stage);
-Z_eject = zpk([P(end-4:end-3); p], [Z(find(abs(Z) > 1)); Z(end-4:end-3)], 1, Ts);
-Z_eject = Z_eject/dcgain(Z_eject);
-sys_stage = minreal(Z_eject*sys_stage);
-
-frfBode(sys_stage, freqs, F3, 'Hz', '--k');
-plotPZ_freqs(sys_stage, F3);
+% ss_opts = frf2ss_opts('Ts', Ts);
+% 
+% f2ss = frf2ss(G_uz2stage_frf, omegas, Nd2, ss_opts); % 12
+% sys_stage = f2ss.realize(ns2); % 12
+% 
+% p = [0.865+0.226j; 0.865-0.226j];
+% 
+% Z = zero(sys_stage);
+% P = pole(sys_stage);
+% Z_eject = zpk([P(end-4:end-3); p], [Z(find(abs(Z) > 1)); Z(end-4:end-3)], 1, Ts);
+% Z_eject = Z_eject/dcgain(Z_eject);
+% sys_stage = minreal(Z_eject*sys_stage);
+% 
+% frfBode(sys_stage, freqs, F3, 'Hz', '--k');
+% plotPZ_freqs(sys_stage, F3);
 %
-plants = CanonPlants.plants_ns14;
+
+% use the old model ('ver 1') as the initial guess
+plants = CanonPlants.plants_ns14(9,1); 
 sys_stage = plants.G_uz2stage;
 figure(F4);
 subplot(2,1,1)
@@ -84,7 +89,7 @@ pzplot(sys_stage_log);
 
 % return
 % Z = sort(zero(sys_stage_log));
-% Z_eject = zpk([], Z(1:1), 1, Ts);
+% Z_eject = zpk([], Z(end), 1, Ts);
 % Z_eject = Z_eject/dcgain(Z_eject);
 % sys_stage_log = minreal(Z_eject*sys_stage_log);
 % 
@@ -93,12 +98,13 @@ pzplot(sys_stage_log);
 % LG.solve_lsq(2, LGopts)
 % [sys_stage_log, p] = LG.sos_fos.realize();
 % fprintf('LG says delay = %.2f\n', p);
-% 
+% %
 % sys_stage_log.InputDelay = max(round(p, 0), 0);
+% % sys_stage_log.InputDelay = max(round(p, 0), 0);
 % frfBode(sys_stage_log, freqs, F4, 'Hz', '--b');
-% 
+% % 
 % plotPZ_freqs(sys_stage_log, F4);
-%
+
 %%
 % ---------------------------------------------------------------- %
 % --------- Second, we work on the powI system -------------------- %
@@ -163,21 +169,22 @@ fprintf('(Hinf)Mag-max = %.3f, psudeo deltaUk_max = %.3f\n', mag_max, I_max/mag_
 fprintf('(BIBO) ||G_delu2Ipow||_1 = %.3f, deltaUk_max = %.3f\n', nm1, delumax);
 
 
-%
+%%
 % ----------------------------------------------------------------
 % --------------------- Now, Fit the drift model -----------------
 addpath('hysteresis')
-%%
 % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_09-10-2018_01_amp_1p0.mat'))
 % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
+fpath_driftID = fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_09-10-2018_01_amp_1p0.mat');
+
+drift_data_hash = DataHash(fpath_driftID, hash_opts);
+load(fpath_driftID)
+
 
 
 Ts = modelFit.frf.Ts;
 
 G_uz2stage = sys_stage_log; %modelFit.models.G_uz2stage;
-
-
 
 k_start = 2677;
 y_exp = driftData.y_exp(k_start:end) - mean(driftData.y_exp(1:k_start));
@@ -200,8 +207,6 @@ opts.Display = 'iter';
 theta = lsqnonlin(gdrift_cost, theta0, lb, ub, opts);
 
 gdrift = zpk(theta(np+1:end-1), theta(1:np), theta(end), Ts);
-
-
 
 ydrift_est0 = lsim(Gvib*gdrift, u_exp, t_exp);
 y_vib = lsim(Gvib, u_exp, t_exp);
@@ -233,10 +238,11 @@ ax = gca;
 
 fprintf('============================================\n')
 % hyst_file = 'hystID_data_5-4-2018_01.mat';
-hyst_file = 'hystID_data_10-Sep-2018_01.mat';
 % hyst_file = 'hystID_data_27-Aug-2018_01.mat';
-hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
-load(hyst_path)
+hyst_file = 'hystID_data_10-Sep-2018_01.mat';
+fpath_hystID = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
+hyst_data_hash = DataHash(fpath_hystID, hash_opts)
+load(fpath_hystID)
 
 kk = length(hystData.y_exp);
 ux = hystData.u_exp(1:kk);
@@ -289,15 +295,18 @@ grid on
 hyst = struct('r', r2, 'w', w2, 'rp', rp2, 'wp', wp2);
 
 %%
-% modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
-% modelFit.models.G_deluz2powI = G_deluz2Ipow;
-% modelFit.models.g_deluz2pow_1norm = nm1;
-% modelFit.models.du_max_nm1 = delumax;
+heritage = struct('fname_frf', fname_frf, 'frf_data_hash', frf_data_hash,...
+  'fpath_driftID', fpath_driftID, 'drift_data_hash', drift_data_hash,...
+  'fpath_hystID', fpath_hystID, 'hyst_data_hash', hyst_data_hash,...
+  'hash_opts', hash_opts);
+  
+
+modelFit.heritage = heritage;
 modelFit.models.G_uz2stage = sys_stage_log;
-% modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
-% modelFit.models.G_deluz2powI = G_deluz2Ipow;
-% modelFit.models.g_deluz2pow_1norm = nm1;
-% modelFit.models.du_max_nm1 = delumax;
+modelFit.models.G_uz2powI = G_deluz2Ipow*g_der;
+modelFit.models.G_deluz2powI = G_deluz2Ipow;
+modelFit.models.g_deluz2pow_1norm = nm1;
+modelFit.models.du_max_nm1 = delumax;
 modelFit.models.Gvib = Gvib;
 modelFit.models.gdrift = gdrift;
 modelFit.models.hyst = hyst;

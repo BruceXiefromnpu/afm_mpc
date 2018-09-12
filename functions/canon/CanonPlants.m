@@ -7,7 +7,7 @@ classdef CanonPlants
   
   
   methods (Static)
-    function [plants, frf_data] = plants_ns14(nd, version)
+    function [plants, frf_data, modelFit] = plants_ns14(nd, version)
     % [plants, frf_data] = plants_ns14(nd)
       
     %       load(fullfile(PATHS.sysid, ['hysteresis/steps_hyst_model.mat']));
@@ -30,14 +30,20 @@ classdef CanonPlants
       end
       
       load(modelFit_file, 'modelFit')
+      if exist('nd', 'var') && ~isempty(nd)
+        modelFit.models.Gvib.IOdelay = 0;
+        modelFit.models.G_uz2stage.IOdelay = 0;
+        modelFit.models.Gvib.InputDelay = nd;
+        modelFit.models.G_uz2stage.InputDelay = nd;
+      else
+        modelFit.models.Gvib.IOdelay = 0;
+        modelFit.models.G_uz2stage.IOdelay = 0;
+        modelFit.models.Gvib.InputDelay = 9;
+        modelFit.models.G_uz2stage.InputDelay = 9;
+      end
       plants = modelFit.models;
       SYS = ss(modelFit.models.Gvib);
       
-      if exist('nd', 'var')
-        SYS.InputDelay = nd;
-      else
-        SYS.InputDelay = 9;
-      end
       %plants.gdrift = modelFit.models.gdrift;
       plants.gdrift_inv = 1/plants.gdrift;
       
