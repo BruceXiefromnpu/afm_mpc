@@ -31,7 +31,7 @@ P = path();
   
   u_reset = PIHyst.gen_reset_u(t1, t_final, Ts, k1, umax);
   if verbose
-    figure(100);
+    figure(100); clf
     t = (0:length(u_reset)-1)'*Ts;
     plot(t, u_reset, '-k')
     grid on, hold on

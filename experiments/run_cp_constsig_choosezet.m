@@ -62,7 +62,7 @@ saveon = false;
 %
 % For all cases, drift and hysteresis compensation remains
 % unchanged. 
-md = 4;
+md = 2;
 
 % !!!!!! These gamas should match the data in table II !!!!!!
 if md == 1
@@ -101,7 +101,7 @@ end
 % ------- Load Plants -----
 with_hyst = true;
 
-[plants, frf_data] = CanonPlants.plants_ns14;
+[plants, frf_data] = CanonPlants.plants_ns14(9, 2);
 
 Ts  = plants.SYS.Ts;
 % if md == 2
@@ -386,6 +386,7 @@ if do_sim_linfxp
   fprintf('max of M*Xhat = %.2f\n', max(max(abs(ML_x0*Xhat_fxpl.Data'))));
   
   % Simulate current
+  if 0
   figure(1000); clf
   Ipow = lsim(plants.G_uz2powI, U_full_fxpl.Data, U_full_fxpl.Time);
   sim_exp_fxpl.Ipow = timeseries(Ipow, U_full_fxpl.Time);
@@ -393,7 +394,9 @@ if do_sim_linfxp
   hlin_Ipow = plot(U_full_fxpl.Time, Ipow, '--k');
   hlin_Ipow.DisplayName = 'Linear Current';
   hold on, grid on;
+  end
 end
+%
 % ----------------------------------------------------------------------- %
 % --------------------- MPC, fgm fixed-point ---------------------------- %
 if do_sim_mpcfxp
@@ -441,14 +444,14 @@ if do_sim_mpcfxp
   Ts_vec_fxpm = sim_exp_fxpm.settle_time(TOL, tol_mode, 1);
   fprintf('Total MPC FXP settle-time = %.3f [ms]\n', sum(Ts_vec_fxpm)*1000);
   
+  if 0
   figure(1000);
   hold on
   Ipow = lsim(plants.G_uz2powI, U_full_fxpm.Data, U_full_fxpm.Time);
   sim_exp_fxpm.Ipow = timeseries(Ipow, U_full_fxpm.Time);
-  
   hmpc_Ipow = plot(U_full_fxpl.Time, Ipow, '--g');
   hmpc_Ipow.DisplayName = 'MPC Current';
-  
+  end  
   fprintf('\n-------------------------------------------------\n')
   [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp_fxpl, sim_exp_fxpm);
 
@@ -558,9 +561,10 @@ grid on
 title('Current')
 
 try; [~, F_state] = plotState(xhat_exp, F_state); end;
+
 fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp_fxpl,...
-  sim_exp_fxpm, afm_exp_lin);
+ sim_exp_fxpm,  afm_exp_lin);
 
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
@@ -569,17 +573,17 @@ if saveon
 save(fullfile(save_root, [step_descr, '_lin_EXP_', exp_id_str, '_',...
     datestr(now, 'mm-dd-yyyy'), '02.mat']), 'afm_exp_lin')
 end
-%
+
 %--------------------------------------------------------------------------
 % -------------- MPC Experiment -------------------------------------------
-
+%
 % Build the u-reset.
 if 1
   dry_run = false;
   reset_piezo('t1', 15, 't_final', 25, 'umax', 9, 'k1', 0.55,...
             'verbose', true, 'dry_run', dry_run)
 end
-%
+
 if ispc & do_sim_mpcfxp
   mpc_dat_path = 'Z:\mpc-journal\step-exps\MPCControls01.csv';
   sims_fxpm.write_control_data(mpc_dat_path, yref, traj_path)
