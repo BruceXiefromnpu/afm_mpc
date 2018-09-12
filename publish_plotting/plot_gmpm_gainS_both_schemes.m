@@ -6,7 +6,7 @@ addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
 
 clear, clc
 saveon = true;
-plants = CanonPlants.plants_ns14();
+plants = CanonPlants.plants_ns14(9, 2);
 G = plants.SYS;
 G_recyc = plants.sys_recyc;
 Ts = G_recyc.Ts;
@@ -191,7 +191,7 @@ PM_ls2 = ':';
 
 width = 3.45;
 height = 3;
-figbase = 0;
+figbase = 10;
 
 f4 = mkfig(4+figbase, width, height); clf
 f5 = mkfig(5+figbase, width, height); clf
