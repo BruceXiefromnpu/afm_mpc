@@ -39,7 +39,7 @@ subplot(2,1,1)
 title('log fit')
 
 Nd2 = 10;
-ns2 = 12
+ns2 = 14;
 k_estmax = 273;
 ss_opts = frf2ss_opts('Ts', Ts);
 

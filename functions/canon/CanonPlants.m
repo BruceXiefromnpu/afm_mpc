@@ -7,27 +7,38 @@ classdef CanonPlants
   
   
   methods (Static)
-    function [plants, frf_data] = plants_ns14(nd)
+    function [plants, frf_data] = plants_ns14(nd, version)
     % [plants, frf_data] = plants_ns14(nd)
       
-%       load(fullfile(PATHS.sysid, ['hysteresis/steps_hyst_model.mat']));
-%       hyst.rp = rp;
-%       hyst.wp = wp;
-%       hyst.r = r;
-%       hyst.w = w;
-%       
-%       modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_info_HIRESFourierCoef_5-24-2018-01.mat');
-      modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat');
-      load(modelFit_file)
-      plants = modelFit.models;
+    %       load(fullfile(PATHS.sysid, ['hysteresis/steps_hyst_model.mat']));
+    %       hyst.rp = rp;
+    %       hyst.wp = wp;
+    %       hyst.r = r;
+    %       hyst.w = w;
+    %
+    %       modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_info_HIRESFourierCoef_5-24-2018-01.mat');
+    if ~exist('version', 'var')
+      version = 1;
+    end
       
+      if version == 1
+        modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat');
+      elseif version ==2
+        modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_infoFourierCoef_9-11-2018-01.mat');
+      else
+        error('version number $d not recocnized');
+      end
+      
+      load(modelFit_file, 'modelFit')
+      plants = modelFit.models;
       SYS = ss(modelFit.models.Gvib);
+      
       if exist('nd', 'var')
         SYS.InputDelay = nd;
       else
         SYS.InputDelay = 9;
       end
-      plants.gdrift = modelFit.models.gdrift;
+      %plants.gdrift = modelFit.models.gdrift;
       plants.gdrift_inv = 1/plants.gdrift;
       
       SYS = balreal(SYS);
