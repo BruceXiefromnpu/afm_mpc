@@ -5,7 +5,7 @@ addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
 
 clear, clc
 saveon = true;
-plants = CanonPlants.plants_ns14();
+plants = CanonPlants.plants_ns14(9, 2);
 G = plants.SYS;
 G2 = plants.Gvib;
 
@@ -15,7 +15,7 @@ z1 = tzero(G2);
 p2 = pole(absorbDelay(G2));
 
 assert( all(abs(sort(p1) - sort(p2)) < 1e-13) == true)
-%%
+
 fig = mkfig(1, 1.75, 2); clf
 %                                           lft   bt   wd   ht
 ax = axes('Units', 'inches', 'Position', [0.33,  0.2, 1.4 1.7500]);
@@ -38,7 +38,7 @@ set(xlab, 'Units', 'inches', 'Position', [1.5/2, -.1, 0]);
 
 saveas(ax, fullfile(PATHS.jfig, 'pzplot.svg'))
 % tighten_axis(fig, ax)
-%%
+
 S = ss2tex(G)
 
 fname = fullfile(PATHS.MPCJ_root, 'latex', 'Gvib_data.tex');

@@ -5,7 +5,7 @@
 saveon = true;
 lqr_locus_figfile = 'lqr_locus_choozezet.svg';
 
-plants = CanonPlants.plants_ns14();
+plants = CanonPlants.plants_ns14(9, 2);
 sys_recyc = plants.sys_recyc;
 Ts = sys_recyc.Ts;
 

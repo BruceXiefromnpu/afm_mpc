@@ -16,7 +16,7 @@ addpath('/home/arnold/matlab/afm_mpc_journal/functions/canon')
 addpath('/home/arnold/matlab/afm_mpc_journal/functions')
 
 
-[plants, frf_data] = CanonPlants.plants_ns14();
+[plants, frf_data] = CanonPlants.plants_ns14(9, 2);
 G = absorbDelay(ss(plants.G_uz2stage));
 
 % Gains for current sensing 
@@ -124,26 +124,6 @@ tighten_axis(F3, ax3)
 if saveon
   saveas(F3, fullfile(PATHS.jfig, 'G_pow_and_current.svg'));
 end
-%%
-
-modelFit.frf.G_uz2powV = G_uz2powV;
-modelFit.frf.G_uz2stage = G_uz2stage;
-modelFit.frf.G_uz2powI  = G_uz2powI;
-modelFit.frf.G_powV2powI = G_powV2powI;
-modelFit.frf.w_s       = freqs*2*pi;
-modelFit.E_s = E_s;
-modelFit.E_res_stage = E_res_stage;
-
-modelFit.frf.freqs_Hz  = freqs;
-modelFit.frf.Ts        = Ts;
-modelFit.frf.freq_s    = freqs;
-
-
-
-if saveon
-        save(frf_File, 'modelFit');
-end
-
 
 
 

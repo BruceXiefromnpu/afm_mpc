@@ -2,19 +2,30 @@ clear
 clc
 
 saveon = true;
+hash_opts = struct('Method', 'MD5', 'Format', 'hex', 'Input', 'file');
+
 % load('hystID_data_4-30-2018_01.mat')
 addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
 addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
-% hyst_file = 'hystID_data_5-4-2018_01.mat';
-hyst_file = 'hystID_data_27-Aug-2018_01.mat';
 
-hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
+[plants, ~, MF] = CanonPlants.plants_ns14(9,2);
+
+
+% hyst_file = 'hystID_data_27-Aug-2018_01.mat';
+% hyst_path = fullfile(PATHS.sysid, 'hysteresis', hyst_file);
+
+hyst_path = MF.heritage.fpath_hystID;
+% make sure the data hash not changed
+hyst_hash_expected = MF.heritage.hyst_data_hash;
+hyst_hash_current = DataHash(hyst_path, MF.heritage.hash_opts);
+assert(strcmp(hyst_hash_expected, hyst_hash_current))
+
 load(hyst_path)
 
 % % To remove the vibrational and drift aspects, we need those models. Load them:
 % modelFit_file = fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat');
 % load(modelFit_file)
-plants = CanonPlants.plants_ns14();
+
 whos
 
 

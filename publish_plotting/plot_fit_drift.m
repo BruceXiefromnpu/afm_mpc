@@ -1,8 +1,19 @@
 % --------------------- Now, Fit the drift model -----------------
 clear
 % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
-load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
-[plants, frf_data] = CanonPlants.plants_ns14();
+% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
+
+[plants, frf_data, MF] = CanonPlants.plants_ns14(9, 2);
+fpath_driftID = MF.heritage.fpath_driftID;
+
+% make sure the data hash not changed
+drift_hash_expected = MF.heritage.drift_data_hash;
+drift_hash_current = DataHash(fpath_driftID, MF.heritage.hash_opts);
+assert(strcmp(drift_hash_expected, drift_hash_current))
+
+load(fpath_driftID)
+
+% fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_9-10-2018_01.mat'))
 
 Gvib = plants.SYS; %modelFit.models.G_uz2stage;
 Ts = Gvib.Ts;
@@ -54,9 +65,8 @@ h3 = plot(t_exp, y_vib, ':k');
 h3.DisplayName = '$G_{\textrm{vib}}$';
 leg1 = legend([h0, h1, h2, h3]);
 xlim([0, 0.28])
-ylim([-0.005, 0.17])
-% set(ax, 'XTick', (0:0.05:0.3), 'YTick', (0:0.025:0.15))
-set(ax, 'YTick', (0:0.025:0.15))
+ylim([-0.005, 1.05])
+% set(ax, 'YTick', (0:0.025:0.15))
 
 grid on
 % grid minor;

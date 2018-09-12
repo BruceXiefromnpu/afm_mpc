@@ -3,7 +3,7 @@
 
 clear, clc
 saveon = true;
-plants = CanonPlants.plants_ns14();
+plants = CanonPlants.plants_ns14(9,2);
 G = plants.SYS;
 G_recyc = plants.sys_recyc;
 Ts = G_recyc.Ts;
