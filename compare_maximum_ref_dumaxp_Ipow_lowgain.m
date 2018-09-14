@@ -33,7 +33,7 @@ umax = 5;
 % sys_recyc_nodelay = plants.sys_recyc_nodelay;
 % 
 
-plants = CanonPlants.plants_ns14();
+plants = CanonPlants.plants_ns14(9,2);
 du_max_orig = StageParams.du_max;
 du_max = du_max_orig/norm(plants.gdrift_inv, Inf);
 
@@ -80,12 +80,12 @@ R0 = 1;
 gamma = 0.00001;
 gam_s = linspace(gamma, 6, 30)
 % gam_s = logspace(log10(gamma), log10(20), 30)
-%%
+%
 % gam_s = [1, 100, 1000, 2500, 5000, 10000];
 ref_s = 0.1:0.5:15.5;
 
 
-N_mpc_s = [8, 12, 20]; % original
+N_mpc_s = [8, 12, 22]; % original
 % N_mpc_s = [12, 18, 24];
 N_traj =800;
 trun = Ts*N_traj;
@@ -377,6 +377,13 @@ for kk = 1:length(rmax_s)
    title(sprintf('r-max = %.2f', rmax_s(kk)));
     
 end
+
+
+% cz_mg_mpc22 = step_data_mpc.ts_by_rmax_results{3}.gamma;
+% cz_mg_slf   = step_data_lin.ts_by_rmax_results{1}.gamma;
+
+
+
 % % gam = R1;
 % % N = 20;
 % % Qp = dare(sys_recyc.a, sys_recyc.b, Q1, gam, S1);
@@ -421,49 +428,4 @@ saveas(gcf, fullfile(PATHS.jfig, 'perc_increase_Ipow_lowgain_rmax14.svg'))
 
 
 
-
-
-%%
-% 
-% group0 =  [figure(300), figure(301), figure(302), figure(303), figure(304),...
-%           figure(305)];
-% tilefigs([1], group0);
-% %%
-% group1 = [figure(400), figure(401), figure(402), figure(403), figure(404),...
-%           figure(405)];
-% tilefigs(2, group1)
-% 
-% %%
-% group2 = [figure(501), figure(502),figure(503),figure(504)];
-% tilefigs(3, group2);
-% 
-% 
-% %%
-% figure(400);
-% subplot(2,1,1)
-% ax1 = gca();
-% grid on;, hold on
-% subplot(2,1,2)
-% ax2 = gca();
-% grid on, hold on
-% 
-% ref_idx = 19;
-% gam_idx = 1;
-% step_data_lin.plot_single_traj(ref_idx, gam_idx, ax1, ax2, 'LineStyle', '-')
-% %%
-% step_data_lin.plot_single_traj(ref_idx, gam_idx, ax1, ax2, 'LineStyle', '--')
-% step_data_mpc.plot_single_traj(3, ref_idx, 1, ax1, ax2, 'LineStyle', '-.')
-% 
-% ref = ref_s(ref_idx);
-% 
-% 
-% subplot(2,1,1)
-% grid on;, hold on
-% xlm = xlim();
-% plot(xlm, [ref, ref]+0.01*ref, ':k')
-% plot(xlm, [ref, ref]-0.01*ref, ':k')
-% subplot(2,1,2)
-% grid on, hold on
-
-%%
 

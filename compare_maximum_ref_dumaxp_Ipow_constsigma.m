@@ -26,7 +26,7 @@ TOL = 0.01;
 % 3). LQR generation gain.
 % -------------------------------------------------------------------------
 % -------------------- Constrained LQR Stuff ------------------------------
-plants = CanonPlants.plants_ns14();
+plants = CanonPlants.plants_ns14(9, 2);
 du_max_orig = StageParams.du_max;
 du_max = du_max_orig/norm(plants.gdrift_inv, Inf);
 
@@ -78,7 +78,7 @@ gam_s = linspace(gamma, 15, 30)
 ref_s = 0.1:0.5:15;
 
 
-N_mpc_s = [8, 12, 16, 20]; % original
+N_mpc_s = [8, 12, 16, 22]; % original
 % N_mpc_s = [12, 18, 24];
 N_traj =800;
 trun = Ts*N_traj;
