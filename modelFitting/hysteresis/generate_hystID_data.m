@@ -5,7 +5,7 @@ saveon = false;
 
 Ts = 40e-6;
 if 1
-  u_max = 8.8;
+  u_max = 8.5;
   n_space = 8000;
   n_up = 5;
   step_sz = u_max/n_up;
@@ -38,9 +38,10 @@ if 1
   
   t_vec = (0:length(u_vec)-1)'*Ts;
   
-  eta = randn(length(t_vec), 1)*0.01;
-  u_vec = u_vec + eta;
-  % lpf
+%   eta = randn(length(t_vec), 1)*0.01;
+%   u_vec = u_vec + eta;
+  
+% lpf
   w1 = 100*2*pi;
   F = tf(w1, [1, w1])
   F = c2d(F*F, Ts);
@@ -63,11 +64,11 @@ else
 end
 
 
-%%
+%
 dry_run = false
 reset_piezo('t1', 15, 't_final', 25, 'umax', 10, 'k1', 0.55,...
             'verbose', true, 'dry_run', dry_run)
-          %%
+          
 if ~dry_run
   umax = 10;
   clear vi;

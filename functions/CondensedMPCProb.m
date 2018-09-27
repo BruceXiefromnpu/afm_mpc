@@ -32,6 +32,7 @@ classdef CondensedMPCProb < handle
     
     methods
         function [U, X] = solve(self, xk_1, varargin)
+        % [U, X] = solve(self, xk_1, varargin)
         % Solve the mpc problem for initial condition xk_1.
             f = self.M*xk_1;
             

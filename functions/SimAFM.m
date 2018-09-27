@@ -304,8 +304,8 @@ classdef SimAFM
         end
         fprintf(fid, '%.12f, ', MPC_mat(end,1:end-1));
         fprintf(fid, '%.12f\n', MPC_mat(end,end));
-        fclose(fid);
       end
+      fclose(fid);
       
     end % write control data
   
