@@ -31,7 +31,7 @@ refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 % process_settle_time_data.m here...
 experiment_directory = ['many_steps_data_rand_', date, '_01'];
 step_exp_root = fullfile(PATHS.exp, 'step-exps');
-[status, message ] = mkdir(step_exp_root, experiment_directory);
+% [status, message ] = mkdir(step_exp_root, experiment_directory);
 save_root = fullfile(step_exp_root, experiment_directory);
 %%
 fprintf('\n\n\n\n')
@@ -41,12 +41,12 @@ tol_mode = 'abs';
 % which simulations to run
 
 do_sim_linfxp = true;
-
 do_sim_mpcfxp = true;
-do_sim_hyst = true;
-do_inv_hyst = true;
-do_drift = true;
-do_invdrift = true;
+
+do_sim_hyst = false;
+% do_inv_hyst = false;
+% do_drift = false;
+% do_invdrift = false;
 
 plotstate = false;
 plotpoles = false;
@@ -62,13 +62,13 @@ saveon = false;
 %
 % For all cases, drift and hysteresis compensation remains
 % unchanged. 
-md = 2;
+md = 5;
 
 % !!!!!! These gamas should match the data in table II !!!!!!
 if md == 1
   % 1). Constant sigma, minimum-gamma 
-  gam_lin = 12;
-  gam_mpc = 2;
+  gam_lin = 7.5;
+  gam_mpc = 0.001;
   exp_id_str = 'const-sig-min-gam';
 elseif md == 2
   % 2). Constant sigma, rob-optimal
@@ -81,8 +81,8 @@ elseif md ==3
 % 3). Choose zeta, minimum-gamma
 %   gam_lin = 3.8;
 %   gam_mpc = 3.1;
-  gam_lin = 2.9;
-  gam_mpc = 0.2;
+  gam_lin = 3.5;
+  gam_mpc = 0.00001;
   exp_id_str = 'choose-zet-min-gam';
 elseif md ==4
 % 4). Choose zeta, rob-optimal
@@ -92,8 +92,8 @@ elseif md ==4
 % gam_mpc = 29.45;
   exp_id_str = 'choose-zet-rob-opt';
 elseif md == 5
-  gam_mpc = .11;
-  gam_lin = 12;
+  gam_mpc = .6475;
+  gam_lin = gam_mpc;
   exp_id_str = 'const-sig-same-sig';
 end
 
@@ -134,9 +134,9 @@ end
 
 % Get a ref trajectory to track.
 N  = 800;
-r1 =1.37;
-r2 = 0;
-trajstyle =4;
+r1 = 1.35;
+r2 = -7;
+trajstyle =1;
 if trajstyle == 1
   step_ref = StepRef([r1], N);
   yref = step_ref.yref;
@@ -191,7 +191,7 @@ du_max = du_max_orig/norm(plants.gdrift_inv, Inf);
 
 
 if md == 1 || md == 2 || md == 5
-  cmplx_rad = 0.9;
+  cmplx_rad = 0.88;
   [Q1, R0, S1, P_x] = build_control_constsigma(plants.sys_recyc, cmplx_rad);
   % gam_lin = 100;
   % gam_mpc = 100;
@@ -222,7 +222,7 @@ if plotpoles
   sys_cl = SSTools.close_loop(plants.sys_recyc, K_lqr);
 end
 
-N_mpc = 12;
+N_mpc = 22;
 
 Qp = dare(plants.sys_recyc.a, plants.sys_recyc.b, Q1, R0+gam_mpc, S1);
 nu = 1;
@@ -353,18 +353,18 @@ sys_obs_fxp.c = fi(sys_obsDist.c, 1, nw, 28);
 if do_sim_linfxp
   sims_fxpl = SimAFM(plants.PLANT, K_fxp, Nx_fxp, sys_obs_fxp, L_fxp, du_max_fxp,...
     true, 'nw', nw, 'nf', nf, 'thenoise', thenoise);
-
-  sims_fxpl.r = plants.hyst_sat.r;
-  sims_fxpl.w = plants.hyst_sat.w;
-  sims_fxpl.rp = fi(plants.hyst_sat.rp, 1, 16, 11);
-  sims_fxpl.wp = fi(plants.hyst_sat.wp, 1, 16, 11);
-  sims_fxpl.d = plants.hyst_sat.d;
-  sims_fxpl.ws = plants.hyst_sat.ws;
-  sims_fxpl.dp = fi(plants.hyst_sat.dp, 1, 16, 11);
-  sims_fxpl.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
-  sims_fxpl.gdrift_inv = plants.gdrift_inv;
-  sims_fxpl.gdrift = plants.gdrift;
-  
+  if do_sim_hyst
+    sims_fxpl.r = plants.hyst_sat.r;
+    sims_fxpl.w = plants.hyst_sat.w;
+    sims_fxpl.rp = fi(plants.hyst_sat.rp, 1, 16, 11);
+    sims_fxpl.wp = fi(plants.hyst_sat.wp, 1, 16, 11);
+    sims_fxpl.d = plants.hyst_sat.d;
+    sims_fxpl.ws = plants.hyst_sat.ws;
+    sims_fxpl.dp = fi(plants.hyst_sat.dp, 1, 16, 11);
+    sims_fxpl.wsp = fi(plants.hyst_sat.wsp, 1, 16, 11);
+    sims_fxpl.gdrift_inv = plants.gdrift_inv;
+    sims_fxpl.gdrift = plants.gdrift;
+  end
   
   [y_fxpl, U_full_fxpl, U_nom_fxpl, dU_fxpl, Xhat_fxpl] = sims_fxpl.sim(yref, dist_traj);
   name = sprintf('FXP lin Sim. (%s)', exp_id_str);
