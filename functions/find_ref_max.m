@@ -80,9 +80,6 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
     figs = [figs, F2, F3];
   end
   
-  % We have to set the simulink workspace to this function, since
-  % default is the main scripts workspace.
-  % options = simset('SrcWorkspace','current');
   y_traj_s = repmat(timeseries(0,0), 1, length(ref_s));
   du_traj_s = repmat(timeseries(0,0), 1, length(ref_s));
   t_settle_s = zeros(1, length(ref_s));
@@ -90,8 +87,7 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
   ref_max_recommended_idx = 0;
   for iter = 1:length(ref_s)
     ref_f = ref_s(iter);
-    % sim('MPC_fp', [], options)
-    % y1 = y_mpcDist;
+
     [Y, U, dU] = sim_MPC_fp(sim_struct, ref_f);
     [t_settle, k_s] = settle_time(Y.time, Y.Data, ref_f, 0.01*ref_f,...
       [], [], 30);
@@ -110,6 +106,7 @@ function result = find_ref_max(sim_struct, ref_s, varargin)
     end
     if isnan(t_settle)
       ts_is_nan = true;
+      t_settle_s(iter) = Inf;
       break
     else
       ts_is_nan = false;

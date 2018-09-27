@@ -38,6 +38,8 @@ classdef ManyStepExps < handle
       hands = self.ploty_selected(idx, fig_ax);
     end
     function [hands] = ploty_selected(self, idx, fig_ax)
+    % [hands] = ploty_selected(self, idx, fig_ax)
+    
       hands = gobjects(1, length(idx));
       for k=1:length(idx)
         hands(k) = self.step_exps{idx(k)}.ploty(fig_ax);
@@ -46,6 +48,8 @@ classdef ManyStepExps < handle
     end
     
     function [hands] = plotdu_selected(self, idx, fig_ax)
+    % [hands] = plotdu_selected(self, idx, fig_ax)
+    
       hands = gobjects(1, length(idx));
       for k=1:length(idx)
         hands(k) = self.step_exps{idx(k)}.plotdu(fig_ax);
@@ -53,6 +57,8 @@ classdef ManyStepExps < handle
       end
     end
     function [hands] = plotIpow_selected(self, idx, fig_ax)
+    % [hands] = plotIpow_selected(self, idx, fig_ax)
+    
       hands = gobjects(1, length(idx));
       for k=1:length(idx)
         hands(k) = self.step_exps{idx(k)}.plotIpow(fig_ax);

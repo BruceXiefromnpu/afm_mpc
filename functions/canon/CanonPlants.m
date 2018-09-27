@@ -25,6 +25,8 @@ classdef CanonPlants
         modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat');
       elseif version ==2
         modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_infoFourierCoef_9-11-2018-01.mat');
+      elseif version == 3
+        modelFit_file = fullfile(PATHS.sysid,'FRF_data', 'x-axis_sines_infoFourierCoef_9-27-2018-01.mat');
       else
         error('version number $d not recocnized');
       end

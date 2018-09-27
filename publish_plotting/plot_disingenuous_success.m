@@ -14,11 +14,12 @@ TOL = 14/512;
 names_exp_v1 = {'single_step_lin_EXP_const-sig-same-sig_08-30-2018.mat',...
 'single_step_mpc_EXP_const-sig-same-sig_08-30-2018.mat'};
 
-load(fullfile(data_root, names_exp_v1{1}))
-lin_exp_v1 = afm_exp_lin;
-lin_exp_v1.controller
+load(fullfile(data_root, names_exp_v1{1}));
 
-load(fullfile(data_root, names_exp_v1{2}))
+lin_exp_v1 = afm_exp_lin;
+% lin_exp_v1.controller;
+
+load(fullfile(data_root, names_exp_v1{2}));
 mpc_exp_v1 = afm_exp_mpc;
 
 mpc_exp_v1.Color = 'r';
@@ -26,12 +27,12 @@ mpc_exp_v1.LineStyle = '--';
 mpc_exp_v1.yscaling = 5;
 mpc_exp_v1.yunits = '$\mu$m';
 
-tsmpc1 = mpc_exp_v1.settle_time(TOL, 'abs', 0)*1000
-tslin1  = lin_exp_v1.settle_time(TOL, 'abs', 0)*1000
+tsmpc1 = mpc_exp_v1.settle_time(TOL, 'abs', 0)*1000;
+tslin1  = lin_exp_v1.settle_time(TOL, 'abs', 0)*1000;
+wh
 
-
-mpc_exp_v1.name = sprintf('MPC-CS, $\\gamma=0.11$, settle-time=%.2f [ms]', tsmpc1)
-lin_exp_v1.name = sprintf('SLF-CS, $\\gamma=0.11$, settle-time=%.2f [ms]', tslin1)
+mpc_exp_v1.name = sprintf('MPC-CS, $\\gamma=0.11$, settle-time=%.2f [ms]', tsmpc1);
+lin_exp_v1.name = sprintf('SLF-CS, $\\gamma=0.11$, settle-time=%.2f [ms]', tslin1);
 lin_exp_v1.yscaling = 5;
 lin_exp_v1.yunits = '$\mu$m';
 
@@ -43,15 +44,15 @@ names_exp_v2 = {'single_step_lin_EXP_const-sig-same-sig_08-30-201802.mat'};
 
 load(fullfile(data_root, names_exp_v2{1}))
 lin_exp_v2 = afm_exp_lin;
-tslin2  = lin_exp_v2.settle_time(TOL, 'abs', 0)*1000
+tslin2  = lin_exp_v2.settle_time(TOL, 'abs', 0)*1000;
 
-lin_exp_v2.name = sprintf('SLF-CS, $\\gamma=12$, settle-time=%.2f [ms]', tslin2)
+lin_exp_v2.name = sprintf('SLF-CS, $\\gamma=12$, settle-time=%.2f [ms]', tslin2);
 lin_exp_v2.Color = 'k';
 lin_exp_v2.LineStyle = '-';
 lin_exp_v2.yscaling = 5;
 lin_exp_v2.yunits = '$\mu$m';
 
-
+%%
 width = 3.45;
 height = 3;
 F1 = mkfig(1, width, height); clf;
@@ -65,9 +66,17 @@ ax2 = axes('Position', [lft, bt2, wd, ht1]);
 % subplot(2,1,1);
 % ax2 = subplot(2,1,2);
 
-hlin2 = lin_exp_v2.ploty(ax1);
+mpc_exp_v1.Color = 'r';
+mpc_exp_v1.LineStyle = '-';
+lin_exp_v1.Color = 'b';
+lin_exp_v1.LineStyle = '-';
+lin_exp_v2.Color = 'k';
+lin_exp_v2.LineStyle = '--';
+
+
 hmpc1 = mpc_exp_v1.ploty(ax1);
 hlin1 = lin_exp_v1.ploty(ax1);
+hlin2 = lin_exp_v2.ploty(ax1);
 
 grid(ax1, 'on')
 
@@ -75,8 +84,8 @@ mpc_exp_v1.step_ref.yscaling = 5;
 mpc_exp_v1.step_ref.plot_settle_boundary(ax1, TOL, 'abs')
 
 lin_exp_v1.plotdu(ax2);
-lin_exp_v2.plotdu(ax2);
 mpc_exp_v1.plotdu(ax2);
+lin_exp_v2.plotdu(ax2);
 
 grid(ax2, 'on')
 
@@ -88,12 +97,13 @@ xlim(ax2, [tstart, tf])
 ylim(ax1, [1, 1.5]*5)
 
 leg1 = legend([hmpc1, hlin1, hlin2]);
-set(leg1, 'Position', [0.2513 0.6500 0.7122 0.1449], 'Box', 'off')
+set(leg1, 'Position', [0.2664 0.5736 0.7122 0.1449], 'Box', 'off')
 ylabel(ax1, '$y$ [$\mu$m]')
 ylabel(ax2, '$\Delta u_k$')
 xlabel(ax2, 'time [s]')
 
 set(ax1, 'XTickLabel', [])
+saveas(F1, fullfile(PATHS.jfig, 'disingenuous.svg'))
 
 %%
 % now simulation
