@@ -33,7 +33,7 @@ classdef FGMprob_1 < CondensedMPCProb
           self.N_mpc = N;
           self.nu = size(sys.b,2);
           [H, M] = CondensedMPCProb.build_mpc_problem(sys,N, Q, R, Qp, S);
-
+          
           eigs = eig(H);
           L    = max(eigs);
           mu   = min(eigs);
@@ -41,7 +41,9 @@ classdef FGMprob_1 < CondensedMPCProb
           if mu < 0
             error('Hessian must be positive definite. Smallest eigenvalue is mu = %f', mu)
           end
-
+          self.kappa = cond(H);
+          self.H = H;
+          self.M = M;
           self.I_HL   = eye(N) - H/L;
           self.ML     = M/L;
           self.beta   = (sqrt(L) - sqrt(mu))/(sqrt(L) + sqrt(mu));
@@ -84,7 +86,7 @@ classdef FGMprob_1 < CondensedMPCProb
             y_i = [y_i(nu+1:end); y_i(end-nu+1:end)];
 
             f = self.ML*xk_1;
-            [z_i, y_i] = call_qp_solver(f, z_i, y_i);
+            [z_i, y_i] = self.call_qp_solver(f, z_i, y_i);
 
             ziyi = [z_i; y_i];
             self.warm_start_data = ziyi;
