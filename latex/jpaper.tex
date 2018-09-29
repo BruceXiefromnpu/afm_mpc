@@ -145,7 +145,7 @@ Historically, one of the challenges of applying MPC to systems with fast dynamic
 The classical alternative to MPC with respect to constraint violation is to simply relax the performance criteria, e.g., by increasing the control weight and instituting a linear feedback law. Because MPC is considerably more difficult to implement and requires more computation time and/or hardware resources compared to linear feedback, an important question is  ``how much \emph{time} is actually saved with MPC?"
 % Explorations following this line of reasoning have not seen much attention in the applied MPC literature.
 
-In recent work, we applied the FGM formulation of \cite{Jerez_Trans_2014} to our piezo stage and showed that, given a particular set of weighting matrices, we could increase the stabilizable range of setpoints compared to simply saturating an equivalent linear feedback \cite{braker_application_2017}. Others have also applied MPC to similar systems \cite{Wills_CDC_2005, Lin_ASME_2012, rana_spiral_2014, rana_MPC}. In all these cases, little insight is given to how the cost function was tuned. In some cases, no comparison to linear control is given \cite{rana_spiral_2014, rana_MPC}. When a comparison to linear feedback is given, it appears this was only done for inputs of a fixed input size. This is problematic because, as we show in Section~\ref{sec**}, it is possible to tune the weighting matrices such that MPC performs significantly better than linear feedback for only certain sizes of inputs. 
+In recent work, we applied the FGM formulation of \cite{Jerez_Trans_2014} to our piezo stage and showed that, given a particular set of weighting matrices, we could increase the stabilizable range of setpoints compared to simply saturating an equivalent linear feedback \cite{braker_application_2017}. Others have also applied MPC to similar systems \cite{Wills_CDC_2005, Lin_ASME_2012, rana_spiral_2014, rana_MPC}. In all these cases, little insight is given to how the cost function was tuned. In some cases, no comparison to linear control is given \cite{rana_spiral_2014, rana_MPC}. When a comparison to linear feedback is given, it appears this was only done for inputs of a fixed input size. This is problematic because, as we show in Section~\ref{sec:results}, it is possible to tune the weighting matrices such that MPC performs significantly better than linear feedback for only certain sizes of inputs. 
 
 In prior research where MPC is compared to a linear feedback law \cite{Wills_CDC_2005, Lin_ASME_2012}, including in our own prior work \cite{braker_application_2017}, de-rating the linear feedback is never considered. Thus, the first question we set out to answer in this paper is ``how much performance is sacrificed by using a (possibly de-rated) linear feedback compared to MPC?''. We consider this question by looking at the settling-time for a broad range of step inputs. In section REF, we show that, in contrast to simulation results, the de-rated linear feedback has \emph{better} performance. 
 
@@ -253,7 +253,6 @@ We give the stage a step input with relatively small amplitude (to minimize the 
   \caption{The stage is given a step input (dash-dotted black) with an amplitude of 0.15 volts, which results in the solid blue output trajectory. The response of the combined $\Gv$ and $G_{d}$ models is shown as the dashed red, while that of the vibrational model alone is the dotted black curve.}
   \label{fig:drift_fit}
 \end{figure}
-
 Let $\mathcal{Y}_{\text{exp}}$ represent the step response data collected from the stage and  $\mathcal{Y}_{\text{vib}}$ be the response of the model $\Gv$ to the same input. The goal then is to solve the non-linear least squares problem
 % \todo{I think this is a bit awkward}
 \begin{equation}
@@ -264,6 +263,21 @@ where $\hat{g}_d(k|\theta)$ is the impulse response corresponding to $\hat{G}_d(
 The non-linear optimization problem \eqref{eqn:fit_drift_cost} is solved with MATLAB's \texttt{lsqnonlin} and results in the red curve in Fig.~\ref{fig:drift_fit}, which shows the simulated step response of $\hat{G}_d\hGv$. 
 
 \subsection{Hysteresis Modeling}\label{sec:hyst_model}
+\begin{figure*}[h!]
+  \begin{minipage}{0.48\textwidth}
+  \includesvg[width=1\linewidth]{figures/hyst_response_ol.svg}
+  \caption{The stage is driven by a sequence of filtered step inputs shown in the dotted black curve. The resulting stage response is the solid black curve, which shows good agreement, e.g., at the first step, but much worse agreement for larger steady-state values. The dashed red curve is the response of the overall combined model of $\hGv$, $\hat{G}_{d}$, and the complex hysteresis model $\mathcal{F}$.}
+  \label{fig:hyst_resp_dem}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includesvg[width=1\linewidth]{figures/G_pow_and_current.svg}
+\caption{ The solid curve is the transfer function, $G_{I_X, u_X}$, from low voltage control to power amplifier output current, which is upper-bounded by the dotted and dashed curves, which represent a pure discrete derivative multiplied by the bounds \eqref{eqn:h1bound} and \eqref{eqn:duHinf}, respectively.}
+\label{fig:powTF}
+\end{minipage}
+\end{figure*}
+
 In typical raster scanning applications, hysteresis manifests as a bowing of the trajectory as the stage tries to track the linear ramps in a triangle wave (see, e.g., Fig. 3 of \cite{Leang_IEEECS_2009}). To motivate the need for hysteresis compensation in a step tracking application, consider Fig. \ref{fig:hyst_resp_dem}, which shows an input signal of various filtered steps applied open-loop to the stage. The solid black curve is the stage response, while the dotted-black curve is the input (scaled by the nominal DC-gain of $G_d\Gv$), which shows good agreement for the first step, but much worse agreement with the later steps, particularly those with large amplitudes. Effectively, the gain of the system depends on the control history, since for the same steady-state value of control, the steady-state value of the stage changes.
 
 There are many models for hysteresis \cite{croft_creep_1999, rakotondrabe_bouc_2011, Lui_hysteresis_2013}. Here, we opt for simplicity (and by proxy, fast computation) and use the Modified Prandtl-Ishlinksi Hysteresis model developed in \cite{kuhnen_modeling_2003}. This hysteresis model is composed of a linear combination of saturation operators cascaded with a linear combination of classic hysteretic play\footnote{The term ``play'' is derived from the operator's use in modeling mechanical slop.} operators. The overall input-output relationship of the modified hysteresis operator $\mathcal{F}[\cdot]$ is
@@ -297,20 +311,7 @@ for an input $\xi_k$ and output $\mu_k$.
 If the thresholds $d_H^i$ and $d_S^i$ are pre-defined, \cite{kuhnen_modeling_2003} shows that it is possible to fit the weights $w_S$ and $w_H$ as the solution to a quadratic program. Using the input and output data shown in Fig.~\ref{fig:hyst_resp_dem}, we fit the weights $w_H$ and $w_S$ with several different numbers of operators. Though the quality of the fit increases with more operators, we found that the improvement did not increase substantially beyond 7 of each operator. 
 The resulting fit with 7 saturation operators and 7 hysteresis operators is shown in Fig.~\ref{fig:hyst_resp_dem} as the dashed red curve (which also includes the drift and vibrational models). As the inset in that figure shows, it is possible to improve on this fit. One common alternative to cascading the drift and hysteresis models is to put them in parallel with each other \cite{mokaberi_compensation_2008, Krejci_inverse_2001}. While this does indeed lead to a smaller residual, it gives worse closed-loop performance than the present method.
 
-\begin{figure}
-  \includesvg[width=1\linewidth]{figures/hyst_response_ol.svg}
-  \caption{The stage is driven by a sequence of filtered step inputs shown in the dotted black curve. The resulting stage response is the solid black curve, which shows good agreement, e.g., at the first step, but much worse agreement for larger steady-state values. The dashed red curve is the response of the overall combined model of $\hGv$, $\hat{G}_{d}$, and the complex hysteresis model $\mathcal{F}$.}
-  \label{fig:hyst_resp_dem}
-\end{figure}
-
-
 \subsection{Power Amplifier Characterization and Limitations}\label{sec:powcharct}
-\begin{figure}[htbp]
-\centering
-\includesvg[width=1\linewidth]{figures/G_pow_and_current.svg}
-\caption{ The solid curve is the transfer function, $G_{I_X, u_X}$, from low voltage control to power amplifier output current, which is upper-bounded by the dotted and dashed curves, which represent a pure discrete derivative multiplied by the bounds \eqref{eqn:h1bound} and \eqref{eqn:duHinf}, respectively.}
-\label{fig:powTF}
-\end{figure}
 The high voltage output of the C300 is current limited to 100 mA. The solid black curve in Figure~\ref{fig:powTF} shows the transfer function from the low voltage input of the C300 to current flowing through the stage, $G_{I_X,u_X}$, which is measured via the sensing resistor and op-amp shown in Fig~\ref{fig:c300_meas}. Because the piezo actuators are highly capacitive, at frequencies below about 600~Hz, $G_{I_X,u_x}$ looks like a pure derivative.
 Thus, we can factor $G_{I_X,u_X}$ as
 \begin{align}
@@ -482,6 +483,11 @@ Thus, the loop gain is given by $L(z) = G(z)D_1(z)$ and we define the sensitivit
 \begin{equation}
   \mathcal{S}(z)\triangleq \frac{1}{1+L(z)}.\label{eqn:Sens}
 \end{equation}
+Due to the disturbance estimator, $\mathcal{S}(z)$ will always have a zero at $z=1$ so that its DC-gain is zero. It will be helpful in Section~\ref{sec:results} to define ''integrated sensitivity'' as
+\begin{equation}
+\mathcal{S}_I = \mathcal{S}\frac{1}{z-1} \label{eqn:S_int}.
+\end{equation}
+
 The closed-loop poles are the transmission zeros of $1+L(z)$ and are the union of the controller poles and observer poles, which can be seen through the separation principle or manipulation of the matrix pencil describing the transmission zeros. Moreover, in the first term of \eqref{eqn:cltf}, the observer poles are canceled by the transmission zeros of $(1-D_2(z))$. Of course, these properties only hold when the observer is a perfect model of the plant. 
 
 The advantage in representing the closed-loop dynamics as \eqref{eqn:cltf} is that it exposes cleanly how to analyze the robustness of our designs. Due to hysteresis, the gain margin is of particular importance. 
@@ -578,17 +584,102 @@ Certainly, in the case of the LQR state feedback controller, one could simply us
 % \subsection{Selecting Desired Poles}
 We consider two methods to choose a set of desired pole locations. The first method we call ``constant-$\sigma$''. The idea is to move all complex poles such that they lie on a circle with a specified radius, which endows them all with the same time constant. Here, we select the radius as $\sigma=0.9$.
 
-The second scheme, which we call ``choose-$\zeta$'', keeps the natural frequency of each complex pole unchanged but specifies a damping ratio $\zeta$. This is the same scheme we considered in \cite{braker_fast_2017, braker_application_2017}.
+The second scheme, which we call ``choose-$\zeta$'', keeps the natural frequency of each complex pole unchanged but specifies a damping ratio $\zeta$. As we will see in the next section, this approach generally yields slower settling time than the constant-$\sigma$ method: however it is the same scheme we considered previously in \cite{braker_fast_2017, braker_application_2017}, so we include it here so that these results can be evaluated in light of our prior work.
 
 For both cases, we place the 9 poles corresponding to the delay at the roots of unity with a radius chosen more less arbitrarily at ${\sigma=0.25}$. Fig.~\ref{fig:lqr_locus} shows root locus-like plots for each scenario as a function of $\gamma$. As $\gamma$ approaches zero, the closed-loop poles approach the designed fictitious zeros, which are indicated by black circles. 
 
 
 \subsection{Selecting $\gamma$}
-\begin{figure*}
+The choice of $\gamma$ has a significant effect on system performance. Because this effect differs between simulation and experiment, we explore that aspect of the tuning in the next section.
+
+
+
+% Table~\ref{tab:gmpms} summarizes the different values of $\gamma$ selected and the resulting robustness metrics for the two pole placement schemes for MPC and SLF.
+
+% \begin{table}[httb!]
+%   \caption{For each control scheme, this table summarizes the associated control weight $\gamma$ as well as the resulting GM, PM, and low-frequency gain of $\mathcal{S}(z)$. The units for GM and $|\mathcal{S}|$ are decibels and the units for PM are degrees.}
+%   \label{tab:gmpms}
+%   \scriptsize
+%   \begin{tabular}{cccccc}
+%     % scheme& $\gamma$ &GM [dB]& PM [deg] & $|\mathcal{S}|$ [dB]\\
+% \input{rob_data}    
+%   \end{tabular}
+% \end{table}
+
+\section{Simulated vs Experimental Performance}\label{sec:results}
+
+\begin{figure}
+  \includesvg[scale=1]{figures/disingenuous.svg}
+  \caption{When $\gamma=0.11$ for both MPC and SLF, MPC outperforms SLF significantly for a 6.85~$\mu$m step. When the SLF control law is de-rated such that $\gamma=12$, it performs comparably to MPC.}
+  \label{fig:disingenuous}
+\end{figure}
+
+When input constrained MPC is compared to a saturated linear feedback, this is often done using the same control weight for both MPC and the linear feedback and often for a limited range of inputs. Fig.~\ref{fig:disingenuous} illustrates why such an approach is insufficient. The solid red and blue trajectories are the result of tracking a 6.85 $\mu$m step command where $\gamma$ is the same for both designs. If we considered this data alone, we would conclude that MPC is far superior to SLF ''because the constraints were explicitly handled.'' However, if we slightly de-rate the SLF control by increasing $\gamma$, we get the dashed black trajectory which performs just as well. A similar result will occur for smaller reference commands but the same control weights. Thus, to comprehensively assess the potential benefit of MPC, we need to (a) choose the control weights differently so that each scheme performs the best it can and (b) evaluate performance across a range of inputs.
+
+\begin{figure}
+  \includesvg[scale=1]{figures/steps.svg}
+  \caption{The sequence of step commands used to test the control laws. The red circles indicate the 5th and 24th reference. The response to these references are shown in closer detail in Fig.~\ref{fig:min_gam_traj} and \ref{fig:rob_gam_traj}.}
+  \label{fig:steps}
+\end{figure}
+For both pole placement schemes, the choice of $\gamma$ has a strong influence on whether or not it makes sense to implement MPC. For example, if one takes $\gamma$ large enough, then the constrained optimal control and unconstrained optimal control will coincide for all physical setpoints making MPC and SLF equivalent. For a range of $\gamma$ smaller than this value (i.e., $\Delta u_k$ is saturated), the difference in trajectories produced by SLF and MPC is not substantial, meaning that MPC contributes little additional performance. At the other extreme, for $\gamma$ small enough, the SLF control will become unstable while MPC will not. The implicit assumption with MPC
+
+Ideally, the control horizon would be long enough that any physically realizable trajectory would settle within the length of the control horizon. This would require $N$ to be several hundred, which is not currently feasible. The consequence of this is that for very small $\gamma$, the MPC may also become unstable.
+
+\subsection{Study 1: small $\gamma$}\label{sec:small_gam}
+
+\begin{table*}
+  % \begin{minipage}{1\textwidth}
+  \caption{ Settling times for the minimum-$\gamma$ control weight for both pole placement schemes.
+    The first two columns show the reference value and overall change in setpoint. The first four colored columns are the result of simulation and the last four colored columns the experimental settling times. The last (un-colored row) of each table is the sum off settling times together for the respective experiment.
+    % Refer to Table~\ref{tab:gmpms} for a summary of the abbreviations heading each column.
+  }
+  %\begin{subtable}{1\textwidth}
+    %\caption{Settling times for the minimum-$\gamma$ control weight for both pole placement schemes. }
+  % \scriptsize
+    \begin{tabular}{ccccccc|cccc}
+      \scriptsize
+      &    &               &\multicolumn{4}{c|}{simulation}  &\multicolumn{4}{c}{experiment} \\ 
+      \input{manystepsdata_mingam.tex}
+      \label{tab:ts_CSCZ1}
+    \end{tabular}
+% \end{subtable}
+\end{table*}
+Initially we assumed that selecting small values $\gamma$ would result in the best performance (i.e., fastest settling time). Determining this value of $\gamma$ requires that we define the maximum range of setpoints we would like to visit. For our stage, this is approximately a total range of $\pm35 \mu$m, which means the maximum possible step size is $70~\mu$m. Given this maximum step size, we need to determine the smallest $\gamma$ that will still yield a stable trajectory (for the nominal plant) subject to our slew rate constraint. To choose $\gamma$, we ran a series of simulations for a 70~$\mu$m step input for $\gamma$ between $10^-5$ and 10. For MPC and SLF, we take the $\gamma$ which yields the smallest settling time. Note that if $\gamma$ is small enough to result in instability, that value is automatically rejected by this metric. 
+
+% Note that it is not sufficient to run this set of simulations for only the largest step size because a given $\gamma$ may, for example, stabilize a step input of 70~$\mu$m but be unstable for $35~\mu$m. Thus, we run a series of simulations across a grid of $\gamma$'s. For each $\gamma$ in the grid, simulations are run for a reference of $r=2.5~\mu$m up to $r=75~\mu$m in increments of $2.5~\mu$m. If instability occurs, we move up to the next $\gamma$ in the grid. The smallest $\gamma$ which is stable for all setpoints in the range $2.5, 75$ is what we consider to be the minimum $\gamma$. This set of simulations is run for both the MPC case with $N=22$ as well the SLF case for both the constant-$\sigma$ and choose-$\zeta$ pole placement schemes.
+
+% Additionally, faster settling times will typically be achieved by selecting a $\gamma$ larger than the liminal $\gamma$.
+% % , particularly for SLF.
+% To account for this, we ran a set of simulations for a 70~$\mu$m step size with $\gamma$ starting at the smallest stabilizing $\gamma$ and increasing to XX times that value. We choose the $\gamma$ which minimizes the settling time (shown in Fig. REF.). This yields $\gamma=3.5$ for the choose-$\zeta$ case and 7.5 for the constant-$\sigma$ case. 
+
+Using these values of $\gamma$, we tested the experimental performance of the SLF and MPC control schemes by by giving the stage a sequence of 24 reference commands. The first 20 references we selected randomly within the range $[-35~\mu$\text{m}, $35\mu\text{m}]$. We chose the final four references as $0~\mu$m, $35~\mu$m, $-35~\mu$m, and $0~\mu$m, to exercise the full range of the stage. The sequence of references is shown in Fig.~\ref{fig:steps}.
+
+For each step command, we computed the settling times, which we define in an absolute sense. Specifically, the settle boundary is 70~$\mu$m/512, which would correspond to settling within one pixel of a 512 by 512 pixel image for the given range. The settling times for each reference command are compiled into Table~\ref{tab:ts_CSCZ1}. Each row corresponds to a different reference command, as indicated in the first column. The second column shows the overall change in setpoint. Columns 3 through 6 show the simulation settling time and columns 7 through 10 show the experimental settling times. The colormap codes the settling times where dark blue is fastest flowing toward dark red as the slowest. 
+
+In simulation, for both the constant-$\sigma$ and choose-$\zeta$ schemes, MPC provides a faster overall settling time. However, in aggregate this affect is not dramatic. As one might expect, the most benefit is seen in the larger step sizes, particularly for the CZ scheme. In the CS scheme, the  advantage of MPC is not universal, which can be seen, e.g., in the second step command, where MPC is 0.04 ms slower.
+
+While we expected that the simulated settling times would be faster in general than the experimental times, we were surprised to see that for both the CS and CZ pole placement schemes, MPC produced noticeably longer total settling times than SLF. Moreover, the degradation from simulation is worse for the CZ scheme than CS.
+In general, we observed that the MPC trajectories typically exhibited larger amounts of overshoot especially for the chosen-$\zeta$ scheme. This can be seen in the top panel of Fig~\ref{fig:min_gam_traj}, which zooms in on references 5 and 24 (which are circled in Fig.~\ref{fig:steps}).
+\begin{figure}
+  % \begin{minipage}{1\columnwidth}
+    \includesvg[width=1\columnwidth]{figures/step_exps_min_gam.svg}
+    \caption{Experimental trajectories for the constant-$\sigma$ and chosen-$\zeta$ pole placement schemes. The two columns zoom in on the two responses indicated by the red ellipses in Fig.~\ref{fig:steps}. (first row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current.
+      % The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.
+    }
+  \label{fig:min_gam_traj}
+% \end{minipage}
+% \hfill
+\end{figure}
+
+\textbf{Discussion:} While one might blame the lackluster performance of MPC on model uncertainty, a more focused question is ''why does the experimental performance of MPC degrade further from simulation than SLF?'' That is, why is the MPC control law less robust than SLF? To help answer this question, we looked at the gain and phase margin of controller. Reasoning that errors in both the drift and hysteresis models would present as uncertainty at low frequencies, we also considered the DC-gain of the integrated sensitivity function defined in \eqref{eqn:S_int}.
+
+Recall that the control weight $\gamma$ in the SLF control scheme is larger than in MPC. Thus, it is particularly instructive to plot how these metrics depend on $\gamma$. 
+Fig.~\ref{fig:gmpm} plots the GM and PM of $L(z)$ vs $\gamma$. The DC-gain of $\mathcal{S}_I(z)$ is plotted as against $\gamma$ as the solid black curves in Fig.~\ref{fig:GainS}.  In both figures, the values of $\gamma$ chosen for MPC and SLF are indicated by a square and diamond, respectively. Note that for both the CS and CZ pole-placement scenarios, both GM and PM improve with larger values of $\gamma$. Moreover, the values of $\gamma$ associated with SLF result in a smaller DC-gain of $\mathcal{S}_I(z)$, which implies better robustness to low frequency disturbances.
+\begin{figure}
   % \begin{subfigure}[b]{0.3\textwidth}
   \begin{subfigure}[t]{0.48\textwidth}
   % \begin{minipage}{0.48\textwidth}
-    \includesvg[scale=1]{figures/PMGM_vs_gamma_both.svg}
+    \includesvg[scale=.9]{figures/PMGM_vs_gamma_both.svg}
     \caption{}
     \label{fig:gmpm}
   \end{subfigure}
@@ -596,136 +687,89 @@ For both cases, we place the 9 poles corresponding to the delay at the roots of 
   \hfil
   % \begin{minipage}{0.48\textwidth}
   \begin{subfigure}[t]{0.48\textwidth}
-    \includesvg[scale=1]{figures/GainS_TS_vs_gamma_both.svg}
+    % \includesvg[scale=1]{figures/GainS_TS_vs_gamma_both.svg}
+    \includesvg[scale=.9]{figures/GainS_TS_vs_gamma_cs.svg}
     \caption{}
     \label{fig:GainS}
     % \end{minipage}
   \end{subfigure}
-  \caption{Robustness and performance metrics for the constant-$\sigma$ and choose-$\zeta$ state weighting schemes. (left) Phase and Gain Margins as $\gamma$ is increased. (right) Low-frequency gain of $\mathcal{S}(z)$ and (unconstrained) settling times as $\gamma$ is increased. The markers indicate different choices of $\gamma$. The `$\times$' corresponds to the minimum of the sensitivity function gain; the circle corresponds to the minimum $\gamma$ choice for SLF; the square is the minimum $\gamma$ choice for MPC.}
-  \label{fig:robmetrics}
-\end{figure*}
-\begin{figure}
-  \includesvg[scale=1]{figures/sens_bode.svg}
-  \caption{Sensitivity function $\mathcal{S}$ magnitude the CS (black) and CZ (red) two control design schemes. For each scheme, the different selections of $\gamma$ are shown as indicated in the legend. }
+  \begin{subfigure}[t]{0.48\textwidth}
+  \includesvg[scale=.9]{figures/sens_bode.svg}
+  \caption{}
   \label{fig:sens_bode}
+\end{subfigure}
+\caption{Robustness and performance metrics for the constant-$\sigma$ and choose-$\zeta$ state weighting schemes. (a) Phase and Gain Margins as $\gamma$ is increased. (b) Gain of $\mathcal{S}_I(1)$ (solid black). The sum of simulated settling times for different $\gamma$ are indicated by red circles for SLF and black dots for MPC. Similarly, the mean of the total settling is indicated by the black and red dots with error bars.
+  In both panels (a) and (b), the square and diamond markers indicated the values of $\gamma$ used in Section~\ref{sec:small_gam} for MPC and SLF, respectively. (c) Sensitivity function $\mathcal{S}$ magnitude the CS (black) and CZ (red) control design schemes.}
+  \label{fig:robmetrics}
 \end{figure}
-In principle, one would like to select the smallest control weight $\gamma$ that stabilizes all possible setpoints for either SLF or MPC with a certain control horizon. We call this the \emph{minimum-$\gamma$} (MG) scheme. The motivation for MPC here is that, by directly accounting for the constraint, we can use a smaller $\gamma$ than we can for SLF. To consider this approach, we need to determine the smallest $\gamma$ that will still yield a stable trajectory (for the nominal plant) subject to our slew rate constraint. To determine this, we run a series of simulations across a grid of $\gamma$'s. For each $\gamma$ in the grid, simulations are run for a reference of $r=2.5~\mu$m up to $r=75~\mu$m in increments of $2.5~\mu$m. If instability occurs, we move up to the next $\gamma$ in the grid. The smallest $\gamma$ which is stable for all setpoints in the range $2.5, 75$ is what we consider to be the minimum $\gamma$. This set of simulations is run for both the SLF case as well as the MPC case for $N=12$, for both the constant-$\sigma$ and choose-$\zeta$ pole placement schemes.
+\subsection{Study II: robust $\gamma$}
+How might we choose $\gamma$ such that the best experimental performance results? Clearly, this choice will be a compromise between nominal speed and our different robustness metrics. To illustrate how nominal speed increases with $\gamma$, we ran a series of simulations using the sequence of steps shown in Fig.~\ref{fig:steps}. The total settling time for each simulation is shown in Fig.~\ref{fig:GainS}. Thus, while making $\gamma$ very large will improve both GM and PM, this will result in both increased sensitivity to low frequency disturbances as well as a slower nominal response. 
 
-For both the constant-$\sigma$ and choose-$\zeta$ scenarios, Fig.~\ref{fig:gmpm} shows the gain margin (GM) and phase margin (PM) plotted as $\gamma$ increases. The gain of $\mathcal{S}(z)$ at low frequencies is also an interesting dimension for analysis. However, due to the disturbance estimator, $\mathcal{S}(z)$ has a zero at ${z=1}$ so that ${\mathcal{S}(z)\rvert_{z=1}=0}$. Thus, it is more insightful to consider the quantity $\mathcal{S}(z)/(z-1)\rvert_{z=1}$, which is plotted as a function of $\gamma$ in Fig.~\ref{fig:GainS}.
-% low-frequency gain of $\mathcal{S}$ as $\gamma$ increases.
-The minimum acceptable values of $\gamma$ found in the parameter sweep are marked with circles for SLF and squares for MPC. It is clear that these small values of $\gamma$ will yield poor stability margins for either MPC or SLF, but are worse for MPC.
+Notably, Fig.~\ref{fig:GainS} shows that $|\mathcal{S}_I(1)|$ has a minimum for $\gamma=50.6$ (for chosen-$\zeta$) and $\gamma=46$ (for constant-$\sigma$). We hypothesized that the fastest experimental settling times would be achieved by taking $\gamma$ near these values. To test this hypothesis, we ran a sequence of experiments for values of $\gamma$ between 0.001 and 400. Experiments at each $\gamma$ were run 5 times. The sample mean of the total settling time for each set of experiments is plotted as the black and red dots with error bars in Fig.~\ref{fig:GainS} (right axis). The error bars indicated the sample standard deviation.
 
-Certainly, both MPC and SLF are, in general, non-linear making these classical metrics insufficient to describe their global behavior. However, for any setpoint, both SLF and MPC behave linearly in a neighborhood around that setpoint. In other words, while the beginning of a setpoint tracking maneuver may saturate the SLF controller or put the MPC on its constraint boundary, the latter part of that same maneuver will be governed by linear dynamics. In that sense, the metrics GM and PM still give good insight.\footnote{In discussing robustness, recall that, in contrast to the continuous-time case, the full-state feedback discrete-time LQR controller does not have a guaranteed infinite gain margin nor a guaranteed phase margin greater than $60^{\circ}$ \cite{andersson_moore}. For both continuous-time and discrete-time, the robustness properties can be arbitrarily bad when an observer is used in lieu of full-state feedback~\cite{doyle_guaranteed_1978}. In the continuous-time case, the full-state feedback robustness may be recovered asymptotically using, e.g., the loop transfer recovery (LTR) method of \cite{doyle_robustness_1979}. In general, this result does not translate to discrete-time. Most efforts at obtaining LTR-like results for discrete-time assume that (1) a current estimator is used and (2) $CB\neq 0$ \cite{Maciejowski_asymptotic_1985,guaracy_discrete_2015,ishihara_loop_1986}. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. For our system model, $CB=0$, because the relative degree is 12. These two factors preclude discrete-time LTR.} % INTO WHAT???
+\textbf{Discussion}
+The fastest mean settling time for the CS scheme occurs with $\gamma=100$ and for CZ occurs with $\gamma=25$, which are slightly larger than the values of $\gamma$ which minimize the integrated sensitivity. This is likely because those larger values come with better gain margins. 
+The settling times from one of the 5 experiments are compiled into Table~\ref{tab:ts_CSCZ2}. This table uses the same color map as Table~\ref{tab:ts_CSCZ1} and is organized in the same way. 
+Fig.~\ref{fig:rob_gam_traj} zooms in on references 5 and 24.
 
-Thus, as an alternative to the minimum-$\gamma$ approach, we consider selecting the $\gamma$ which minimizes $\mathcal{S}(z)/(z-1)\rvert_{z=1}$. This $\gamma$ is marked by an $\times$ in Fig.~\ref{fig:GainS}. The corresponding points on the GM and PM curves in Fig.~\ref{fig:gmpm} are similarly marked by an $\times$. We call this the ``robust-$\gamma$'' choice.
-Fig.~\ref{fig:sens_bode} shows the magnitude of the six sensitivity functions resulting from these three difference choices of $\gamma$ for the two pole placement schemes. 
+In general, the CZ scheme is about 34\% slower than the CS scheme. However, as can be seen in Fig.~\ref{fig:rob_gam_traj}, the CZ scheme has much smaller residual oscillations. With these larger values of the control weight, $\Delta u_k$ is rarely saturated such that even in simulation, MPC provides no benefit. 
+The largest power amplifier current measured in all experiments is 98.2 mA.
 
-For the constant-$\sigma$ and choose-$\zeta$ pole placement scenarios, the low-frequency gain of $\mathcal{S}(z)$ achieves a minimum at ${\gamma=129}$ and $\gamma=62$, respectively. Both of these control weights are large enough that there will be no stability problems due to saturation, i.e., we can track any setpoint across the stage with either SLF or MPC. 
+\subsection{Possible Objections}
+We envision three main criticisms to these results and analysis. First, one might rightly point out that both MPC and SLF are in general, non-linear making the classical metrics like PM and GM insufficient. However, for any setpoint, both SLF and MPC behave linearly in a neighborhood around that setpoint. In other words, while the beginning of a setpoint tracking maneuver may saturate the SLF controller or put the MPC on its constraint boundary, the latter part of that same maneuver will be governed by linear dynamics. In that sense, the metrics GM and PM and the DC-gain of the integrated sensitivity still provide some insight, which we believe is manifested, e.g., in the correlation between overall settling time and $|\mathcal{S}_I(1)|$.
 
+A related objection is that the relatively poor GMs and PMs could be improved through a loop transfer recovery (LTR) method. However, the classic method as proposed in \cite{doyle_robustness_1979} does not translate to discrete-time. Most efforts at obtaining LTR-like results for discrete-time assume that (1) a current estimator is used and (2) $CB\neq 0$ \cite{Maciejowski_asymptotic_1985,guaracy_discrete_2015,ishihara_loop_1986}. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. Also, for our system model, $CB=0$, because the relative degree is 12. These two factors preclude discrete-time LTR. Furthermore, recall that, in contrast to the continuous-time case, the full-state feedback discrete-time LQR controller does not have a guaranteed infinite gain margin nor a guaranteed phase margin greater than $60^{\circ}$, but rather the guaranteed bounds for GM and PM depend on the DARE solution $P$ (which in turn depends on $\gamma$) \cite{andersson_moore}. 
 
-Table~\ref{tab:gmpms} summarizes the different values of $\gamma$ selected and the resulting robustness metrics for the two pole placement schemes for MPC and SLF.
+Finally, one might argue that MPC could be beneficial if, rather than constraining the slew rate of the low-voltage input, we constrained the output of a power amplifier current model. Such an MPC problem could no longer be solved with the FGM, though with a much larger FPGA, it may be possible that the problem could be solved with the Alternating Direction Method of Multipliers (ADMM) \cite{Jerez_Trans_2014}. Such an alternative formulation would only change the constraints, not the cost. Thus, the robustness properties explored in this paper would remain unchanged, though it is possible they would play a smaller role. However, embedded platforms with FPGAs capable implementing the ADDM remain expensive. Thus, even if the state constrained problem could improve performance over SLF, this improvement would need to be weighed against the cost of simply upgrading the power amplifier. 
+\begin{figure}
+% \begin{minipage}{1\columnwidth}
+  \includesvg[width=1\columnwidth]{figures/step_exps_rob_gam.svg}
+  \caption{Experimental trajectories for the constant-$\sigma$ and chosen-$\zeta$ pole placement schemes. The two columns zoom in on the two responses indicated by the red ellipses in Fig.~\ref{fig:steps}. (first row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current.
+    % Experimental trajectories for the choose-$\zeta$ pole placement scheme. The top panel shows all 24 step responses. The two columns zoom in on the two responses indicated by the red ellipses. (second row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current. The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.
+  }
+  \label{fig:rob_gam_traj}
+% \end{minipage}
+\end{figure}
 
-\begin{table}[httb!]
-  \caption{For each control scheme, this table summarizes the associated control weight $\gamma$ as well as the resulting GM, PM, and low-frequency gain of $\mathcal{S}(z)$. The units for GM and $|\mathcal{S}|$ are decibels and the units for PM are degrees.}
-  \label{tab:gmpms}
-  \scriptsize
-  \begin{tabular}{cccccc}
-    % scheme& $\gamma$ &GM [dB]& PM [deg] & $|\mathcal{S}|$ [dB]\\
-\input{rob_data}    
-  \end{tabular}
-\end{table}
-
-
-\section{Results}\label{sec:results}
-
-We tested the MPC and SLF control laws for both pole placement schemes (constant-$\sigma$ and choose-$\zeta$) and both $\gamma$ selection schemes by giving the stage a sequence of 24 reference commands. The first 20 references we selected randomly within the range $[-35~\mu$\text{m}, $35\mu\text{m}]$. We chose the final four references as $0~\mu$m, $35~\mu$m, $-35~\mu$m, and $0~\mu$m, to exercise the full range of the stage. The sequence of references is shown in the top plots of Figs. \ref{fig:const_sig_y} and \ref{fig:choose_zet_y}.
-
-Settling times are computed in an absolute sense. Specifically, the settle boundary is 70~$\mu$m/512, which would correspond to settling within one pixel of a 512 by 512 pixel image for the given range.
-The settling times for each reference command are compiled into Table~\ref{tab:ts_CS} for the constant-$\sigma$ scheme and Table~\ref{tab:ts_CZ} for the chosen-$\zeta$ scheme. Each row corresponds to a different reference command, as indicated in the first column. The second column shows the overall change in setpoint. Columns 3 through 6 show the simulation settling time and columns 7 through 10 show the experimental settling times. The colormap codes the settling times where dark blue is fastest flowing toward dark red as the slowest. 
-
-In simulation, it is clear that for both the constant-$\sigma$ and choose-$\zeta$ schemes, choosing the minimum achievable $\gamma$ is faster in simulation than the robust choice. In both cases, MPC reduces the total settle time, though this improvement is marginal in the constant-$\sigma$ case. As one might expect from the poor gain and phase margins and large gain of $\mathcal{S}$ achieved by the minimum-$\gamma$ approach, these results do not translate to experiment.
-On the other hand, in the experiments, choosing the $\gamma$ which minimizes the low frequency gain of $\mathcal{S}$ achieves much better results. Here, the constant-$\sigma$ scheme is about 40\% faster than the choose-$\zeta$ scheme.
-
-Figs.~\ref{fig:const_sig_y} and \ref{fig:choose_zet_y} show the output trajectories for the constant-$\sigma$ scheme (Fig. ~\ref{fig:const_sig_y}) and choose-$\zeta$ scheme (Fig. \ref{fig:choose_zet_y}). Large amounts of overshoot can be seen in the top row of Fig.~\ref{fig:choose_zet_y}, which are the minimum $\gamma$ trajectories and can be attributed to the excessively low stability margins associated with that choice. For each figure, the two columns of smaller plots zoom in on two references. Here it can be seen that the choose-$\zeta$ schemes eliminates some of the residual (though small) oscillations present in the constant-$\sigma$ scheme.
-
-
-Notably, for the robust-$\gamma$ choice, $\gamma$ is still small enough that for larger moves, the control rate saturates. This can be most clearly seen in the left $\Delta u_k$ plot of Fig.~\ref{fig:const_sig_y}. Nonetheless, the difference between using MPC or SLF is marginal in both simulation and experiment. 
-
-
-% % ------------------------ ORPHAN ----------------------------------------
-% Alternatively, one could use the same $\gamma$ for both the MPC design and SLF design (which implies, roughly,  the same set of disturbance rejection and robustness properties) and hope that the direct handling of constraints improves performance. This is the perspective taken, e.g., in \cite{Wills_CDC_2005}. While this will indeed be the case for certain sizes of setpoints (e.g., setpoints which are near the stability boundary for SLF), we will see that the difference between MPC and SLF is marginal for the majority of the movement range.
-% % ------------------------ END ORPHAN ----------------------------------------
-
-Finally, the bottom row of Fig.~\ref{fig:const_sig_y} and \ref{fig:choose_zet_y}  shows the actual current $I_X$ measured in the experiments. In general, we find that for every reference, the current draw stays below the 100~mA limit of the C300. 
-
-\begin{figure*}
-  \begin{minipage}{1\columnwidth}
-    \includesvg[width=1\columnwidth]{figures/step_exps_const_sig_y.svg}
-  \caption{Experimental trajectories for the constant-$\sigma$ pole placement scheme. The top panel shows all 24 step responses. The two columns zoom in on the two responses indicated by the red ellipses. (second row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current. The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.}
-  \label{fig:const_sig_y}
-\end{minipage}
-\hfill
-\begin{minipage}{1\columnwidth}
-  \includesvg[width=1\columnwidth]{figures/step_exps_choose_zet_y.svg}
-  \caption{Experimental trajectories for the choose-$\zeta$ pole placement scheme. The top panel shows all 24 step responses. The two columns zoom in on the two responses indicated by the red ellipses. (second row) Stage output trajectories. The dotted-black lines indicate the settle boundary. (third row) Control increment trajectories. (fourth row) Measured power amplifier current. The abbreviations in the legend are defined in Table~\ref{tab:gmpms}.}
-  \label{fig:choose_zet_y}
-\end{minipage}
-\end{figure*}
-
-
-% \begin{figure*}
-%   % \begin{minipage}{1\columnwidth}
-%   \begin{subfigure}[t]{1\columnwidth}
-%     \includesvg[width=1\columnwidth]{figures/step_exps_const_sig_Ipow.svg}
-%   % \caption{}
-% \end{subfigure}
-% % \end{minipage}
-% % \begin{minipage}{1\columnwidth}
-% \begin{subfigure}[t]{1\columnwidth}
-%   \includesvg[width=1\columnwidth]{figures/step_exps_choose_zet_Ipow.svg}
-%   % \caption{}
-% \end{subfigure}
-% % \end{minipage}
-% \caption{Measured power amplifier current for the constant-$\sigma$ (left) and choose-$\zeta$ (right) schemes.
-% \textcolor{red}{It's hard to see anything useful in these figures. Maybe it would make more sense to show only ``best'' and ``worst''}}
-% \label{fig:Ipow_exp}
-% \end{figure*}
 
 % ----------------------------------------------------------------------------------------------
 \begin{table*}
   % \begin{minipage}{1\textwidth}
-  \caption{The first two columns show the reference value and overal change in setpoint. The first four colored columns are the result of simulation and the last four colored columns the experimental settling times. The last (un-colored row) of each table is the sum off settling times together for the respective experiment. Refer to Table~\ref{tab:gmpms} for a summary of the abbreviations heading each column.}
-  \begin{subtable}{1\textwidth}
-    \caption{Settling times for the constant-$\sigma$ pole placement scheme. }
-  % \scriptsize
-    \begin{tabular}{ccccccc|cccc}
-      \scriptsize
-      &    &               &\multicolumn{4}{c|}{simulation}  &\multicolumn{4}{c}{experiment} \\ 
-      \input{manystepsdata.tex}
-      \label{tab:ts_CS}
-    \end{tabular}
-\end{subtable}
-\begin{subtable}{1\textwidth}
-  \caption{Settling times for the choose-$\zeta$ pole placement scheme. }
+  \caption{Settling times for the robust-$\gamma$ control weight selection for both pole placement schemes.
+    The first two columns show the reference value and overall change in setpoint. The first four colored columns are the result of simulation and the last four colored columns the experimental settling times. The last (un-colored row) of each table is the sum off settling times together for the respective experiment.
+    % Refer to Table~\ref{tab:gmpms} for a summary of the abbreviations heading each column.
+  }
+%   \begin{subtable}{1\textwidth}
+%     \caption{Settling times for the minimum-$\gamma$ control weight for both pole placement schemes. }
+%   % \scriptsize
+%     \begin{tabular}{ccccccc|cccc}
+%       \scriptsize
+%       &    &               &\multicolumn{4}{c|}{simulation}  &\multicolumn{4}{c}{experiment} \\ 
+%       \input{manystepsdata_mingam.tex}
+%       \label{tab:ts_CS}
+%     \end{tabular}
+% \end{subtable}
+% \begin{subtable}{1\textwidth}
+  % \caption{Settling times for the robust-$\gamma$ control weight selection for both pole placement schemes.}
   % \scriptsize
   \begin{tabular}{ccccccc|cccc}
     \scriptsize
     &    &               &\multicolumn{4}{c|}{simulation}  &\multicolumn{4}{c}{experiment} \\ 
     \input{manystepsdata_choosezeta.tex}
   \end{tabular}
-  \label{tab:ts_CZ}
-\end{subtable}
+  \label{tab:ts_CSCZ2}
+% \end{subtable}
 \begin{centering}
   \includesvg[scale=1]{figures/ts_colorbar.svg}
 \end{centering}
 \end{table*}
 
 \section{Conclusions}
+While it is well known that performance and robustness are somewhat antithetical, this fact seems little discussed in applications of MPC. Indeed, it is implicit to the claim that better performance will ensue through the use of MPC due to constraint handling that a more aggressive control will actually perform better in practice. In this paper, we have provided a counter example to that narrative. 
 
+% As we noted in Section~\ref{sec:powcharct}, a slew rate constraint on the low-voltage input is conservative. An alternative would be to formulate the optimal control problem such that the output of the power amplifier current model was constrained. Such an MPC problem could no longer be solved with the FGM, though with a larger FPGA the problem could be solved with the Alternating Direction Method of Multipliers (ADMM) \cite{Jerez_Trans_2014}. Although the ADMM represents a substantial increase in both hardware requirements and code complexity, it is possible that MPC would be beneficial in that case. However, such an alternative formulation would only change the constraints, not the cost. Thus, the robustness properties explored in this paper would remain unchanged. Moreover, embedded platforms with FPGAs capable implementing the ADDM remain expensive. Thus, even if the state constrained problem could improve performance over SLF, this improvement must be weighed against simply upgrading the power amplifier. 
 
-As we noted in Section~\ref{sec:powcharct}, a slew rate constraint on the low-voltage input is conservative. An alternative would be to formulate the optimal control problem such that the output of the power amplifier current model was constrained. Such an MPC problem could no longer be solved with the FGM, though with a larger FPGA the problem could be solved with the Alternating Direction Method of Multipliers (ADMM) \cite{Jerez_Trans_2014}. Although the ADMM represents a substantial increase in both hardware requirements and code complexity, it is possible that MPC would be beneficial in that case. However, such an alternative formulation would only change the constraints, not the cost. Thus, the robustness properties explored in this paper would remain unchanged. 
-
-On the other hand, despite the impressive recent advances in FPGA-based QP solvers, computing a linear feedback law will always yield a significantly faster achievable sample rate. Moreover, it has been shown that continuous-time robustness properties are recovered in the limit as the sampling frequency approaches 0. Thus, while in this paper we have compared MPC and linear feedback using the same sampling frequency, an interesting line for further investigation is: How much does robustness increase when the sampling frequency increases?
+% On the other hand, despite the impressive recent advances in FPGA-based QP solvers, computing a linear feedback law will always yield a significantly faster achievable sample rate. Moreover, it has been shown that continuous-time robustness properties are recovered in the limit as the sampling frequency approaches 0. Thus, while in this paper we have compared MPC and linear feedback using the same sampling frequency, an interesting line for further investigation is: How much does robustness increase when the sampling frequency increases?
 
 % We will show that in simulation, this idea does indeed lead to a significantly decreased settling time. However, the desire to decrease $\gamma$ must be tempered by its affect on both robustness and disturbance rejection, because these things are a metric for how the control will perform in practice. Unfortunately, we will see that decreasing $\gamma$ tends to degrade both properties for the weighting matrices we consider. 
 
