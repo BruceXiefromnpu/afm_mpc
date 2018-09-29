@@ -45,6 +45,8 @@ latex/*.bst
 latex/*.cls
 latex/Gvib_data.tex
 latex/_region_.tex
+latex/manystepsdata_mingam.tex
+
 
 # simulink backups
 *.r2016b
