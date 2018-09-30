@@ -608,21 +608,20 @@ The choice of $\gamma$ has a significant effect on system performance. Because t
 
 \section{Simulated vs Experimental Performance}\label{sec:results}
 
-\begin{figure}
-  \includesvg[scale=1]{figures/disingenuous.svg}
-  \caption{When $\gamma=0.11$ for both MPC and SLF, MPC outperforms SLF significantly for a 6.85~$\mu$m step. When the SLF control law is de-rated such that $\gamma=12$, it performs comparably to MPC.}
-  \label{fig:disingenuous}
-\end{figure}
+% \begin{figure}
+%   \includesvg[scale=1]{figures/disingenuous.svg}
+%   \caption{When $\gamma=0.11$ for both MPC and SLF, MPC outperforms SLF significantly for a 6.85~$\mu$m step. When the SLF control law is de-rated such that $\gamma=12$, it performs comparably to MPC.}
+%   \label{fig:disingenuous}
+% \end{figure}
 
-When input constrained MPC is compared to a saturated linear feedback, this is often done using the same control weight for both MPC and the linear feedback and often for a limited range of inputs. Fig.~\ref{fig:disingenuous} illustrates why such an approach is insufficient. The solid red and blue trajectories are the result of tracking a 6.85 $\mu$m step command where $\gamma$ is the same for both designs. If we considered this data alone, we would conclude that MPC is far superior to SLF ''because the constraints were explicitly handled.'' However, if we slightly de-rate the SLF control by increasing $\gamma$, we get the dashed black trajectory which performs just as well. A similar result will occur for smaller reference commands but the same control weights. Thus, to comprehensively assess the potential benefit of MPC, we need to (a) choose the control weights differently so that each scheme performs the best it can and (b) evaluate performance across a range of inputs.
+% When input constrained MPC is compared to a saturated linear feedback, this is often done using the same control weight for both MPC and the linear feedback and often for a limited range of inputs. Fig.~\ref{fig:disingenuous} illustrates why such an approach is insufficient. The solid red and blue trajectories are the result of tracking a 6.85 $\mu$m step command where $\gamma$ is the same for both designs. If we considered this data alone, we would conclude that MPC is far superior to SLF ''because the constraints were explicitly handled.'' However, if we slightly de-rate the SLF control by increasing $\gamma$, we get the dashed black trajectory which performs just as well. A similar result will occur for smaller reference commands but the same control weights. Thus, to comprehensively assess the potential benefit of MPC, we need to (a) choose the control weights differently so that each scheme performs the best it can and (b) evaluate performance across a range of inputs.
 
 \begin{figure}
   \includesvg[scale=1]{figures/steps.svg}
   \caption{The sequence of step commands used to test the control laws. The red circles indicate the 5th and 24th reference. The response to these references are shown in closer detail in Fig.~\ref{fig:min_gam_traj} and \ref{fig:rob_gam_traj}.}
   \label{fig:steps}
 \end{figure}
-For both pole placement schemes, the choice of $\gamma$ has a strong influence on whether or not it makes sense to implement MPC. For example, if one takes $\gamma$ large enough, then the constrained optimal control and unconstrained optimal control will coincide for all physical setpoints making MPC and SLF equivalent. For a range of $\gamma$ smaller than this value (i.e., $\Delta u_k$ is saturated), the difference in trajectories produced by SLF and MPC is not substantial, meaning that MPC contributes little additional performance. At the other extreme, for $\gamma$ small enough, the SLF control will become unstable while MPC will not. The implicit assumption with MPC
-
+For both pole placement schemes, the choice of $\gamma$ has a strong influence on whether or not it makes sense to implement MPC. For example, if one takes $\gamma$ large enough, then the constrained optimal control and unconstrained optimal control will coincide for all physical setpoints making MPC and SLF equivalent. For a range of $\gamma$ smaller than this value (i.e., $\Delta u_k$ is saturated), the difference in trajectories produced by SLF and MPC is not substantial, meaning that MPC contributes little additional performance. At the other extreme, for $\gamma$ small enough, the SLF control will become unstable while MPC will not. 
 Ideally, the control horizon would be long enough that any physically realizable trajectory would settle within the length of the control horizon. This would require $N$ to be several hundred, which is not currently feasible. The consequence of this is that for very small $\gamma$, the MPC may also become unstable.
 
 \subsection{Study 1: small $\gamma$}\label{sec:small_gam}
@@ -642,9 +641,12 @@ Ideally, the control horizon would be long enough that any physically realizable
       \input{manystepsdata_mingam.tex}
       \label{tab:ts_CSCZ1}
     \end{tabular}
-% \end{subtable}
+    % \end{subtable}
+    \begin{centering}
+      \includesvg[scale=1]{figures/ts_colorbar.svg}
+    \end{centering}
 \end{table*}
-Initially we assumed that selecting small values $\gamma$ would result in the best performance (i.e., fastest settling time). Determining this value of $\gamma$ requires that we define the maximum range of setpoints we would like to visit. For our stage, this is approximately a total range of $\pm35 \mu$m, which means the maximum possible step size is $70~\mu$m. Given this maximum step size, we need to determine the smallest $\gamma$ that will still yield a stable trajectory (for the nominal plant) subject to our slew rate constraint. To choose $\gamma$, we ran a series of simulations for a 70~$\mu$m step input for $\gamma$ between $10^-5$ and 10. For MPC and SLF, we take the $\gamma$ which yields the smallest settling time. Note that if $\gamma$ is small enough to result in instability, that value is automatically rejected by this metric. 
+Initially we assumed that selecting small values of $\gamma$ would result in the best performance (i.e., fastest settling time). Determining this value of $\gamma$ requires that we define the maximum range of setpoints we would like to visit. For our stage, this is approximately a total range of $\pm35 \mu$m, which means the maximum possible step size is $70~\mu$m. Given this maximum step size, we need to determine the smallest $\gamma$ that will still yield a stable trajectory (for the nominal plant) subject to our slew rate constraint. To determine this value, we ran a series of simulations for a 70~$\mu$m step input for $\gamma$ between $10^-5$ and 10. For MPC and SLF, we take the $\gamma$ which yields the smallest settling time. Note that if $\gamma$ is small enough to result in instability, that value is automatically rejected by this metric\footnote{One could, of course, conceive of other methods to determine the smallest ''reasonable'' $\gamma$. For example, one could choose the $\gamma$ which yields the shortest sum of settling times for many step sizes between 0 and 70 $\mu$m. While these other metrics will change the specific numbers cited in this section, they did not, in our experience, change the qualitative conclusion.}. 
 
 % Note that it is not sufficient to run this set of simulations for only the largest step size because a given $\gamma$ may, for example, stabilize a step input of 70~$\mu$m but be unstable for $35~\mu$m. Thus, we run a series of simulations across a grid of $\gamma$'s. For each $\gamma$ in the grid, simulations are run for a reference of $r=2.5~\mu$m up to $r=75~\mu$m in increments of $2.5~\mu$m. If instability occurs, we move up to the next $\gamma$ in the grid. The smallest $\gamma$ which is stable for all setpoints in the range $2.5, 75$ is what we consider to be the minimum $\gamma$. This set of simulations is run for both the MPC case with $N=22$ as well the SLF case for both the constant-$\sigma$ and choose-$\zeta$ pole placement schemes.
 
@@ -652,10 +654,12 @@ Initially we assumed that selecting small values $\gamma$ would result in the be
 % % , particularly for SLF.
 % To account for this, we ran a set of simulations for a 70~$\mu$m step size with $\gamma$ starting at the smallest stabilizing $\gamma$ and increasing to XX times that value. We choose the $\gamma$ which minimizes the settling time (shown in Fig. REF.). This yields $\gamma=3.5$ for the choose-$\zeta$ case and 7.5 for the constant-$\sigma$ case. 
 
-Using these values of $\gamma$, we tested the experimental performance of the SLF and MPC control schemes by by giving the stage a sequence of 24 reference commands. The first 20 references we selected randomly within the range $[-35~\mu$\text{m}, $35\mu\text{m}]$. We chose the final four references as $0~\mu$m, $35~\mu$m, $-35~\mu$m, and $0~\mu$m, to exercise the full range of the stage. The sequence of references is shown in Fig.~\ref{fig:steps}.
+Using these values of $\gamma$, we tested the experimental performance of the SLF and MPC control schemes by
+giving the stage a sequence of 24 reference commands. The first 20 references we selected randomly within the range $[-35~\mu$\text{m}, $35\mu\text{m}]$. We chose the final four references as $0~\mu$m, $35~\mu$m, $-35~\mu$m, and $0~\mu$m, to exercise the full range of the stage. The sequence of references is shown in Fig.~\ref{fig:steps}.
 
 For each step command, we computed the settling times, which we define in an absolute sense. Specifically, the settle boundary is 70~$\mu$m/512, which would correspond to settling within one pixel of a 512 by 512 pixel image for the given range. The settling times for each reference command are compiled into Table~\ref{tab:ts_CSCZ1}. Each row corresponds to a different reference command, as indicated in the first column. The second column shows the overall change in setpoint. Columns 3 through 6 show the simulation settling time and columns 7 through 10 show the experimental settling times. The colormap codes the settling times where dark blue is fastest flowing toward dark red as the slowest. 
 
+\textbf{Discussion:}
 In simulation, for both the constant-$\sigma$ and choose-$\zeta$ schemes, MPC provides a faster overall settling time. However, in aggregate this affect is not dramatic. As one might expect, the most benefit is seen in the larger step sizes, particularly for the CZ scheme. In the CS scheme, the  advantage of MPC is not universal, which can be seen, e.g., in the second step command, where MPC is 0.04 ms slower.
 
 While we expected that the simulated settling times would be faster in general than the experimental times, we were surprised to see that for both the CS and CZ pole placement schemes, MPC produced noticeably longer total settling times than SLF. Moreover, the degradation from simulation is worse for the CZ scheme than CS.
@@ -671,10 +675,10 @@ In general, we observed that the MPC trajectories typically exhibited larger amo
 % \hfill
 \end{figure}
 
-\textbf{Discussion:} While one might blame the lackluster performance of MPC on model uncertainty, a more focused question is ''why does the experimental performance of MPC degrade further from simulation than SLF?'' That is, why is the MPC control law less robust than SLF? To help answer this question, we looked at the gain and phase margin of controller. Reasoning that errors in both the drift and hysteresis models would present as uncertainty at low frequencies, we also considered the DC-gain of the integrated sensitivity function defined in \eqref{eqn:S_int}.
+While one might blame the lackluster performance of MPC on model uncertainty, a more focused question is ''why does the experimental performance of MPC degrade further from simulation than SLF?'' That is, why is the MPC control law less robust than SLF? To help answer this question, we looked at the gain and phase margins of controllers. Reasoning that errors in both the drift and hysteresis models would present as uncertainty at low frequencies, we also considered the DC-gain of the integrated sensitivity function defined in \eqref{eqn:S_int}.
 
 Recall that the control weight $\gamma$ in the SLF control scheme is larger than in MPC. Thus, it is particularly instructive to plot how these metrics depend on $\gamma$. 
-Fig.~\ref{fig:gmpm} plots the GM and PM of $L(z)$ vs $\gamma$. The DC-gain of $\mathcal{S}_I(z)$ is plotted as against $\gamma$ as the solid black curves in Fig.~\ref{fig:GainS}.  In both figures, the values of $\gamma$ chosen for MPC and SLF are indicated by a square and diamond, respectively. Note that for both the CS and CZ pole-placement scenarios, both GM and PM improve with larger values of $\gamma$. Moreover, the values of $\gamma$ associated with SLF result in a smaller DC-gain of $\mathcal{S}_I(z)$, which implies better robustness to low frequency disturbances.
+Fig.~\ref{fig:gmpm} plots the GM and PM of $L(z)$ vs $\gamma$. The DC-gain of $\mathcal{S}_I(z)$ is plotted against $\gamma$ as the solid black curves in Fig.~\ref{fig:GainS}.  In both figures, the values of $\gamma$ chosen for MPC and SLF in the previous section are indicated by a square and diamond, respectively. Note that for both the CS and CZ pole-placement scenarios, both GM and PM improve with larger values of $\gamma$. Moreover, the values of $\gamma$ associated with SLF result in a smaller DC-gain of $\mathcal{S}_I(z)$, which implies better robustness to low frequency disturbances.
 \begin{figure}
   % \begin{subfigure}[b]{0.3\textwidth}
   \begin{subfigure}[t]{0.48\textwidth}
@@ -759,9 +763,6 @@ Finally, one might argue that MPC could be beneficial if, rather than constraini
   \end{tabular}
   \label{tab:ts_CSCZ2}
 % \end{subtable}
-\begin{centering}
-  \includesvg[scale=1]{figures/ts_colorbar.svg}
-\end{centering}
 \end{table*}
 
 \section{Conclusions}
