@@ -59,16 +59,17 @@ cs_idx = [5,6];
 cz_idx = [7,8];
 
 names_min_gam = {
-  'SLF-CS-MG','MPC-CS-MG',...
-  'SLF-CZ-MG', 'MPC-CZ-MG',...
-  'SLF-CS-MG', 'MPC-CS-MG',...
-  'SLF-CZ-MG', 'MPC-CZ-MG'};
+  'SLF-CS ($\gamma=7.5$)','MPC-CS ($\gamma=10^{-3}$',...
+  'SLF-CZ-($\gamma=3.5$)', 'MPC-CZ ($\gamma=10^{-5})$',...
+  'SLF-CS ($\gamma=7.5$)','MPC-CS ($\gamma=10^{-3}$)',...
+  'SLF-CZ-($\gamma=3.5$)', 'MPC-CZ ($\gamma=10^{-5}$)'};
+
 
 names_rob_gam = {
-  'SLF-CS-RG','MPC-CS-RG',...
-  'SLF-CZ-RG', 'MPC-CZ-RG',...
-  'SLF-CS-RG', 'MPC-CS-RG',...
-  'SLF-CZ-RG', 'MPC-CZ-RG'};
+  'SLF-CS ($\gamma=100)','MPC-CS ($\gamma=100$)',...
+  'SLF-CZ ($\gamma=25)', 'MPC-CZ ($\gamma=25$)',...
+  'SLF-CS ($\gamma=100$)', 'MPC-CS ($\gamma=100$)',...
+  'SLF-CZ ($\gamma=25$)', 'MPC-CZ ($\gamma=25$)'};
 
 data_root = fullfile(PATHS.exp, 'step-exps', 'many_steps_sweep_gamma_21-Sep-2018_01');
 clrs = {'b', 'r', 'g', 'k', 'b', 'r', 'g', 'k'}    ;
@@ -194,7 +195,7 @@ ax4 = axes('Units', 'inches', 'Position', [1.99, 0.385, 1.35, 1.0], 'Box', 'on')
 xlim_lft = [0.50, 0.53];
 xlim_rt = [2.30, 2.33];
 ylim_lft = [7, 8.5];
-ylim_rt = [-2, 2];
+ylim_rt = [-1.5, 2.1];
 
 step_ref.plot(ax1);
 step_ref.plot_settle_boundary(ax1, TOL, tol_mode);
@@ -216,7 +217,7 @@ title(ax2, 'step 24')
 
 leg = legend(hands);
 set(leg, 'FontSize', 7, 'Box', 'off',...
-  'Position',  [0.6484 0.8082 0.3634 0.1397]);
+  'Position',  [0.5811 0.8110 0.4121 0.1397]);
 
 
 hold(ax3, 'on')
@@ -302,7 +303,7 @@ set(ax2, 'XTick', [2.3, 2.31, 2.32])
 title(ax2, 'step 24')
 leg = legend(hands);
 set(leg, 'FontSize', 7, 'Box', 'off',...
-  'Position', [0.6423 0.8139 0.3387 0.1307]);
+  'Position', [0.5882 0.7677 0.3978 0.1397]);
 
 hold(ax3, 'on')
 step_exps_MG.plotdu_selected(cz_idx, ax3);

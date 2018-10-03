@@ -1,4 +1,4 @@
-function [GM_s, PM_s, Sens_gain, TS_s] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obsDist, Q, R0, S, LxLd, gams)
+function [GM_s, PM_s, Sens_gain, TS_s, BW_s] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obsDist, Q, R0, S, LxLd, gams)
   % For the deltaUk system with disturbance observer, computes the gain margin,
   % phase margin, low-frequency Sensitivity function gain, and unconstrainted
   % settling time for a unit step input.
@@ -8,9 +8,11 @@ function [GM_s, PM_s, Sens_gain, TS_s] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obs
   PM_s = gams*0;
   Sens_gain = gams*0;
   TS_s = gams*0;
+  BW_s = gams*0;
+  
   w_eval = 10;
   Ts = G.Ts;
-  
+  omegas = logspace(log10(1), log10(12500*2*pi), 1000);
   for k=1:length(gams)
   
     K_lqr = dlqr(G_recyc.a, G_recyc.b, Q, R0+gams(k), S);
@@ -32,6 +34,11 @@ function [GM_s, PM_s, Sens_gain, TS_s] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obs
     
     GM_s(k) = 20*log10(gm);
     PM_s(k) = pm;
+    
+    Hyr_frf = freqresp(Hyr, omegas);
+    Hyr_frd = frd(Hyr_frf, omegas);
+    
+    BW_s(k) = bandwidth(Hyr_frd);
 
   end
   
