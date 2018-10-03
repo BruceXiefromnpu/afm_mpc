@@ -50,6 +50,7 @@ function [ax, C_hand] = lqr_locus(sys, Q, Ro, S, lb, ub, ax, varargin)
     sgrid();
   end
   
+  hands = gobjects(length(gam_s), 1);
   for k=1:length(gam_s)
     R = Ro + gam_s(k);
     
@@ -58,19 +59,63 @@ function [ax, C_hand] = lqr_locus(sys, Q, Ro, S, lb, ub, ax, varargin)
     
     pl = pole(sys_cl);
     clr = mp_fine(k,:);
-    plot(real(pl), imag(pl), '.', 'color', clr)
-    
+    hands(k) = plot(real(pl), imag(pl), '.', 'color', clr);
+    hands(k).UserData = gam_s(k);
     hold on
     drawnow();
   end
-  
-  tcks = logspace(log10(gam_s(1)), log10(gam_s(end)), 10);
-  tcks =  round(tcks, 2, 'significant');
-
-  caxis([gam_s(1), gam_s(end)])
-  C_hand = colorbar('TickLabels', tcks, 'Location', 'northoutside'); 
+  dcm = datacursormode(gcf);
+  set(dcm, 'UpdateFcn', @local_callback_function);
+    
+%   tcks = logspace(log10(gam_s(1)), log10(gam_s(end)), 10);
+%   tcks =  round(tcks, 2, 'significant');
+% 
+%   caxis([gam_s(1), gam_s(end)])
+%   C_hand = colorbar('TickLabels', tcks, 'Location', 'northoutside'); 
   
   xlabel('Re');
   ylabel('Im');
   
 end
+
+
+
+function datatip_txt = make_tip_txt(sz_loc, freq, Wn, zet, mag)
+if abs(Wn - freq) < 1e-13
+    unit = '[rad/s]';
+else
+    unit = '[Hz]';
+end
+    datatip_txt = {['Freq: ',num2str(freq,4), ' ',unit],...
+        ['Mag: ',num2str(mag,4), ' [dB]'],...
+        ['Wn: ',num2str(Wn,4), ' rad/s'],...
+        ['damping: ',num2str(zet,4)],...
+        ['Re: ', num2str(real(sz_loc))],...
+        ['Im: +-', num2str(abs(imag(sz_loc)))]};
+end
+
+function output_txt = local_callback_function(~,event_obj)
+% Display the position of the data cursor
+% obj          Currently not used (empty)
+% event_obj    Handle to event object
+
+    if isa(event_obj.Target.UserData, 'double')
+      % check to see if the target line has the user data set. If so,
+      % assume it will return the text to update the data-tip.
+      gam = event_obj.Target.UserData();
+    else
+      gam = NaN;
+    end
+    
+    pos = get(event_obj, 'Position');
+    
+    output_txt = {['X: ',num2str(pos(1))],...
+      ['Y: ',num2str(pos(2))],...
+      ['gam: ', num2str(gam)]};
+
+
+end
+
+
+
+

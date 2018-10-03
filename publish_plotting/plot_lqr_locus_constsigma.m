@@ -36,8 +36,19 @@ color_map = diverging_map(s_, rgb1, rgb2);
 
 
 
-[ax, C_hand] = lqr_locus(G_recyc, Q1, 1, S1, gam_min, gam_max, ax,...
+[ax] = lqr_locus(G_recyc, Q1, 1, S1, gam_min, gam_max, ax,...
   'color_map', color_map);
+
+
+clc
+caxis([gam_min, gam_max])
+C_hand = colorbar('Location', 'eastoutside'); 
+
+tck_labs = [0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000];
+
+C_hand.Ticks = linspace(gam_min, gam_max, length(tck_labs));
+C_hand.TickLabels = tck_labs;
+
 C_hand.Label.Interpreter = 'latex';
 C_hand.Label.FontSize = 14;
 C_hand.Location = 'eastoutside';
@@ -50,6 +61,8 @@ C_hand.Label.Position = [2.5214    0.5549         0];
 
 xlim([-0.3, 1])
 ylim([-0.35, 0.35])
+
+
 % C_hand.Label.String = '$R_o + \gamma$';
 
 xlabel('Re')

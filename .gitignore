@@ -45,6 +45,11 @@ latex/*.bst
 latex/*.cls
 latex/Gvib_data.tex
 latex/_region_.tex
+latex/manystepsdata_mingam.tex
+latex/ts_means_CS.tex
+latex/ts_means_CZ.tex
+latex/snippets.tex
+latex/results_snippets.tex
 
 # simulink backups
 *.r2016b

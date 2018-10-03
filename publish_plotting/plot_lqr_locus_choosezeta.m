@@ -28,8 +28,16 @@ color_map = diverging_map(s_, rgb1, rgb2);
 
 color_map = diverging_map(s_, rgb1, rgb2);
 
-[ax, C_hand] = lqr_locus(sys_recyc, Q1, 1, S1, .001, 1000, ax,...
+[ax] = lqr_locus(sys_recyc, Q1, 1, S1, .001, 1000, ax,...
   'color_map', color_map);
+
+caxis([gam_min, gam_max]);
+C_hand = colorbar('Location', 'eastoutside'); 
+tck_labs = [0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000];
+
+C_hand.Ticks = linspace(gam_min, gam_max, length(tck_labs));
+C_hand.TickLabels = tck_labs;
+
 
 C_hand.Label.Interpreter = 'latex';
 C_hand.Label.FontSize = 14;
