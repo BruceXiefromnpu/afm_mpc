@@ -29,10 +29,13 @@ refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 
 % folder into which to save results. Point
 % process_settle_time_data.m here...
-experiment_directory = ['many_steps_sweep_gamma', date, '_03'];
+experiment_directory = ['many_steps_sweep_gamma_', date, '_01'];
+experiment_directory = ['many_steps_sweep_gamma_21-Sep-2018_01'];
 step_exp_root = fullfile(PATHS.exp, 'step-exps');
+
 [status, message ] = mkdir(step_exp_root, experiment_directory);
 save_root = fullfile(step_exp_root, experiment_directory);
+
 %%
 fprintf('\n\n\n\n')
 TOL = 14/512; % max volts by pixels
@@ -43,10 +46,10 @@ tol_mode = 'abs';
 do_sim_lin = true;
 
 do_sim_mpcfxp = true;
-do_sim_hyst = true;
-do_inv_hyst = true;
-do_drift = true;
-do_invdrift = true;
+do_sim_hyst = false;
+do_inv_hyst = false;
+do_drift = false;
+do_invdrift = false;
 
 plotstate = false;
 plotpoles = false;
@@ -63,30 +66,31 @@ saveon = true;
 % For all cases, drift and hysteresis compensation remains
 % unchanged. 
 
-md = 2;
+md = 1;
 % !!!!!! These gamas should match the data in table II !!!!!!
 if md == 1
   % 1). Constant sigma
-  gam_lin_min = 10;
-  gam_mpc_min = 0.5;
-  gam_rob = 129.2;
+  gam_lin_min = 7.5;
+  gam_mpc_min = 0.001;
+  gam_rob = 46.4;
 %   gam_s = [gam_mpc_min, gam_lin_min, 40, 80, gam_rob, 200, 400];
-  gam_s = [gam_mpc_min, gam_lin_min, 40, 80, gam_rob, 200, 300, 400, 600,];
+  gam_s = sort([gam_mpc_min, gam_lin_min, 0.01,0.1, 1, 10, 25, 75, 100, gam_rob, 200, 300, 400]);
 %   gam_s = sort([20:20:40])
   exp_id_str = 'const-sig';
 elseif md ==2
 % 3). Choose zeta, minimum-gamma
-  gam_lin_min = 2.9;
-  gam_mpc_min = 0.2;
-  gam_rob = 61.4;
-  gam_s = [  40, 80, gam_rob, 200, 300, 400, 600,];
-  sort([gam_mpc_min, gam_lin_min, gam_rob, [20:20:200]]);
+  gam_lin_min = 3.5;
+  gam_mpc_min = 0.00001;
+  gam_rob = 50.9;
+  gam_s = sort([gam_mpc_min, gam_lin_min, 0.01,0.1, 1, 10, 25, 75, 100, gam_rob, 200, 300, 400]);
+  gam_s = sort(gam_s);
   exp_id_str = 'choose-zet';
 end
-
-
+fname_ts_data = fullfile(save_root, ['ts_total', exp_id_str, '_',...
+  datestr(now, 'mm-dd-yyyy'), '.mat']);
+fname_ts_data = 'Z:\mpc-journal\step-exps\many_steps_sweep_gamma_21-Sep-2018_01\ts_totalconst-sig_09-21-2018.mat';
 % ------- Load Plants -----
-[plants, frf_data] = CanonPlants.plants_ns14;
+[plants, frf_data] = CanonPlants.plants_ns14(9,2);
 Ts  = plants.SYS.Ts;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -112,7 +116,9 @@ elseif trajstyle == 2
   step_descr = 'two_step';  
 elseif trajstyle == 4
   step_root = fullfile(PATHS.exp, 'step-exps');
-  load(fullfile(step_root, 'many_steps_data_rand_ymax7.mat'), 'step_ref');
+  
+  load(fullfile(step_root, 'many_steps_data_rand_ymax7_n6p5.mat'), 'step_ref');
+%   load(fullfile(step_root, 'many_steps_data_rand_ymax7.mat'), 'step_ref');
   yref = step_ref.yref;
   step_descr = 'many_steps_ymax7';
 end
@@ -196,7 +202,6 @@ ts_sum_sim_results = zeros(length(gam_s), 3);
 
 %%
 for idx_gam = 1:length(gam_s)
-  
   gam_iter = gam_s(idx_gam);
   fprintf('===========================================================\n');
   fprintf('Starting simulations for gamma = %f\n', gam_iter);
@@ -347,15 +352,18 @@ for idx_gam = 1:length(gam_s)
  
 end
 
+if saveon
+  save(fname_ts_data, 'gam_s', 'ts_sum_sim_results')
+end
 %%
 
-num_observations = 5;
+num_observations = 8;
 % column spec: [gamma, lin_exp, mpc_exp]
 ts_sum_exp_results = zeros(length(gam_s), 3, num_observations); 
 sims_fxpm.sys_obs_fp = sys_obsDist;
 sims_fxpm.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 
-
+% gam_s = 3.5
 traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
 for idx_observation = 1:num_observations
 for idx_gam = 1:length(gam_s)
@@ -529,7 +537,6 @@ for idx_gam = 1:length(gam_s)
   Ts_vec_afm_mpc = afm_exp_mpc.settle_time(TOL, tol_mode, 1);
   fprintf('Total AFM mpc FXP settle-time = %.3f [ms]\n', sum(Ts_vec_afm_mpc)*1000);
 
-  
   H_mpcexp = plot(afm_exp_mpc, F_yudu, 'umode', 'both');
   try;  legend( make_legend_vec(h1(1), h2(1), h3(1),  H_mpcexp(1) )); end;
   subplot(3,1,1)
@@ -571,9 +578,9 @@ end
 
 ts_sum_exp_results(:,2:end,:)*1000
 %
-save(fullfile(save_root, ['ts_total', exp_id_str, '_',...
-  datestr(now, 'mm-dd-yyyy'), '.mat']), 'ts_sum_sim_results', 'ts_sum_exp_results');
-
+if saveon
+save(fname_ts_data, 'ts_sum_exp_results', '-append');
+end
 %%
 function handle_vec =  make_legend_vec(varargin)
   

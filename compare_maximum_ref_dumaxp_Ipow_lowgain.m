@@ -173,6 +173,7 @@ catch ME
 
 tic
 try
+  
     step_data_mpc.max_ref_judge = Judge;
     step_data_mpc = step_data_mpc.build_max_setpoints('force', 0, 'verbose', verbose);
    logger('Finished building max setpoints, mpc. Total time = %.2f\n\n', toc);
@@ -238,147 +239,114 @@ end
 % ======================================================================= %
 
 % ---------------------------- For MPC ---------------------------------- %
-rmax_s = [1, 2.5, 5.0, 14];
-for jj = 1:length(N_mpc_s)
-    N_mpc = N_mpc_s(jj);
-    F=figure(300 + jj);clf; hold on;
-    colrs =  get(gca, 'colororder');
-    ax = gca;
-
-    
-    hto = step_data_timeopt.plot_ref_vs_settle(ax, 'LineWidth', 2,...
-                            'Color', colrs(1, :));
-    hcl = step_data_clqr.plot_ref_vs_settle(ax,[], 'LineWidth', 2,...
-                         'Color', colrs(2, :));
-    hands = [hcl; hto];
-
-    
-    for kk = 1:length(rmax_s)
-        step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s(kk), jj);
-        figure(F);
-        [~, h] = step_data_mpc.plot_ts_by_ref_max_judge(rmax_s(kk),...
-                       jj, ax, 'LineWidth', 1.25, 'Color', colrs(kk + 2,:));
-        hands = [hands; h];
-    end
-    title(sprintf('N = %.0f', N_mpc))
-    legend(hands);
-end
-
-% ------------------------- For LINEAR ---------------------------------- %
-clc
-F=figure(300);clf; hold on;
+F=figure(301);clf; hold on;
 colrs =  get(gca, 'colororder');
 ax = gca;
+rmax_s = [14];
+% rmax_s = [1, 2.5, 5.0, 14];
 hto = step_data_timeopt.plot_ref_vs_settle(ax, 'LineWidth', 2,...
-                        'Color', colrs(1, :));
+  'Color', colrs(1, :));
 hcl = step_data_clqr.plot_ref_vs_settle(ax,[], 'LineWidth', 2,...
-                     'Color', colrs(2, :));
+  'Color', colrs(2, :));
 hands = [hcl; hto];
-for kk = 1:length(rmax_s)
-    step_data_lin = step_data_lin.ts_by_ref_max(rmax_s(kk), 1);
-    figure(F)
-    [~, h] = step_data_lin.plot_ts_by_ref_max_judge(rmax_s(kk),...
-                   [], ax, 'LineWidth', 1.25, 'Color', colrs(kk + 2,:));
+
+step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s, 1);
+for jj = 1:length(N_mpc_s)
+    N_mpc = N_mpc_s(jj);
+    step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s, jj);
+    gam_ = step_data_mpc.ts_by_rmax_results{jj}.gamma;
+    step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s, jj);
+    figure(F);
+    [~, h] = step_data_mpc.plot_ts_by_ref_max_judge(rmax_s,...
+      jj, ax, 'LineWidth', 1.25, 'Color', colrs(jj + 2,:));
+    h.DisplayName = sprintf('MPC, $\\gamma=%.3g$, N=%d', gam_, N_mpc);
     hands = [hands; h];
+
+    title(sprintf('N = %.0f', N_mpc))
+    
 end
+legend(hands);
+
+% ------------------------- For LINEAR ---------------------------------- %
+
+step_data_lin = step_data_lin.ts_by_ref_max(rmax_s, 1);
+gam_ = step_data_lin.ts_by_rmax_results{1}.gamma;
+[~, h] = step_data_lin.plot_ts_by_ref_max_judge(rmax_s,...
+  [], ax, 'LineWidth', 1.25, 'Color', colrs(jj + 3,:));
+h.DisplayName = sprintf('Linear, $\\gamma=%.3g$, ', gam_);
+hands = [hands; h];
+
 legend(hands);
 title('Linear')
 
 
 
-% % % ======================================================================= %
-% % %                                                                         %
-% % %               Settle Time Percent Increase over time-Optimal            %
-% % %                       by-Maximum-Acheivable-Reference                   %
-% % %                                                                         %
-% % % ======================================================================= %
-% % clear StepDataCLQR
-% % ts_timeopt = step_data_timeopt.results.settle_times_opt_cell{1};
-% % 
-% % % -----------------------CLQR vs Time-Optimal---------------------------- %
-% % F = figure(399);
-% % ax = gca();
-% % step_data_clqr.plot_ts_perc_increase_by_rmax(1, ts_timeopt, ax);
-% % title('CLQR')
-% % 
-% % 
-% % %%% plot(ref_s(kref), (ts_mpc/ts_clqr)*100, 'xk')
-% % % ------------------------- For LINEAR ---------------------------------- %
-% % clc
-% % clear StepDataQuad
-% % F=figure(400);clf; hold on;
-% % ax = gca();
-% % 
-% % hands = [];
-% % for kk = 1:length(rmax_s)
-% %     figure(F)
-% %     step_data_lin = step_data_lin.ts_by_ref_max(rmax_s(kk), 1);
-% %     [~, h] = step_data_lin.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
-% %                    1, ts_timeopt, ax, 'LineWidth', 1.25, 'Color', colrs(kk, :));
-% %     hands = [hands; h];
-% % 
-% % end
-% % title('Linear (Percent Increase)')
-% % legend(hands)
-% % 
-% % for jj = 1:length(N_mpc_s)
-% %     N_mpc = N_mpc_s(jj);
-% %     F=figure(400 + jj);clf; hold on;
-% %     colrs =  get(gca, 'colororder');
-% %     ax = gca;
-% % 
-% %     hands = [];
-% %     
-% %     for kk = 1:length(rmax_s)
-% %         step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s(kk), jj);
-% %         figure(F);
-% %         [~, h] = step_data_mpc.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
-% %                        jj, ts_timeopt, ax, 'LineWidth', 1.25, 'Color', colrs(kk + 2,:));
-% %         hands = [hands; h];
-% %     end
-% %     title(sprintf('N = %.0f (Percent Increase)', N_mpc))
-% %     legend(hands);
-% %     grid on; zoom on;
-% % end
-
-%
 ts_timeopt = step_data_timeopt.results.settle_times_opt_cell{1};
-for kk = 1:length(rmax_s)
-    
-   F = figure(500 + kk); clf; hold on;
-   ax = gca();
-   hands = [];
-   
-   % CLQR: this guy doesn't change, no need to regenerate.
-   [~, h] = step_data_clqr.plot_ts_perc_increase_by_rmax(1, ts_timeopt, ax, 'Color', colrs(1, :));
-   h.DisplayName = 'CLQR';
-   hands = [hands;h];
-   
-   
-   % -- Linear
-   step_data_lin = step_data_lin.ts_by_ref_max(rmax_s(kk), 1);
-   [~, h] = step_data_lin.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
-                   1, ts_timeopt, ax, 'LineWidth', 1.5, 'Color', colrs(2, :));
-   h.DisplayName = sprintf('Linear ($\\gamma = %.1f$)', step_data_lin.ts_by_rmax_results{1}.gamma);
-   hands = [hands;h];
-   
-   step_data_mpc.ts_by_rmax_results = {};
-   for jj = 1:length(N_mpc_s)
-        step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s(kk), jj);
-        figure(F);
-        [~, h] = step_data_mpc.plot_ts_perc_increase_by_rmax(rmax_s(kk),...
-                       jj, ts_timeopt, ax, 'LineWidth', 1.5, 'Color', colrs(jj + 2,:));
-        h.DisplayName = sprintf('MPC ($N=%.0f$ $\\gamma = %.1f$', N_mpc_s(jj),...
-                        step_data_mpc.ts_by_rmax_results{jj}.gamma);
-        hands = [hands; h];
-    end
-   grid on
-   legend(hands)
-   title(sprintf('r-max = %.2f', rmax_s(kk)));
-    
+
+F = figure(501); clf; hold on;
+ax = gca();
+hands = [];
+
+% CLQR: this guy doesn't change, no need to regenerate.
+[~, h] = step_data_clqr.plot_ts_perc_increase_by_rmax(1, ts_timeopt, ax, 'Color', colrs(1, :));
+h.DisplayName = 'CLQR';
+hands = [hands;h];
+
+
+% -- Linear
+step_data_lin = step_data_lin.ts_by_ref_max(rmax_s, 1);
+[~, h] = step_data_lin.plot_ts_perc_increase_by_rmax(rmax_s,...
+  1, ts_timeopt, ax, 'LineWidth', 1.5, 'Color', colrs(2, :));
+h.DisplayName = sprintf('Linear ($\\gamma = %.1f$)', step_data_lin.ts_by_rmax_results{1}.gamma);
+hands = [hands;h];
+
+step_data_mpc.ts_by_rmax_results = {};
+for jj = 1:length(N_mpc_s)
+  step_data_mpc = step_data_mpc.ts_by_ref_max(rmax_s, jj);
+  figure(F);
+  [~, h] = step_data_mpc.plot_ts_perc_increase_by_rmax(rmax_s,...
+    jj, ts_timeopt, ax, 'LineWidth', 1.5, 'Color', colrs(jj + 2,:));
+  h.DisplayName = sprintf('MPC ($N=%.0f$ $\\gamma = %.1f$', N_mpc_s(jj),...
+    step_data_mpc.ts_by_rmax_results{jj}.gamma);
+  hands = [hands; h];
+end
+grid on
+legend(hands)
+title(sprintf('r-max = %.2f', rmax_s));
+
+
+%%
+idx = find(step_data_lin.results{1}.max_setpoints >= rmax_s(end), 1, 'first');
+
+ts_sums = [];
+for k=idx:length(gam_s)
+  
+  t_settle_s = step_data_lin.results{1}.data{k}.t_settle_s;
+  
+  ts_sums(k-idx+1) = sum(t_settle_s.*ref_s);
 end
 
+gams_ = gam_s(idx:end);
 
+figure(10); clf;
+plot(gams_, ts_sums)
+hold on; grid on;
+%
+
+idx = find(step_data_mpc.results{1}.max_setpoints >= rmax_s(end), 1, 'first');
+
+ts_sums = [];
+for k=idx:length(gam_s)
+  
+  t_settle_s = step_data_mpc.results{1}.data{k}.t_settle_s;
+  
+  ts_sums(k-idx+1) = sum(t_settle_s);
+end
+
+gams_ = gam_s(idx:end);
+
+figure(10)
+plot(gams_, ts_sums)
 % cz_mg_mpc22 = step_data_mpc.ts_by_rmax_results{3}.gamma;
 % cz_mg_slf   = step_data_lin.ts_by_rmax_results{1}.gamma;
 

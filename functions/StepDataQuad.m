@@ -82,16 +82,17 @@ classdef StepDataQuad < StepData
                 end
                 PB.upd(gam_iter);
                 if data_iter.ref_max_recommended_idx == length(ref_s) 
-                  self.logger('maximum setpoint gamma reached, terminating.\n');
-                  PB.upd(length(gam_s));
+                 self.logger('maximum setpoint gamma reached, continuing.\n');
+                  %PB.upd(length(gam_s));
                   % We need to fill in the data we didn't compute
-                  max_setpoints_idx(gam_iter+1:end) = max_setpoints_idx(gam_iter);
-                  max_recommended_sps_idx(gam_iter+1:end) = max_recommended_sps_idx(gam_iter);
-                  break
+                  %max_setpoints_idx(gam_iter+1:end) = max_setpoints_idx(gam_iter);
+                  %max_recommended_sps_idx(gam_iter+1:end) = max_recommended_sps_idx(gam_iter);
+                  % break
                 else
                   self.logger('maximum setpoint = %.2f, gamma = %.4f.\n', ...
                     ref_s(data_iter.ref_max_recommended_idx), gamma);
                 end
+                
                 %     keyboard
             end % end MAIN LOOP 
                 result_s.max_setpoints_idx = max_setpoints_idx;

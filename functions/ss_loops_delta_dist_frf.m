@@ -1,6 +1,6 @@
 
 function [Sens, Hyd, Hyr, Loop] =ss_loops_delta_dist_frf(G_frf, omegas, sys, sys_recyc, sys_obs, KxKu, LxLd)
-% [Sens, Hyd, Hyr] =ss_loops_delta_dist(sys, sys_recyc, sys_obs, KxKu, LxLd)
+% [Sens, Hyd, Hyr] = ss_loops_delta_dist_frf(G_frf, omegas, sys, sys_recyc, sys_obs, KxKu, LxLd)
 % 
 % For the closed loop s.s. system with deltaU augmentation and disturbance
 % estimation (input disturbance only), constructs the closed loop transfer

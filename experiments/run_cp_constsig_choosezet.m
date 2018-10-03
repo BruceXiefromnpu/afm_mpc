@@ -31,7 +31,8 @@ refTrajPath     = fullfile(PATHS.step_exp, refTrajName);
 % process_settle_time_data.m here...
 experiment_directory = ['many_steps_data_rand_', date, '_01'];
 step_exp_root = fullfile(PATHS.exp, 'step-exps');
-% [status, message ] = mkdir(step_exp_root, experiment_directory);
+
+[status, message ] = mkdir(step_exp_root, experiment_directory);
 save_root = fullfile(step_exp_root, experiment_directory);
 %%
 fprintf('\n\n\n\n')
@@ -52,7 +53,8 @@ plotstate = false;
 plotpoles = false;
 plotdriftpoles = false;
 plotdriftbode = false;
-saveon = false;
+plot_powspec = true;
+saveon = true;
 
 % We need four modes in this script:
 % 1). Constant sigma, minimum-gamma 
@@ -92,8 +94,8 @@ elseif md ==4
 % gam_mpc = 29.45;
   exp_id_str = 'choose-zet-rob-opt';
 elseif md == 5
-  gam_mpc = .6475;
-  gam_lin = gam_mpc;
+  gam_mpc = 0.001;
+  gam_lin = .0001;
   exp_id_str = 'const-sig-same-sig';
 end
 
@@ -111,7 +113,6 @@ Ts  = plants.SYS.Ts;
 % plants.gdrift_inv = 1/plants.gdrift_1p0;
 % plants.gdrift = plants.gdrift_1p0*1.;
 
-
 if plotdriftpoles
   figure(91); clf
   pzplot(plants.gdrift)
@@ -125,7 +126,7 @@ if plotdriftbode
   setoptions(Hbode, 'FreqUnits', 'Hz')
   grid on
 end
-%
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                                                                         %
 %                  Design reference "trajectory"                          %
@@ -133,8 +134,9 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Get a ref trajectory to track.
+exp_num = '06';
 N  = 800;
-r1 = 1.35;
+r1 = 1.705;
 r2 = -7;
 trajstyle =1;
 if trajstyle == 1
@@ -191,7 +193,7 @@ du_max = du_max_orig/norm(plants.gdrift_inv, Inf);
 
 
 if md == 1 || md == 2 || md == 5
-  cmplx_rad = 0.88;
+  cmplx_rad = 0.9;
   [Q1, R0, S1, P_x] = build_control_constsigma(plants.sys_recyc, cmplx_rad);
   % gam_lin = 100;
   % gam_mpc = 100;
@@ -264,7 +266,31 @@ setoptions(Hbode_sens, 'FreqUnits', 'Hz')
 legend('S: linear', 'S: mpc')
 grid on;
 
-%
+if plot_powspec
+  
+  Fig_powspec = figure(73); clf
+  ax_powspec = gca();
+  G0_frf = frf_data.G_uz2stage;
+  omegas = frf_data.freqs_Hz*2*pi;
+  gdrift_inv_frf = squeeze(freqresp(plants.gdrift_inv, omegas));
+  G_frf = G0_frf.*gdrift_inv_frf;
+  g_step = zpk([], [1], 1, Ts);
+  g_step_frf = squeeze(freqresp(g_step, omegas));
+  
+  [Sens_frf, Hyd_frf, Hyr_frf] =ss_loops_delta_dist_frf(G_frf, omegas,...
+    plants.SYS, plants.sys_recyc, sys_obsDist, K_lqr, L_dist);
+
+%   frf_bode_mag(frf_data.G_uz2stage, frf_data.freqs_Hz, ax_powspec, 'Hz', '-b');
+%   frf_bode_mag(plants.G_uz2stage, frf_data.freqs_Hz, ax_powspec, 'Hz', '--k');
+%   
+%    frf_bode_mag(Hyr_frf, frf_data.freqs_Hz, ax_powspec, 'Hz', '-b');
+%    frf_bode_mag(Hyr, frf_data.freqs_Hz, ax_powspec, 'Hz', '--k');
+   semilogx(frf_data.freqs_Hz,...
+     abs(Hyr_frf.*g_step_frf-g_step_frf.*squeeze(freqresp(Hyr, omegas))));
+
+end
+
+
 [Gm_lin, Pm_lin] = margin(Loop);
 [Gm_mpc, Pm_mpc] = margin(Loop_mpc);
 fprintf('-------- MARGINS ------------------\n')
@@ -451,7 +477,7 @@ if do_sim_mpcfxp
   sim_exp_fxpm.Ipow = timeseries(Ipow, U_full_fxpm.Time);
   hmpc_Ipow = plot(U_full_fxpl.Time, Ipow, '--g');
   hmpc_Ipow.DisplayName = 'MPC Current';
-  end  
+  end
   fprintf('\n-------------------------------------------------\n')
   [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp_fxpl, sim_exp_fxpm);
 
@@ -460,10 +486,10 @@ end
 %
 if saveon
   save(fullfile(save_root, [step_descr, '_linfxp_sim_', exp_id_str, '_',...
-    datestr(now, 'mm-dd-yyyy'), '02.mat']), 'sim_exp_fxpl');
+    datestr(now, 'mm-dd-yyyy'), exp_num, '_.mat']), 'sim_exp_fxpl');
        
   save(fullfile(save_root, [step_descr, '_mpcfxp_sim_', exp_id_str, '_',...
-    datestr(now, 'mm-dd-yyyy'), '02.mat']), 'sim_exp_fxpm');
+    datestr(now, 'mm-dd-yyyy'), exp_num, '_.mat']), 'sim_exp_fxpm');
 end
 
 sims_fxpm.sys_obs_fp = sys_obsDist;
@@ -471,10 +497,11 @@ sims_fxpm.sys_obs_fp.a = sys_obsDist.a - L_dist*sys_obsDist.c;
 
 
 traj_path = 'Z:\mpc-journal\step-exps\traj_data.csvtraj_data.csv';
-%
-%
+
+
+
 % return
-%%
+%
 %--------------------------------------------------------------------------
 % --------------------------- LINEAR Experiment ---------------------------
 %
@@ -566,13 +593,20 @@ fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode, sim_exp_fxpl,...
  sim_exp_fxpm,  afm_exp_lin);
 
+if plot_powspec
+  e_lin = sim_exp_fxpl.y -  afm_exp_lin.y;
+  [E_lin_fft, frq_fft] = power_spectrum(e_lin.Data, Ts);
+  yyaxis(ax_powspec, 'right');
+  semilogx(ax_powspec, frq_fft, E_lin_fft);
+end
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
 if saveon
 save(fullfile(save_root, [step_descr, '_lin_EXP_', exp_id_str, '_',...
-    datestr(now, 'mm-dd-yyyy'), '02.mat']), 'afm_exp_lin')
+    datestr(now, 'mm-dd-yyyy'), exp_num, '_.mat']), 'afm_exp_lin')
 end
+
 
 %--------------------------------------------------------------------------
 % -------------- MPC Experiment -------------------------------------------
@@ -605,7 +639,7 @@ clear e;
 clear vi;
 % -----------------------RUN THE Experiment--------------------------------
 vipath =['C:\Users\arnold\Documents\MATLAB\afm_mpc_journal',...
-  '\labview\fixed-point-host\play_FXP_AFMss_MPC_distEst_singleAxis.vi'];
+  '\labview\fixed-point-host\play_FXP_AFMss_MPC_distEst_singleAxisN22.vi'];
 if 1
 [e, vi] = setupVI(vipath, 'SettleTicks', SettleTicks, 'Iters', Iters,...
    'num', num, 'den', den, 'TF Order', 1*(length(den)-1),...
@@ -623,7 +657,7 @@ else
             'traj_path', traj_path, 'control_data_path', mpc_dat_path);
 end          
 vi.Run
-%
+
 ticks_bench = vi.GetControlValue('Loop Ticks (benchmark)');
 fprintf('Actual loop ticks: %d\n', ticks_bench);
 % Now, read in data, and save to structure, and plot.
@@ -670,12 +704,21 @@ fprintf('Max of experimental Xhat = %.2f\n', max(abs(xhat_exp.data(:))));
 [ts_mat, names] = pretty_print_ts_data(TOL, tol_mode,...
   sim_exp_fxpl, sim_exp_fxpm, afm_exp_lin, afm_exp_mpc);
 
+if plot_powspec
+  figure(Fig_powspec);
+  ax_powspec = gca();
+  e_mpc = sim_exp_fxpm.y -  afm_exp_mpc.y;
+  [E_mpc_fft, frq_fft] = power_spectrum(e_mpc.Data, Ts);
+  yyaxis(ax_powspec, 'right');
+  semilogx(ax_powspec, frq_fft, E_mpc_fft);
+end
 
 % save('many_steps_data/many_steps_rand_fxpmpc_invHystDrift_constsig_7-9-2018.mat', 'y_exp', 'u_exp',...
 %   'du_exp', 'ufull_exp', 'Ipow_exp', 'yref', 'y_fxpm')
+
 if saveon
 save(fullfile(save_root, [step_descr, '_mpc_EXP_', exp_id_str, '_',...
-  datestr(now, 'mm-dd-yyyy'), '.mat']), 'afm_exp_mpc');
+  datestr(now, 'mm-dd-yyyy'), exp_num, '_.mat']), 'afm_exp_mpc');
 
 end
 
