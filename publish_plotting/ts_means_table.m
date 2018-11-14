@@ -1,4 +1,5 @@
 clc
+clear
 exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
 ts_total_file = 'ts_totalconst-sig_09-21-2018.mat';
 fpath = fullfile(exp_path, ts_total_file);
@@ -17,7 +18,7 @@ S = '$\gamma$&MPC-sim & SLF-sim & MPC-exp & SLF-exp\\';
 S = sprintf('%s\n\\toprule\n', S)
 
 for k=1:length(dat_CS.gam_s)
-  gam_k = dat_CZ.gam_s(k);
+  gam_k = dat_CS.gam_s(k);
   if gam_k <= 0.1
     gam_str = sprintf('$10^{%d}$', log10(gam_k));
   else
