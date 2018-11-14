@@ -59,7 +59,7 @@ ylim([-100, 15])
 title('Control signal to stage output')
 
 h2 = frfBode(G, frf_data.freqs_Hz, [ax1, ax2], 'Hz', '--k', 'LineWidth', 1);
-h2.DisplayName = '$G_{\textrm{vib}}$ (model)';
+h2.DisplayName = '$\hat{G}_{\textrm{vib}}$ (model)';
 
 xlim([frf_data.freqs_Hz(1), frf_data.freqs_Hz(end)])
 ylim([-2500, 15])

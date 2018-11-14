@@ -55,6 +55,7 @@ files_rob_gam = {
 ['many_steps_ymax7_mpc_EXP_choose-zet_09-24-2018_',gam_str_cz, '_obsID_3.mat'],...
 };
 
+% Indeces 1-4 are simultion.
 cs_idx = [5,6];
 cz_idx = [7,8];
 
@@ -199,7 +200,6 @@ ylim_rt = [-1.5, 2.1];
 
 step_ref.plot(ax1);
 step_ref.plot_settle_boundary(ax1, TOL, tol_mode);
-% step_exps_CS.ploty_selected([5:8], ax2);
 step_exps_MG.ploty_selected([cs_idx, cz_idx], ax1);
 
 set(ax1, 'XLim', xlim_lft); % ;
@@ -306,8 +306,7 @@ set(leg, 'FontSize', 7, 'Box', 'off',...
   'Position', [0.5882 0.7677 0.3978 0.1397]);
 
 hold(ax3, 'on')
-step_exps_MG.plotdu_selected(cz_idx, ax3);
-step_exps_RG.plotdu_selected(cz_idx, ax3);
+step_exps_RG.plotdu_selected([cs_idx, cz_idx], ax3);
 set(ax3, 'XLim', xlim_lft-[0, 0.025]);
 grid(ax3, 'on')
 ax3.YLabel.String='$\Delta u_k$';
@@ -324,9 +323,6 @@ xlabel(ax4, 'time [s]')
 
 ylim(ax4, [-0.2, 0.2])
 set(ax4, 'YTick', [-0.1, 0, 0.1, 0.2]);
-
-
-
 
 if saveon
   saveas(Fig, fullfile(PATHS.jfig, 'step_exps_rob_gam.svg'))

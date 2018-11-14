@@ -1,8 +1,11 @@
 % --------------------- Now, Fit the drift model -----------------
 clear
+addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions'))
+addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions', 'canon'))
+
 % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
 % load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
-
+saveon = true;
 [plants, frf_data, MF] = CanonPlants.plants_ns14(9, 2);
 fpath_driftID = MF.heritage.fpath_driftID;
 
@@ -59,10 +62,10 @@ h1 = plot(t_exp, y_exp, '-b');
 h1.DisplayName = 'Exp. Step Response';
 
 h2 = plot(t_exp, ydrift_est0, '--r');
-h2.DisplayName = '$G_{\textrm{vib}}G_d$';
+h2.DisplayName = '$\hat{G}_{\textrm{vib}}\hat{G}_d$';
 
 h3 = plot(t_exp, y_vib, ':k');
-h3.DisplayName = '$G_{\textrm{vib}}$';
+h3.DisplayName = '$\hat{G}_{\textrm{vib}}$';
 leg1 = legend([h0, h1, h2, h3]);
 xlim([0, 0.28])
 ylim([-0.005, 1.05])
@@ -76,5 +79,6 @@ ax = gca;
 
 tighten_axis(fig, ax)
 set(leg1, 'Units', 'inches', 'Box', 'off', 'Position', [1.7751 0.5873 1.5782 0.6273]);
-
-saveas(fig, fullfile(PATHS.jfig(), 'drift_fit.svg'))
+if saveon
+  saveas(fig, fullfile(PATHS.jfig(), 'drift_fit.svg'))
+end

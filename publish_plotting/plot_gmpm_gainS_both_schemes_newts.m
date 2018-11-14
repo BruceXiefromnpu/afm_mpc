@@ -263,39 +263,61 @@ if saveon
 end
 
 %%
+% ----------------------------------------------------------------------- %
+% Now, plot the settling settling times vs gamma and on the same two graphs,
+% plot the DC-gain of the integrated sensitivity function vs gamma.
+% ----------------------------------------------------------------------- %
+
 clc
 % =============================================================
-% Load the sum of steps experimental data.
-exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
-ts_total_file = 'ts_totalconst-sig_09-21-2018.mat';
+% Load the CONSTANT-SIMGA sum of steps experimental data.
+exp_path_CS = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
+ts_total_file_CS = 'ts_totalconst-sig_09-21-2018.mat';
 
-fpath1 = fullfile(exp_path, ts_total_file);
-load(fpath1)
+fpath1 = fullfile(exp_path_CS, ts_total_file_CS);
+dat_CS=load(fpath1)
 
-gams_ts = ts_sum_exp_results(:,1,1);
-ts_sum_exp_results = ts_sum_exp_results(:,2:end,:);
-ts_exp_means = mean(ts_sum_exp_results, 3); % average across pages (3rd dim)
-ts_exp_stdv = sqrt(var(ts_sum_exp_results,0,3)); % average across pages (3rd dim)
-ts_data = struct('means', ts_exp_means, 'stdv', ts_exp_stdv, 'gams', gams_ts);
+% gams_ts = ts_sum_exp_results(:,1,1);
+ts_sum_exp_results_CS = dat_CS.ts_sum_exp_results(:,2:end,:); % first column is gammas, drop it.
+ts_exp_means_CS = mean(ts_sum_exp_results_CS, 3); % average across pages (3rd dim)
+ts_exp_stdv_CS = sqrt(var(ts_sum_exp_results_CS,0,3)); % average across pages (3rd dim)
+ts_data_CS = struct('means', ts_exp_means_CS, 'stdv', ts_exp_stdv_CS, 'gams', dat_CS.gam_s);
 
-% ===============================
-% figure(f5);
+% Load the CHOOSE-ZETA sum of steps experimental data.
+exp_path_CZ = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
+ts_total_file_CZ = 'ts_totalchoose-zet_09-21-2018.mat';
+fpath2 = fullfile(exp_path_CZ, ts_total_file_CZ);
+dat_CZ = load(fpath2)
+
+%gams_ts = ts_sum_exp_results(:,1,1);
+ts_sum_exp_results_CZ = dat_CZ.ts_sum_exp_results(:,2:end,:);
+ts_exp_means_CZ = mean(ts_sum_exp_results_CZ, 3); % average across pages (3rd dim)
+ts_exp_stdv_CZ = sqrt(var(ts_sum_exp_results_CZ,0,3)); % average across pages (3rd dim)
+ts_data_CZ = struct('means', ts_exp_means_CZ, 'stdv', ts_exp_stdv_CZ, 'gams', dat_CZ.gam_s);
+
+% =============================================================
+
 f5 = mkfig(5+figbase, 7, 2.0); clf
 ax2 = axes('Units', 'inches', 'Position', [0.3793 0.3000 2.65 1.50],...
   'YAxisLocation', 'left');
+
+ax3 = axes('Units', 'inches', 'Position', [0.3793+3.54 0.3000 2.65 1.50],...
+  'YAxisLocation', 'left');
+
+% --------------------- plot CONSTANT-SIGMA ----------------------------- %
+f5.CurrentAxes = ax2;
 [h_sens1] = plot_sens(gams, Sens_gain1, ax2, f5,...
   'Sens_color', GM_colr, 'Sens_LS', GM_ls1);
-
 h_sens1.DisplayName = '$|\mathcal{S}_I(1)|$';
 
 yyaxis left
 ax2.YAxis(2).Color = PM_colr;
-hts_mpc_exp = errorbar(ts_data.gams, ts_data.means(:,2)*1000,...
-  ts_data.stdv(:,2)*1000, 'r.' );
+hts_mpc_exp = errorbar(ts_data_CS.gams, ts_data_CS.means(:,2)*1000,...
+  ts_data_CS.stdv(:,2)*1000, 'r.' );
 hts_mpc_exp.DisplayName = '$\bar{T}(\gamma_{\ell})$ (MPC exp.)';
 
-hts_slf_exp = errorbar(ts_data.gams, ts_data.means(:,1)*1000,...
-  ts_data.stdv(:,1)*1000, 'k.' );
+hts_slf_exp = errorbar(ts_data_CS.gams, ts_data_CS.means(:,1)*1000,...
+  ts_data_CS.stdv(:,1)*1000, 'k.' );
 hts_slf_exp.DisplayName = '$\bar{T}(\gamma_{\ell})$ (SLF exp.)';
 
 title('constant-$\sigma$')
@@ -307,55 +329,36 @@ ylim([200, 300])
 
 xlim(xlm)
 yyaxis(ax2, 'right')
+ax2.YAxis(2).Color = 'k';
 
 set(ax2, 'XTick', [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]);
-% set(ax2, 'XTickLabel', []);
 xlab1 = xlabel('$\gamma$');
 set(xlab1, 'Units', 'inches', 'Position', [1.349, -.15, 0])
 set(ax2, 'YTick', [36:1:39]);
-% ----------------------------------------------------------------------- %
-exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
-ts_total_file = 'ts_totalchoose-zet_09-21-2018.mat';
 
-fpath2 = fullfile(exp_path, ts_total_file);
-load(fpath2)
-
-gams_ts = ts_sum_exp_results(:,1,1);
-
-ts_sum_exp_results = ts_sum_exp_results(:,2:end,:);
-ts_exp_means = mean(ts_sum_exp_results, 3); % average across pages (3rd dim)
-ts_exp_stdv = sqrt(var(ts_sum_exp_results,0,3)); % average across pages (3rd dim)
-ts_data = struct('means', ts_exp_means, 'stdv', ts_exp_stdv, 'gams', gams_ts);
-
-% ===============================
-% figure(f6);
-
-ax3 = axes('Units', 'inches', 'Position', [0.3793+3.54 0.3000 2.65 1.50],...
-  'YAxisLocation', 'left');
+% --------------------- plot CHOOSE-ZETA -------------------------------- %
+f5.CurrentAxes = ax3;
 [h_sens2] = plot_sens(gams, Sens_gain2, ax3, f5,...
   'Sens_color', GM_colr, 'Sens_LS', GM_ls1);
 h_sens2.DisplayName = '$|\mathcal{S}_I(1)|$';
 
 yyaxis left
 ax3.YAxis(2).Color = PM_colr;
-hts_mpc_exp2 = errorbar(ts_data.gams, ts_data.means(:,2)*1000,...
-  ts_data.stdv(:,2)*1000, 'r.' );
+hts_mpc_exp2 = errorbar(ts_data_CZ.gams, ts_data_CZ.means(:,2)*1000,...
+  ts_data_CZ.stdv(:,2)*1000, 'r.' );
 hts_mpc_exp2.DisplayName = '$\bar{T}(\gamma_{\ell})$ (MPC exp.)';
 
-hts_slf_exp2 = errorbar(ts_data.gams, ts_data.means(:,1)*1000,...
-  ts_data.stdv(:,1)*1000, 'k.' );
+hts_slf_exp2 = errorbar(ts_data_CZ.gams, ts_data_CZ.means(:,1)*1000,...
+  ts_data_CZ.stdv(:,1)*1000, 'k.' );
 hts_slf_exp2.DisplayName = '$\bar{T}(\gamma_{\ell})$ (SLF exp.)';
 
 hold on
-% h_ts_slf_sim2 = plot(gams_ts, ts_sum_sim_results(:,2)*1000, 'k.');
-% h_ts_slf_sim2.DisplayName = '$\Sigma t_{s}^i$ (sim.)';
-% 
-% h_ts_mpc_sim2 = plot(gams_ts, ts_sum_sim_results(:,3)*1000, 'ro', 'MarkerSize', 5);
-% h_ts_mpc_sim2.DisplayName = '$\Sigma t_{s}^i$ (sim.)';
+
 ylabel('total settle-time [ms]')
 
 title('choose-$\zeta$')
 yyaxis(ax3, 'right')
+ax3.YAxis(2).Color = 'k';
 xlim(xlm)
 ylim([44, 48.2])
 
@@ -374,19 +377,20 @@ if saveon
 end
 
 %%
+% ----------------------------------------------------------------------- %
+% Now, plot the simulated settling times vs gamma and on the same two graphs,
+% plot the 3-dB closed loop bandwidth vs gamma
+% ----------------------------------------------------------------------- %
 
-
-dat1 = load(fpath1);
-dat2 = load(fpath2);
 f10 = mkfig(10+figbase, 7, 2.0); clf
 ax2 = axes('Units', 'inches', 'Position', [0.3793 0.3000 2.65 1.50],...
   'YAxisLocation', 'left');
 
 
-h_ts_slf_sim = semilogx(dat1.gam_s, dat1.ts_sum_sim_results(:,2)*1000, 'k.');
+h_ts_slf_sim = semilogx(dat_CS.gam_s, dat_CS.ts_sum_sim_results(:,2)*1000, 'k.');
 h_ts_slf_sim.DisplayName = '$\Sigma t_i (\gamma_{\ell})$  (SLF sim.)';
 hold on
-h_ts_mpc_sim = semilogx(dat1.gam_s, dat1.ts_sum_sim_results(:,3)*1000, 'ro');
+h_ts_mpc_sim = semilogx(dat_CS.gam_s, dat_CS.ts_sum_sim_results(:,3)*1000, 'ro');
 h_ts_mpc_sim.DisplayName = '$\Sigma t_i(\gamma_{\ell})$ (MPC sim.)';
 ylabel('total settle-time [ms]')
 xlab1 = xlabel('$\gamma$');
@@ -405,13 +409,13 @@ grid on
 ax3 = axes('Units', 'inches', 'Position', [0.3793+3.54 0.3000 2.65 1.50],...
   'YAxisLocation', 'left');
 
-h_ts_slf_sim = semilogx(dat2.gam_s, dat2.ts_sum_sim_results(:,2)*1000, 'k.');
+h_ts_slf_sim = semilogx(dat_CZ.gam_s, dat_CZ.ts_sum_sim_results(:,2)*1000, 'k.');
 h_ts_slf_sim.DisplayName = '$\Sigma t_i(\gamma_{\ell})$  (SLF sim.)';
 hold on
-h_ts_mpc_sim = semilogx(dat2.gam_s, dat2.ts_sum_sim_results(:,3)*1000, 'ro');
+h_ts_mpc_sim = semilogx(dat_CZ.gam_s, dat_CZ.ts_sum_sim_results(:,3)*1000, 'ro');
 h_ts_mpc_sim.DisplayName = '$\Sigma t_i(\gamma_{\ell})$ (MPC sim.)';
 ylabel('total settle-time [ms]')
-ylim([100, 600])
+ylim([100, 650])
 yyaxis right
 ax3.YAxis(2).Color = 'k';
 h_bw = semilogx(gams, BW_s2/2/pi, '-k');
@@ -432,171 +436,29 @@ if saveon
   saveas(f10, fullfile(PATHS.jfig, bw_ts_figfile_both ))
 end
 %%
-% clc
-[cor_cs_sim_mpc, p_cs_sim_mpc] = corrcoef(ts_sum_sim_results(:,3), ts_data.gams)
-[cor_cs_exp_mpc, p_cs_exp_mpc] = corrcoef(ts_data.means(1:end-2,2), ts_data.gams(1:end-2))
-
-sg2 = 10.^(Sens_gain2/20);
-
-sens_interp = interp1(gams, sg2, ts_data.gams);
-
-[cor_cs_sim_mpc, p_cs_sim_mpc] = corrcoef(ts_data.means(:,2), sens_interp)
-
-figure(104)
-plot(sens_interp, ts_data.means(:,2), 'x')
-
-
-figure(105), clf
-hold on, grid on
-plot(ts_data.gams, ts_data.means(:,2))
-yyaxis right
-plot(ts_data.gams, sens_interp)
-
+% % % this is experimental, and unused in the manuscript.
+% % [cor_cs_sim_mpc, p_cs_sim_mpc] = corrcoef(ts_sum_sim_results(:,3), ts_data.gams)
+% % [cor_cs_exp_mpc, p_cs_exp_mpc] = corrcoef(ts_data.means(1:end-2,2), ts_data.gams(1:end-2))
+% % 
+% % sg2 = 10.^(Sens_gain2/20);
+% % 
+% % sens_interp = interp1(gams, sg2, ts_data.gams);
+% % 
+% % [cor_cs_sim_mpc, p_cs_sim_mpc] = corrcoef(ts_data.means(:,2), sens_interp)
+% % 
+% % figure(104)
+% % plot(sens_interp, ts_data.means(:,2), 'x')
+% % 
+% % 
+% % figure(105), clf
+% % hold on, grid on
+% % plot(ts_data.gams, ts_data.means(:,2))
+% % yyaxis right
+% % plot(ts_data.gams, sens_interp)
+% % 
 
 %%
-% % % %%
-% % % clc
-% % % % =============================================================
-% % % % Load the sum of steps experimental data.
-% % % % exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_17-Sep-2018_01');
-% % % % ts_total_file = 'ts_totalconst-sig_09-17-2018.mat';
-% % % exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
-% % % ts_total_file = 'ts_totalconst-sig_09-21-2018.mat';
-% % % 
-% % % 
-% % % 
-% % % fpath = fullfile(exp_path, ts_total_file);
-% % % load(fpath)
-% % % 
-% % % gams_ts = ts_sum_exp_results(:,1,1);
-% % % ts_sum_exp_results = ts_sum_exp_results(:,2:end,:);
-% % % ts_exp_means = mean(ts_sum_exp_results, 3); % average across pages (3rd dim)
-% % % ts_exp_stdv = sqrt(var(ts_sum_exp_results,0,3)); % average across pages (3rd dim)
-% % % ts_data = struct('means', ts_exp_means, 'stdv', ts_exp_stdv, 'gams', gams_ts);
-% % % 
-% % % 
-% % % % ===============================
-% % % % figure(f5);
-% % % f5 = mkfig(5+figbase, width, 3.66); clf
-% % % % [0.1100 0.1300 0.750 0.690]
-% % % ax2 = axes('Position', [0.1100 0.4850 0.7800 0.3741], 'YAxisLocation', 'left');
-% % % [h_sens1] = plot_sens(gams, Sens_gain1, ax2, f5,...
-% % %   'Sens_color', GM_colr, 'Sens_LS', GM_ls1);
-% % % % set(ax2, 'XTick', [0.01, 0.1, 1, 10, 100])
-% % % % % [h_sens1, h_ts1] = plot_sens_ts(gams, Sens_gain1, TS_s1, ax2, f5,...
-% % % % %   'Ts_color', PM_colr, 'Ts_LS', PM_ls1, 'Sens_color', GM_colr, 'Sens_LS', GM_ls1);
-% % % 
-% % % h_sens1.DisplayName = '$|\mathcal{S}_I(1)|$';
-% % % 
-% % % yyaxis right
-% % % ax2.YAxis(2).Color = PM_colr;
-% % % hts_mpc_exp = errorbar(ts_data.gams, ts_data.means(:,2)*1000,...
-% % %   ts_data.stdv(:,2)*1000, 'r.' );
-% % % hts_mpc_exp.DisplayName = '$\Sigma t_{s}^i$ (MPC exp.)';
-% % % 
-% % % hts_slf_exp = errorbar(ts_data.gams, ts_data.means(:,1)*1000,...
-% % %   ts_data.stdv(:,1)*1000, 'k.' );
-% % % hts_slf_exp.DisplayName = '$\Sigma t_{s}^i$ (SLF exp.)';
-% % % 
-% % % 
-% % % hold on
-% % % h_ts_slf_sim = plot(gams_ts, ts_sum_sim_results(:,2)*1000, 'k.');
-% % % h_ts_slf_sim.DisplayName = '$\Sigma t_{s}^i$  (SLF sim.)';
-% % % 
-% % % h_ts_mpc_sim = plot(gams_ts, ts_sum_sim_results(:,3)*1000, 'ro');
-% % % h_ts_mpc_sim.DisplayName = '$\Sigma t_{s}^i$ (MPC sim.)';
-% % % ylabel('total settle-time [ms]')
-% % % yyaxis(ax2, 'right')
-% % % ylim([100, 275])
-% % % % xlim([0.0001, 1000])
-% % % xlim(xlm)
-% % % yyaxis(ax2, 'left')
-% % % % ylim([36, 48])
-% % % 
-% % % % plot(gams(idx_csro), Sens_gain1(idx_csro), 'xk');
-% % % plot(gams(idx_csmg_lin), Sens_gain1(idx_csmg_lin), 'dk');
-% % % plot(gams(idx_csmg_mpc), Sens_gain1(idx_csmg_mpc), 'sk');
-% % % 
-% % % % leg2 = legend([h_sens1, hts_mpc_exp, h_ts_sim]);
-% % % % set(leg2, 'Position', [0.1514 0.8066 0.7184 0.2091], 'Box', 'off')
-% % % set(ax2, 'XTick', [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]);
-% % % set(ax2, 'XTickLabel', []);
-% % % xlabel('');
-% % % set(ax2, 'YTick', [36:1:39]);
-% % % 
-% % % 
-% % % % exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_17-Sep-2018_01');
-% % % % ts_total_file = 'ts_totalchoose-zet_09-17-2018.mat';
-% % % exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
-% % % ts_total_file = 'ts_totalchoose-zet_09-21-2018.mat';
-% % % 
-% % % fpath = fullfile(exp_path, ts_total_file);
-% % % load(fpath)
-% % % 
-% % % gams_ts = ts_sum_exp_results(:,1,1);
-% % % 
-% % % ts_sum_exp_results = ts_sum_exp_results(:,2:end,:);
-% % % ts_exp_means = mean(ts_sum_exp_results, 3); % average across pages (3rd dim)
-% % % ts_exp_stdv = sqrt(var(ts_sum_exp_results,0,3)); % average across pages (3rd dim)
-% % % ts_data = struct('means', ts_exp_means, 'stdv', ts_exp_stdv, 'gams', gams_ts);
-% % % 
-% % % % ===============================
-% % % % figure(f6);
-% % % % f6 = mkfig(6+figbase, width, height); clf
-% % % ax3 = axes('Position', [0.1100 0.0856 0.7800 0.3619], 'YAxisLocation', 'left');
-% % % [h_sens2] = plot_sens(gams, Sens_gain2, ax3, f5,...
-% % %   'Sens_color', GM_colr, 'Sens_LS', GM_ls1);
-% % % h_sens2.DisplayName = '$|\mathcal{S}_I(1)|$';
-% % % % plot(gams(idx_czro), Sens_gain2(idx_czro), 'xk')
-% % % plot(gams(idx_czmg_lin), Sens_gain2(idx_czmg_lin), 'dk')
-% % % plot(gams(idx_czmg_mpc), Sens_gain2(idx_czmg_mpc), 'sk')
-% % % 
-% % % 
-% % % yyaxis right
-% % % ax3.YAxis(2).Color = PM_colr;
-% % % hts_mpc_exp2 = errorbar(ts_data.gams, ts_data.means(:,2)*1000,...
-% % %   ts_data.stdv(:,2)*1000, 'r.' );
-% % % hts_mpc_exp2.DisplayName = '$\Sigma t_{s}^i$ (MPC exp.)';
-% % % 
-% % % hts_slf_exp2 = errorbar(ts_data.gams, ts_data.means(:,1)*1000,...
-% % %   ts_data.stdv(:,1)*1000, 'k.' );
-% % % hts_slf_exp2.DisplayName = '$\Sigma t_{s}^i$ (SLF exp.)';
-% % % 
-% % % % yyaxis right
-% % % % 
-% % % % ax2.YAxis(2).Color = PM_colr;
-% % % % h_ts_exp2 = errorbar(ts_data.gams, ts_data.means(:,2)*1000,...
-% % % %   ts_data.stdv(:,2)*1000, 'r.' );
-% % % % h_ts_exp2.DisplayName = 'total settle-time (experiment)';
-% % % hold on
-% % % h_ts_slf_sim2 = plot(gams_ts, ts_sum_sim_results(:,2)*1000, 'k.');
-% % % h_ts_slf_sim2.DisplayName = '$\Sigma t_{s}^i$ (sim.)';
-% % % 
-% % % h_ts_mpc_sim2 = plot(gams_ts, ts_sum_sim_results(:,3)*1000, 'ro', 'MarkerSize', 5);
-% % % h_ts_mpc_sim2.DisplayName = '$\Sigma t_{s}^i$ (sim.)';
-% % % ylabel('total settle-time [ms]')
-% % % 
-% % % 
-% % % yyaxis(ax3, 'left')
-% % % % ylim([36, 48])
-% % % xlim(xlm)
-% % % ylim([42, 48.2])
-% % % 
-% % % 
-% % % yyaxis(ax3, 'right')
-% % % ylim([00, 700])
-% % % 
-% % % leg22 = legend([h_sens1, hts_mpc_exp, hts_slf_exp, h_ts_mpc_sim, h_ts_slf_sim]);
-% % % set(leg22, 'NumColumns', 2, 'Box', 'off', 'Position', [0.1189 0.8784 0.7491 0.1152]);
-% % % 
-% % % 
-% % % 
-% % % set(ax3, 'XTick', [0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
-% % % % set(ax2, 'YTick', [36:1:39])
-% % % 
-% % % 
-% % % % legend([h_sens1, h_sens2, h_ts1, h_ts2]);
-%%
+
 
 
 
