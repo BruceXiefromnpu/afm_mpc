@@ -17,16 +17,10 @@ function [Q, R0, S, Px] = build_control_constsigma(G_recyc, cmplx_rad)
   
   z = tzero(G_recyc);
   z = sort_by_w(z(imag(z)~=0));
-<<<<<<< HEAD
   %Px(2:3) = z(1:2);
   
   Px(4:5) = z(3:4);
   % Px(5:6) = z(3:4);
-=======
-%   Px(2:3) = z(1:2);
-  Px(4:5) = z(3:4);
->>>>>>> da5f52af7a2c5aca764fb29a741dddb5784ec40f
-  
   
 %   Px(1) = [];
   [Chat, Dhat] = place_zeros(G_recyc, Px);
