@@ -1,5 +1,5 @@
 clear
-clc
+% clc
 
 saveon = true;
 hash_opts = struct('Method', 'MD5', 'Format', 'hex', 'Input', 'file');
@@ -25,8 +25,6 @@ load(hyst_path)
 % % To remove the vibrational and drift aspects, we need those models. Load them:
 % modelFit_file = fullfile(PATHS.sysid, 'FRF_data_current_stage2.mat');
 % load(modelFit_file)
-
-whos
 
 
 Gvib = plants.Gvib;

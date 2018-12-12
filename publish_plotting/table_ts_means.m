@@ -1,4 +1,6 @@
-clc
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
+
 clear
 exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
 ts_total_file = 'ts_totalconst-sig_09-21-2018.mat';
@@ -44,7 +46,6 @@ fclose(fid);
 
 
 
-
 %%
 exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
 ts_total_file = 'ts_totalchoose-zet_09-21-2018.mat';
@@ -87,8 +88,4 @@ fprintf(fid, '%s', S);
 fclose(fid);
 
 
-% function str = gam_str()
-%   
-%   
-%   
-% end
+

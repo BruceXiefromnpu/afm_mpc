@@ -1,15 +1,10 @@
 % The script will automatically save the resulting FRF's into a .mat file
 % with the same name as sinesOut_FileName, replacing only .csv with .mat.
 clear
-clc
 
 % plotting options
 lw = 1.3;
-saveon = true; % set this to 0 to avoid saving the computed FRFs.
-
-
-% rmpath('C:\Users\arnold\Documents\MATLAB\miscScripts\system_id\')
-% addpath('functions')
+saveon = true; 
 
 addpath('/home/arnold/gradschool/sysID/matlab/functions')
 addpath('/home/arnold/matlab/afm_mpc_journal/functions/canon')
@@ -25,7 +20,7 @@ R3 = 68.4e3;
 R4 = 10.15e6;
 I_gain = (1/R_sense)*(R3/(R3+R4));
 I_gain = 1/15.15; % Measured
-% I_gain = 2.5757;
+
 % Gains for amplifier output voltage
 
 R2 = 1.732e6;
@@ -34,12 +29,6 @@ Vdiv_gain = R2/(R1+R2);
 %Scale the Fourier coefficients of powV  by 1/Vdiv_gain and of powI by
 %1/Rsense.
 
-% 
-% % Transfer functions
-% G_uz2stage = FC_s(:, idx_stage)./FC_s(:, idx_uz);
-% G_uz2powV = FC_s(:,idx_powV)./FC_s(:,idx_uz);
-% G_uz2powI = FC_s(:,idx_powI)./FC_s(:,idx_uz);
-% G_powV2powI = FC_s(:,idx_powI)./FC_s(:, idx_powV);
 
 width = 3.5;
 height = 2.5;
@@ -92,16 +81,12 @@ width = 3.5;
 hieght = 3;
 F3 = mkfig(3, width, height); clf
 ax3 = gca();
-% F3.PaperPosition = [1.3376    2.3454    5.8247    6.3093];
-% h3 = semilogx(ax3, frf_data.freqs_Hz, 20*log10(abs(frf_data.G_uz2powV)), '-.r', 'LineWidth', lw);
-% hold on, grid on;
-% h3.DisplayName = '$G_{V_X, u_X}$';
+
 
 h4 = semilogx(ax3, frf_data.freqs_Hz, 20*log10(abs(frf_data.G_uz2powI)), '-k', 'LineWidth', lw);
 h4.DisplayName = '$G_{I_x,u_x}$';
 hold on, grid on
-% h5 = semilogx(ax3, freqs, 20*log10(abs(G_powV2powI)), '-b', 'LineWidth', lw);
-% h5.DisplayName = '$G_{I_x, V_X}$';
+
 
 h10_bnd = semilogx(frf_data.freqs_Hz, 20*log10(abs(derz_frf)),...
           ':k', 'LineWidth', lw);

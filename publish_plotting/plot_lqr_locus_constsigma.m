@@ -1,7 +1,11 @@
 % This script plots the LQR based root locus for the "lowgain"
 % version of things.
 
-clear, clc
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
+
+
+clear
 saveon = true;
 plants = CanonPlants.plants_ns14(9,2);
 G = plants.SYS;

@@ -1,6 +1,10 @@
 % This script plots the LQR based root locus for the "lowgain"
 % version of things.
 
+clear
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
+
 
 saveon = true;
 lqr_locus_figfile = 'lqr_locus_choozezet.svg';
@@ -13,13 +17,16 @@ Ts = sys_recyc.Ts;
 can_cntrl = CanonCntrlParams_ns14();
 [Q1, R0, S1] = build_control(sys_recyc, can_cntrl);
 
-
 f3 = figure(3); clf
 P_x  = getCharDes(sys_recyc, can_cntrl.gam_s, can_cntrl.pint,...
                              can_cntrl.zeta_s, can_cntrl.rho_s, can_cntrl.rad);
 plot(real(P_x), imag(P_x), 'ok')
 hold on
 ax = gca();
+
+
+gam_min = 0.001;
+gam_max = 10000;
 
 rgb1 = [0.230, 0.299, 0.754];
 rgb2 = [0.706, 0.016, 0.150];
@@ -58,7 +65,7 @@ ylabel('Im')
 
 
 if saveon
-    fpath = fullfile(PATHS.jfig, lqr_locus_figfile);
+  fpath = fullfile(PATHS.jfig, lqr_locus_figfile);
   fprintf('saving Figure number %d as\n %s\n', f3.Number, fpath);
   saveas(f3, fpath)
 end

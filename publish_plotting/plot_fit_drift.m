@@ -3,8 +3,6 @@ clear
 addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions'))
 addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions', 'canon'))
 
-% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_06-05-2018_01_amp_1p0.mat'))
-% load(fullfile(PATHS.sysid, 'hysteresis', 'driftID_data_5-29-2018_01.mat'))
 saveon = true;
 [plants, frf_data, MF] = CanonPlants.plants_ns14(9, 2);
 fpath_driftID = MF.heritage.fpath_driftID;

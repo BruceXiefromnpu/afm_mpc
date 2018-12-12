@@ -1,0 +1,37 @@
+\documentclass[a4paper,twoside]{article}
+\usepackage[margin=1in]{geometry}
+\begin{document}
+\hspace*{0.45\linewidth}
+\begin{minipage}{0.52\linewidth}
+Roger A. Braker\par
+University of Colorado, Boulder\par
+Dept of Electrical, Computer and Energy Engineering \par
+425 UCB\par
+Boulder, CO 80305\par
+United States\par
+roger.braker@colorado.edu\par
+\today
+\end{minipage}
+\par\bigskip
+
+Dear Prof. Andrea Serrani,\par\bigskip
+
+It is our pleasure to submit this manuscript entitled ``A Comparison of Tracking Step Inputs with a Piezo Stage Using MPC and Saturated LQG Control'' (authored by Roger A. Braker and Lucy Y. Pao) for consideration to be published in the Transactions on Control Systems Technology.
+The overall goal of this research is to rapidly track step inputs given to a piezo-actuated nanopositiong stage, while respecting power amplifier current limits. This objective is motivated by compressive sensing based atomic force microscopy. With this goal in mind, we compare the simulation and experimental performance of an input constrained model predictive control (MPC) scheme to saturated linear feedback, where both controllers are derived from the same cost functions. For both controllers, we mitigate model uncertainty with inverse hysteresis and drift compensation. 
+
+To date, many papers have now appeared which demonstrate MPC on various experimental platforms, including those with fast dynamics (e.g., piezo-actuated stages). However, as we argue in the introduction of the manuscript, comparison to competing methods is often cursory and robustness is typically neglected. Due to the substantial cost of implementing MPC (in terms of both hardware and development time), it is crucial to quantify what, if any, real world performance gains are realized by using MPC instead of simpler alternatives. This manuscript offers a detailed case study in that space. For input constrained problems, one expects MPC to yield the most benefit when aggressive weights are chosen. At the same time, overly aggressive weights tend to degrade closed-loop robustness. By analyzing performance across a wide range of control weights, we show that, for this application, the best experimental performance is obtained with large enough control weights that MPC offers no benefit. Due to the current popularity of MPC, we believe that an account of where MPC may fail to provide a substantial performance improvement will be of interest to the readers of Transactions on Control Systems Technology.
+
+The manuscript builds on an earlier conference paper (CCTA 2017, Hawaii). That paper focused on implementation details such as fixed-point word size selection and multiplier usage. We only demonstrated the method for a single step input magnitude and a single control weight and gave no consideration to the robustness of the scheme. In contrast, in this manuscript, we seek to thoroughly characterize performance across the entire operating range of the nanopositioner and for control parameters ranging from very aggressive to significantly de-rated. Further, we give a detailed analysis of how these different weight selections affect closed-loop robustness. It is only section III.a (which discusses modeling vibration dynamics) and section IV (which formulates the control law) that share substantial overlap with the conference paper.
+
+Except for this mentioned overlap across approximately 3 pages of this 13 page manuscript, this manuscript has not been published elsewhere nor is it under review at nor been submitted to any other journal. Both authors agree to submit the manuscript in its present form to the IEEE Transactions on Control Systems Technology. This work was supported in part by Agilent Technologies, Inc, The US National Science Foundation (under Grant CMMI-1234980), and the Hanse Wissenschaftskolleg in Delmenhorst, Germany. Thank you for the consideration and we look forward to hearing from you.
+
+\par\bigskip
+\noindent Sincerely,
+\par\bigskip
+\noindent R.A. Braker\par
+\noindent L.Y. Pao
+\end{document}
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

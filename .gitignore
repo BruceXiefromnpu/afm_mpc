@@ -10,6 +10,8 @@ manystepsdata.tex
 .directory/
 
 
+publish_plotting/legacy/process_settle_time_data_bothschemes_v3.m
+publish_plotting/legacy/table_rob_data.m
 
 # figure or data folders
 fig-figs/
@@ -23,6 +25,7 @@ data/
 *.eps
 *.svg
 *.fig
+*.qdf
 
 
 # Latex ignores

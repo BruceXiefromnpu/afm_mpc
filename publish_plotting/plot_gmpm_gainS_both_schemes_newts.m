@@ -13,8 +13,6 @@ G_recyc = plants.sys_recyc;
 Ts = G_recyc.Ts;
 
 pmgm_figfile = 'PMGM_vs_gamma_both.svg';
-sens_ts_figfile_cs = 'GainS_TS_vs_gamma_cs.svg';
-sens_ts_figfile_cz = 'GainS_TS_vs_gamma_cz.svg';
 sens_ts_figfile_both = 'GainS_TS_vs_gamma_both.svg';
 bw_ts_figfile_both = 'BW_TS_vs_gamma_both.svg';
 
@@ -39,156 +37,24 @@ min_gam_mpc_cz = 0.00001;
 gams = unique([gams, 1.0, 3.0, 3.1, 3.8, min_gam_slf_cs, min_gam_mpc_cs,...
   min_gam_slf_cz, min_gam_mpc_cz]);
 
-if 0
-[GM_s1, PM_s1, Sens_gain1, TS_s1, BW_s1] = gmpm_vs_gam_recyc_obs(G, G_recyc,...
-  G_obsDist, Q_cs, R_cs, S_cs, LxLd, gams);
-
-[GM_s2, PM_s2, Sens_gain2, TS_s2, BW_s2] = gmpm_vs_gam_recyc_obs(G, G_recyc, G_obsDist, Q_cz, R_cz, S_cz, LxLd, gams);
-
-save('gmpmS_data.mat', 'GM_s1', 'PM_s1', 'Sens_gain1', 'TS_s1', 'BW_s1',...
-  'GM_s2', 'PM_s2', 'Sens_gain2', 'TS_s2', 'BW_s2') 
+if 1
+  [GM_s1, PM_s1, Sens_gain1, TS_s1, BW_s1] = gmpm_vs_gam_recyc_obs(G, G_recyc,...
+    G_obsDist, Q_cs, R_cs, S_cs, LxLd, gams);
+  
+  [GM_s2, PM_s2, Sens_gain2, TS_s2, BW_s2] = gmpm_vs_gam_recyc_obs(G, G_recyc,...
+    G_obsDist, Q_cz, R_cz, S_cz, LxLd, gams);
+  
+%   save('gmpmS_data.mat', 'GM_s1', 'PM_s1', 'Sens_gain1', 'TS_s1', 'BW_s1',...
+%     'GM_s2', 'PM_s2', 'Sens_gain2', 'TS_s2', 'BW_s2')
 else
   load('gmpmS_data.mat')
 end
-% -------------------------------------------------------------------------
-% -------------- Build the LaTeX table ------------------------------------
-
-% ------------------- Constant-sigma --------------------------------------
-% 1) Robust-optimal
-[~, idx_csro] = min(Sens_gain1);
-% for rob-optimal, mpc and linear take the same gamma
-lin_sig_rob_data = [gams(idx_csro), GM_s1(idx_csro), PM_s1(idx_csro), Sens_gain1(idx_csro)];
-mpc_sig_rob_data = [gams(idx_csro), GM_s1(idx_csro), PM_s1(idx_csro), Sens_gain1(idx_csro)];
-
-% 2). minimum-gamma. For const-sigma, and rmax=14, we get gam=10 for
-%     linear, and gam=0.5 for Nmpc=12.
-idx_csmg_lin = find(gams == min_gam_slf_cs, 1, 'first');
-lin_sig_ming_data = [gams(idx_csmg_lin), GM_s1(idx_csmg_lin),...
-                     PM_s1(idx_csmg_lin), Sens_gain1(idx_csmg_lin)];
-idx_csmg_mpc = find(gams == min_gam_mpc_cs, 1, 'first');
-mpc_sig_ming_data = [gams(idx_csmg_mpc), GM_s1(idx_csmg_mpc),...
-                     PM_s1(idx_csmg_mpc), Sens_gain1(idx_csmg_mpc)];
-
-                   
-K_cs_rg = dlqr(G_recyc.a, G_recyc.b, Q_cs, R_cs+gams(idx_csro), S_cs);
-K_cs_mg_lin = dlqr(G_recyc.a, G_recyc.b, Q_cs, R_cs+gams(idx_csmg_lin), S_cs);
-K_cs_mg_mpc = dlqr(G_recyc.a, G_recyc.b, Q_cs, R_cs+gams(idx_csmg_mpc), S_cs);
-
-[Sens_cs_rg]     = ss_loops_delta_dist(G, G_recyc, G_obsDist, K_cs_rg, LxLd);
-[Sens_cs_mg_lin] = ss_loops_delta_dist(G, G_recyc, G_obsDist, K_cs_mg_lin, LxLd);
-[Sens_cs_mg_mpc] = ss_loops_delta_dist(G, G_recyc, G_obsDist, K_cs_mg_mpc, LxLd);
 
 
-% --------------------- Choose-zeta ---------------------------------------
-% 1). Robust optimal
-[~, idx_czro] = min(Sens_gain2);
-lin_zet__rob_data = [gams(idx_czro), GM_s2(idx_czro), PM_s2(idx_czro), Sens_gain2(idx_czro)];
-mpc_zet_rob_data = [gams(idx_czro), GM_s2(idx_czro), PM_s2(idx_czro), Sens_gain2(idx_czro)];
+% --------------- The PM-GM figure (fig 12) --------------------
 
-% 2). We have, I think, gam=0.2 for MPC and gam=2.9 for linear,
-%     in the choose zeta scheme.
-idx_czmg_lin = find(gams == min_gam_slf_cz, 1, 'first');
-lin_zet_ming_data = [gams(idx_czmg_lin), GM_s2(idx_czmg_lin),...
-                     PM_s2(idx_czmg_lin), Sens_gain2(idx_czmg_lin)];
-idx_czmg_mpc = find(gams == min_gam_mpc_cz, 1, 'first');
-mpc_zet_ming_data = [gams(idx_czmg_mpc), GM_s2(idx_czmg_mpc),...
-                     PM_s2(idx_czmg_mpc), Sens_gain2(idx_czmg_mpc)];
+%  Plot Colors & Linestyles ----------------------
 
-                   
-K_cz_rg = dlqr(G_recyc.a, G_recyc.b, Q_cz, R_cz+gams(idx_czro), S_cz);
-K_cz_mg_lin = dlqr(G_recyc.a, G_recyc.b, Q_cz, R_cs+gams(idx_czmg_lin), S_cz);
-K_cz_mg_mpc = dlqr(G_recyc.a, G_recyc.b, Q_cz, R_cs+gams(idx_czmg_mpc), S_cz);
-
-[Sens_cz_rg]     = ss_loops_delta_dist(G, G_recyc, G_obsDist, K_cz_rg, LxLd);
-[Sens_cz_mg_lin] = ss_loops_delta_dist(G, G_recyc, G_obsDist, K_cz_mg_lin, LxLd);
-[Sens_cz_mg_mpc] = ss_loops_delta_dist(G, G_recyc, G_obsDist, K_cz_mg_mpc, LxLd);
-
-%%
-
-clc
-width = 3.45;
-height = 2.5;
-f1 = mkfig(1, width, height); clf
-% f1 = figure; clf
-freqs = logspace(log10(1), log10(12500), 200);
-hsens_cs_rg = frf_bode_mag(Sens_cs_rg, freqs, f1, 'Hz', 'Color', 'k', 'LineStyle', '-');
-hsens_cs_rg.DisplayName = 'CS-RG (SLF/MPC)';
-
-hsens_cs_mg_lin = frf_bode_mag(Sens_cs_mg_lin, freqs, f1, 'Hz', 'Color', 'k', 'LineStyle', '--');
-hsens_cs_mg_lin.DisplayName = 'CS-MG (SLF)';
-hsens_cs_mg_mpc = frf_bode_mag(Sens_cs_mg_mpc, freqs, f1, 'Hz', 'Color', 'k', 'LineStyle', ':');
-hsens_cs_mg_mpc.DisplayName = 'CS-MG (MPC)';
-
-hsens_cz_rg = frf_bode_mag(Sens_cz_rg, freqs, f1, 'Hz', 'Color', 'r', 'LineStyle', '-');
-hsens_cz_rg.DisplayName = 'CZ-RG (SLF/MPC)';
-
-hsens_cz_mg_lin = frf_bode_mag(Sens_cz_mg_lin, freqs, f1, 'Hz', 'Color', 'r', 'LineStyle', '--');
-hsens_cz_mg_lin.DisplayName = 'CZ-MG (SLF)';
-hsens_cz_mg_mpc = frf_bode_mag(Sens_cz_mg_mpc, freqs, f1, 'Hz', 'Color', 'r', 'LineStyle', ':');
-hsens_cz_mg_mpc.DisplayName = 'CZ-MG (MPC)';
-
-% response of ppure derivitive.
-% frf_bode_mag(zpk([1], [], 1, G.Ts), freqs, f1, 'Hz')
-
-leg_sens = legend([hsens_cs_rg, hsens_cs_mg_lin, hsens_cs_mg_mpc,...
-  hsens_cz_rg, hsens_cz_mg_lin, hsens_cz_mg_mpc]);
-
-ax = gca();
-ax.XTick = [1, 10, 100, 1000, 10000];
-ylim(ax, [-50, 15])
-tighten_axis(f1, ax)
-
-set(leg_sens, 'FontSize', 7, 'NumColumns', 2, 'Box', 'off');
-set(leg_sens, 'Position', [0.5805    0.3410    2.7610    0.4021]);
-
-if saveon
-  saveas(f1, fullfile(PATHS.jfig, 'sens_bode.svg'));
-end
-
-%
-data = {lin_sig_ming_data, 'SLF-CS-MG', 'SLF, const-$\sigma$, minimum-$\gamma$';
-  mpc_sig_ming_data, 'MPC-CS-MG', 'MPC, const-$\sigma$ minimum-$\gamma$'; 
-  lin_sig_rob_data, 'SLF-CS-RG', 'SLF, const-$\sigma$, robust-$\gamma$ ';
-  mpc_sig_rob_data, 'MPC-CS-RG', 'MPC, const-$\sigma$, robust-$\gamma$'; 
-  %
-  lin_zet_ming_data, 'SLF-CZ-MG', 'SLF, choose-$\zeta$ minimum-$\gamma$'; 
-  mpc_zet_ming_data, 'MPC-CZ-MG', 'MPC, choose-$\zeta$ minimum-$\gamma$';
-  %
-  lin_zet__rob_data, 'SLF-CZ-RG', 'SLF, choose-$\zeta$  robust-$\gamma$'; 
-  mpc_zet_rob_data, 'MPC-CZ-RG', 'MPC, choose-$\zeta$ robust-$\gamma$'}
-
-
-body = sprintf('%s\n\\hline\n', 'scheme    & abbreviation       & $\gamma$ &GM & PM & $|\mathcal{S}|$\\');
-
-
-for col_cell=data'
-  dat = col_cell{1};
-  abrev = col_cell{2};
-  name = col_cell{3};
-  
-  row_str = sprintf('%s & %s & ', name, abrev);
-  for col = 1:size(dat,2)
-    
-    if col < size(dat,2)
-      fmt = '%s %.1f &';
-    else
-      fmt = '%s %.1f';
-    end
-     row_str = sprintf(fmt, row_str, dat(col));
-  end
-  body = sprintf('%s%s\\\\\n', body, row_str);
-end
-
-body
-
-if saveon
-  fid = fopen(fullfile(PATHS.MPCJ_root, 'latex', 'rob_data.tex'), 'w+');
-  fprintf(fid, '%s', body);
-  fclose(fid);
-end
-%%
-clc
-% -------------- Plot Colors & Linestyles ----------------------
 GM_colr = 'k';
 PM_colr = 'r';
 GM_ls1 = '-';
@@ -226,33 +92,6 @@ f4.CurrentAxes = ax1;
 yyaxis(ax1, 'left')
 % plot(gams(idx_csro), GM_s1(idx_csro), 'xk')
 yyaxis(ax1, 'right')
-% plot(gams(idx_csro), PM_s1(idx_csro), 'xk')
-% 
-% yyaxis(ax1, 'left')
-% plot(gams(idx_csmg_lin), GM_s1(idx_csmg_lin), 'dk')
-% yyaxis(ax1, 'right')
-% plot(gams(idx_csmg_lin), PM_s1(idx_csmg_lin), 'dk')
-% 
-% yyaxis(ax1, 'left')
-% plot(gams(idx_csmg_mpc), GM_s1(idx_csmg_mpc), 'sk')
-% yyaxis(ax1, 'right')
-% plot(gams(idx_csmg_mpc), PM_s1(idx_csmg_mpc), 'sk')
-
-% % choose zeta
-% yyaxis(ax1, 'left')
-% % plot(gams(idx_czro), GM_s2(idx_czro), 'xk')
-% yyaxis(ax1, 'right')
-% % plot(gams(idx_czro), PM_s2(idx_czro), 'xk')
-% 
-% yyaxis(ax1, 'left')
-% plot(gams(idx_czmg_lin), GM_s2(idx_czmg_lin), 'dk')
-% yyaxis(ax1, 'right')
-% plot(gams(idx_czmg_lin), PM_s2(idx_czmg_lin), 'dk')
-% 
-% yyaxis(ax1, 'left')
-%  plot(gams(idx_czmg_mpc), GM_s2(idx_czmg_mpc), 'sk')
-% yyaxis(ax1, 'right')
-% plot(gams(idx_czmg_mpc), PM_s2(idx_czmg_mpc), 'sk')
 
 
 leg1 = legend([hgm1, hgm2, hpm1, hpm2]);
@@ -262,20 +101,20 @@ if saveon
    saveas(f4, fullfile(PATHS.jfig, pmgm_figfile))
 end
 
-%%
+%
 % ----------------------------------------------------------------------- %
 % Now, plot the settling settling times vs gamma and on the same two graphs,
 % plot the DC-gain of the integrated sensitivity function vs gamma.
 % ----------------------------------------------------------------------- %
 
-clc
+%%
 % =============================================================
 % Load the CONSTANT-SIMGA sum of steps experimental data.
 exp_path_CS = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
 ts_total_file_CS = 'ts_totalconst-sig_09-21-2018.mat';
 
 fpath1 = fullfile(exp_path_CS, ts_total_file_CS);
-dat_CS=load(fpath1)
+dat_CS=load(fpath1);
 
 % gams_ts = ts_sum_exp_results(:,1,1);
 ts_sum_exp_results_CS = dat_CS.ts_sum_exp_results(:,2:end,:); % first column is gammas, drop it.
@@ -287,7 +126,7 @@ ts_data_CS = struct('means', ts_exp_means_CS, 'stdv', ts_exp_stdv_CS, 'gams', da
 exp_path_CZ = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');
 ts_total_file_CZ = 'ts_totalchoose-zet_09-21-2018.mat';
 fpath2 = fullfile(exp_path_CZ, ts_total_file_CZ);
-dat_CZ = load(fpath2)
+dat_CZ = load(fpath2);
 
 %gams_ts = ts_sum_exp_results(:,1,1);
 ts_sum_exp_results_CZ = dat_CZ.ts_sum_exp_results(:,2:end,:);
@@ -331,7 +170,7 @@ xlim(xlm)
 yyaxis(ax2, 'right')
 ax2.YAxis(2).Color = 'k';
 
-set(ax2, 'XTick', [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]);
+set(ax2, 'XTick', [0.00001, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100]);
 xlab1 = xlabel('$\gamma$');
 set(xlab1, 'Units', 'inches', 'Position', [1.349, -.15, 0])
 set(ax2, 'YTick', [36:1:39]);
@@ -368,7 +207,7 @@ ylim([200, 700])
 leg22 = legend([hts_mpc_exp, hts_slf_exp, h_sens1]);
 leg22.Position =  [0.0649 0.6289 0.1875 0.2285];
 
-set(ax3, 'XTick', [0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
+set(ax3, 'XTick', [1e-5, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
 
 xlab2 = xlabel('$\gamma$');
 set(xlab2, 'Units', 'inches', 'Position', [1.349, -.15, 0])
@@ -376,7 +215,7 @@ if saveon
   saveas(f5, fullfile(PATHS.jfig, sens_ts_figfile_both ))
 end
 
-%%
+%
 % ----------------------------------------------------------------------- %
 % Now, plot the simulated settling times vs gamma and on the same two graphs,
 % plot the 3-dB closed loop bandwidth vs gamma
@@ -402,7 +241,7 @@ semilogx(gams, BW_s1/2/pi, '-k')
 title('constant-$\sigma$')
 ylabel('Bandwidth [Hz]')
 xlim(xlm)
-set(ax2, 'XTick', [0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
+set(ax2, 'XTick', [1e-5, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
 grid on
 
 % subplot(1,2,2)
@@ -425,7 +264,7 @@ title('choose-$\zeta$')
 ylabel('Bandwidth [Hz]')
 xlab2 = xlabel('$\gamma$');
 set(xlab2, 'Units', 'inches', 'Position', [1.349, -.15, 0])
-set(ax3, 'XTick', [0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
+set(ax3, 'XTick', [1e-5, 0.0001, 0.001, 0.01, 0.1, 1, 10, 100])
 
 leg3 = legend([h_ts_mpc_sim, h_ts_slf_sim, h_bw]);
 leg3.Position = [0.5675 0.4467 0.2405 0.2285];
@@ -436,40 +275,6 @@ if saveon
   saveas(f10, fullfile(PATHS.jfig, bw_ts_figfile_both ))
 end
 %%
-% % % this is experimental, and unused in the manuscript.
-% % [cor_cs_sim_mpc, p_cs_sim_mpc] = corrcoef(ts_sum_sim_results(:,3), ts_data.gams)
-% % [cor_cs_exp_mpc, p_cs_exp_mpc] = corrcoef(ts_data.means(1:end-2,2), ts_data.gams(1:end-2))
-% % 
-% % sg2 = 10.^(Sens_gain2/20);
-% % 
-% % sens_interp = interp1(gams, sg2, ts_data.gams);
-% % 
-% % [cor_cs_sim_mpc, p_cs_sim_mpc] = corrcoef(ts_data.means(:,2), sens_interp)
-% % 
-% % figure(104)
-% % plot(sens_interp, ts_data.means(:,2), 'x')
-% % 
-% % 
-% % figure(105), clf
-% % hold on, grid on
-% % plot(ts_data.gams, ts_data.means(:,2))
-% % yyaxis right
-% % plot(ts_data.gams, sens_interp)
-% % 
-
-%%
-
-
-
-
-if 1
-   saveas(f4, fullfile(PATHS.jfig, pmgm_figfile))
-   saveas(f5, fullfile(PATHS.jfig, sens_ts_figfile_cs))
-%    saveas(f6, fullfile(PATHS.jfig, sens_ts_figfile_cz))
-end
-
-%
-
 
 
 % ------------------------------------------------------------------

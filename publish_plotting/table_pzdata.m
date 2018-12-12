@@ -3,7 +3,7 @@
 addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
 addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
 
-clear, clc
+clear
 saveon = true;
 plants = CanonPlants.plants_ns14(9, 2);
 G = plants.SYS;

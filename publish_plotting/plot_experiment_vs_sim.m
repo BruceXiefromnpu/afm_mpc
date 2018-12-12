@@ -1,5 +1,5 @@
 % This script processes the output data from a sequence of step
-% inputs from different experiments (MPC, linear, PID etc) and
+% inputs from different experiments (MPC, linear) and
 % calculates settle-time for each step. The settle-times for each
 % experiment are built up into a latex table and saved to a file. 
 
@@ -7,28 +7,29 @@
 % is to plot the min-gamma on the same figure and rob-gamma on a different
 % figure, rather than CS on one figure and CZ on the other figure. 
 
-clear, clc
+addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
+
+clear
 saveon = true;
 TOL = 14/512;
 tol_mode = 'abs';
 verbose = 0;
 
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
+fig_steps_robgam = 'step_exps_rob_gam.svg';
+fig_steps_mingam = 'step_exps_min_gam.svg';
+fig_stepref = 'steps.svg';
 % where the different experiments are stored.
 
 % Reference Data 
 load(fullfile(PATHS.exp, 'step-exps', 'many_steps_data_rand_ymax7_n6p5.mat'))
 % reft_pi = load(fullfile(root, 'many_steps_rand.mat'))
 
-whos
 
 Fig = figure(1000); clf
 step_ref.yscaling = 5;
 step_ref.plot(Fig);
 step_ref.plot_settle_boundary(Fig, TOL, tol_mode);
 ax0 = gca();
-%%
-clc
 
 
 files_min_gam = {
@@ -42,8 +43,8 @@ files_min_gam = {
 'many_steps_ymax7_mpc_EXP_choose-zet_09-24-2018_gam_0.00_obsID_3.mat',...
 };
 
-gam_str_cs = 'gam_100.00'
-gam_str_cz = 'gam_25.00'
+gam_str_cs = 'gam_100.00';
+gam_str_cz = 'gam_25.00';
 files_rob_gam = {
   ['many_steps_ymax7_linfxp_sim_const-sig_09-21-2018_', gam_str_cs, '.mat'],...
 ['many_steps_ymax7_mpcfxp_sim_const-sig_09-21-2018_', gam_str_cs, '.mat'],...
@@ -128,49 +129,49 @@ step_exps_RG = ManyStepExps(TOL, tol_mode, step_ref, step_exps_RG_cell{:});
 step_exps_MG.ploty_selected(cs_idx, ax0);
 step_exps_RG.ploty_selected(cs_idx, ax0);
 
-%%
-ts_master_vec = unique([step_exps_RG.TS_mat(:); step_exps_MG.TS_mat(:)]);
+
+% ts_master_vec = unique([step_exps_RG.TS_mat(:); step_exps_MG.TS_mat(:)]);
+% 
+% % -------------------------------------------------------------------------
+% rgb1 = [0.230, 0.299, 0.754];
+% rgb2 = [0.706, 0.016, 0.150];
+% s_ = linspace(0,1, length(step_ref.step_diff_amps));
+% color_map = diverging_map(s_, rgb1, rgb2);
+% % ------------ Constant-Sigma LaTex table -------------------
+% % ts_master_vec = ManyStepExps.ts_vec_from_dir(data_root, TOL, tol_mode);
+% 
+% S = step_exps_MG.TS_dat2tex('do_color', true, 'ts_vec', ts_master_vec, 'colormap', color_map);
+% fprintf('%s', S); % just display it.
+% 
+% if saveon
+%   ManyStepExps.write_tex_data(S, fullfile(PATHS.MPCJ_root, 'latex', 'manystepsdata_mingam.tex'));
+% end
+% 
+% 
+% % ------------ Choose-Zeta LaTex table -------------------
+% S = step_exps_RG.TS_dat2tex('do_color', true, 'ts_vec', ts_master_vec, 'colormap', color_map);
+% fprintf('%s', S); % just display it.
+% if saveon
+%   ManyStepExps.write_tex_data(S, fullfile(PATHS.MPCJ_root, 'latex', 'manystepsdata_choosezeta.tex'));
+% end
+% 
+% % create a figure which is only a colormap legend
+% fig100 = mkfig(100, 7, 0.75); clf
+% ax = gca();
+% set(ax, 'Visible', 'off');
+% colormap(ax, color_map);
+% cb = colorbar(ax);
+% set(cb, 'Position', [0.03, 0.5, 0.94, 0.25], 'Orientation', 'horizontal',...
+%   'Units', 'normalized', 'AxisLocation', 'in', 'FontSize', 9)
+% cb.Label.String = 'settle-time [ms]';
+% ts_min = min(ts_master_vec)*1000;
+% ts_max = max(ts_master_vec)*1000;
+% caxis([ts_min, ts_max+.001]); % +.001 to get 93 to display
+% set(cb, 'Ticks', [3, 25, 50, 75, 93])
+% saveas(fig100, fullfile(PATHS.jfig(), 'ts_colorbar.svg'))
+
 
 % -------------------------------------------------------------------------
-rgb1 = [0.230, 0.299, 0.754];
-rgb2 = [0.706, 0.016, 0.150];
-s_ = linspace(0,1, length(step_ref.step_diff_amps));
-color_map = diverging_map(s_, rgb1, rgb2);
-% ------------ Constant-Sigma LaTex table -------------------
-% ts_master_vec = ManyStepExps.ts_vec_from_dir(data_root, TOL, tol_mode);
-
-S = step_exps_MG.TS_dat2tex('do_color', true, 'ts_vec', ts_master_vec, 'colormap', color_map);
-fprintf('%s', S); % just display it.
-
-if saveon
-  ManyStepExps.write_tex_data(S, fullfile(PATHS.MPCJ_root, 'latex', 'manystepsdata_mingam.tex'));
-end
-
-
-% ------------ Choose-Zeta LaTex table -------------------
-S = step_exps_RG.TS_dat2tex('do_color', true, 'ts_vec', ts_master_vec, 'colormap', color_map);
-fprintf('%s', S); % just display it.
-if saveon
-  ManyStepExps.write_tex_data(S, fullfile(PATHS.MPCJ_root, 'latex', 'manystepsdata_choosezeta.tex'));
-end
-
-% create a figure which is only a colormap legend
-fig100 = mkfig(100, 7, 0.75); clf
-ax = gca();
-set(ax, 'Visible', 'off');
-colormap(ax, color_map);
-cb = colorbar(ax);
-set(cb, 'Position', [0.03, 0.5, 0.94, 0.25], 'Orientation', 'horizontal',...
-  'Units', 'normalized', 'AxisLocation', 'in', 'FontSize', 9)
-cb.Label.String = 'settle-time [ms]';
-ts_min = min(ts_master_vec)*1000;
-ts_max = max(ts_master_vec)*1000;
-caxis([ts_min, ts_max+.001]); % +.001 to get 93 to display
-set(cb, 'Ticks', [3, 25, 50, 75, 93])
-saveas(fig100, fullfile(PATHS.jfig(), 'ts_colorbar.svg'))
-
-
-%% -------------------------------------------------------------------------
 % ------------ Minimum-gamma Plot steps, experimental-only zoom in--------
 figure(1000); clf
 ax0 = gca();
@@ -178,8 +179,8 @@ step_ref.plot(ax0);
 step_ref.plot_settle_boundary(ax0, TOL, tol_mode);
 step_exps_MG.ploty_selected([cs_idx, cz_idx], ax0);
 
-%%
-clc
+
+
 width = 3.4;
 height = 3.75;
 
@@ -244,9 +245,9 @@ set(ax3, 'XTick', [0.5, 0.5025, 0.505])
 set(ax4, 'YTick', [-0.1, 0, 0.1, 0.2]);
 
 if saveon
-  saveas(Fig, fullfile(PATHS.jfig, 'step_exps_min_gam.svg'))
+  saveas(Fig, fullfile(PATHS.jfig, fig_steps_mingam))
 end
-%% Now, the choos-zeta scenario
+% Now, the choos-zeta scenario
 % ----------------------------------------------------------------
 Fig = mkfig(1001, width, 1.5); clf
 ax00 = gca();
@@ -263,13 +264,13 @@ a3 = annotation('ellipse');
 set(a3, 'Units', 'inches', 'Position', [3.0339 0.7917 0.1640 0.1562], 'Color', 'r')
 
 
-saveas(Fig, fullfile(PATHS.jfig, 'steps.svg'))
-%%
+saveas(Fig, fullfile(PATHS.jfig, fig_stepref))
+
 width = 3.4;
 height = 3.75;
 Fig = mkfig(11, width, height); clf
 %
-clf, clc
+clf
 ax1 = axes('Units', 'inches', 'Position', [0.35, 0.3850+1.25, 1.35, 1.9250]);
 ax2 = axes('Units', 'inches', 'Position', [1.99, 0.3850+1.25, 1.35, 1.9250]);
 
@@ -325,14 +326,14 @@ ylim(ax4, [-0.2, 0.2])
 set(ax4, 'YTick', [-0.1, 0, 0.1, 0.2]);
 
 if saveon
-  saveas(Fig, fullfile(PATHS.jfig, 'step_exps_rob_gam.svg'))
+  saveas(Fig, fullfile(PATHS.jfig, fig_steps_robgam))
 end
 
-%%
 
- clc
 
-data_root = fullfile(PATHS.exp, 'step-exps', 'many_steps_sweep_gamma_21-Sep-2018_01');
+ 
+
+% Crawl through all the results and find the maximum measured current draw.
 files = split(ls(data_root));
 
 Imax_s = [];
@@ -363,45 +364,6 @@ for k =1:length(files)
 end
 
 fprintf('max of all currents: %.4f [mA]\n', max(Imax_s))
-%%
-
-
-% Now, plot current draw
-clc
-height = 2.5;
-F12 = mkfig(12, width, height);
-ax = gca();
-
-hands_Ipow = step_exps_CS.plotIpow_selected(5:8, ax);
-
-ylim([-130, 110])
-grid on
-ylabel('Current [mA]')
-xlabel('time [s]')
-
-leg3 = legend(hands_Ipow);
-set(leg3, 'NumColumns', 2, 'Units', 'inches',...
-  'Position', [0.8089 0.2993 2.5049 0.3319], 'Box', 'off')
-tighten_axis(F12, ax)
-
-
-F13 = mkfig(13, width, height);
-ax = gca();
-
-hands_Ipow = step_exps_RG.plotIpow_selected(5:8, ax);
-
-ylim([-130, 110])
-grid on
-ylabel('Current [mA]')
-xlabel('time [s]')
-
-leg4 = legend(hands_Ipow);
-set(leg4, 'NumColumns', 2, 'Units', 'inches',...
-  'Position', [0.7956 0.2993 2.5181 0.3319], 'Box', 'off')
-tighten_axis(F13, ax)
 
 
 
-%%
-saveas(F12, fullfile(PATHS.jfig, 'step_exps_const_sig_Ipow.svg'))
-saveas(F13, fullfile(PATHS.jfig, 'step_exps_choose_zet_Ipow.svg'))
