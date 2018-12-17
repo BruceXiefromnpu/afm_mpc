@@ -33,13 +33,14 @@ function [Sens, Hyd, Hyr, Hyeta, Loop] =ss_loops_delta_dist(sys, sys_recyc, sys_
        -Kx,     1-Ku,             -Nbar;
        -Ld*sys.c,    0,              1-Ld*Cd];
 
-  BB_ = [sys.b*Nbar; Nbar; 0];
+%   BB_ = [sys.b*Nbar; Nbar; 0];
+  BB_ = [sys.b; 1; 0];
   LL_ = [Lx; 0; Ld];
 
   K_c = [KxKu, Nbar];
   K_c(end-1) = K_c(end-1)-1;
   D1 = ss(AA_, LL_, K_c, 0, Ts);
-  D2 = ss(AA_, BB_, -K_c, Nbar, Ts);
+  D2 = Nbar*ss(AA_, BB_, -K_c, 1, Ts);
 
   % % Estimated state feedback loop gain:
   Loop = sys*D1;
