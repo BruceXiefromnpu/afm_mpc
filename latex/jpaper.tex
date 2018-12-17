@@ -610,7 +610,7 @@ The choice of $\gamma$ has a significant effect on system performance. Because t
 The goal of this section is to explore how the simulation and experimental performance of MPC and SLF (for both pole placement schemes) depends on the control weight $\gamma$ and to determine to what extent, if any, MPC provides a benefit. In all simulations and experiments the MPC control horizon is $N=22$.
 
 We tested the experimental and simulation performance of the SLF and MPC control schemes using 
-a sequence of 24 reference commands. The first 20 references we selected randomly within the range $[-32.5~\mu$\text{m}, $35\mu\text{m}]$. We chose the final four references as $0~\mu$m, $35~\mu$m, $-32.5~\mu$m, and $0~\mu$m, to exercise the full usable range of the stage\footnote{For references larger than 35~$\mu$m, the control signal saturates; for references smaller than -32.5~$\mu$m, the sensor saturates due to a bias in the stage.}. This sequence of references is shown in Fig.~\ref{fig:steps}. Using a sequence of randomly generated references (rather than, e.g., a single reference or several references beginning from rest) has several benefits: $(i)$ it is representative of the type of references seen in a compressive sensing imaging scenario \cite{braker_hardware_2018}; $(ii)$ it eliminates the possibility of cherry picking specific reference values where one control law does better and $(iii)$ using a \emph{sequence} of references will help to draw out the deleterious effects of imperfections in the hysteresis and drift inversion.
+a sequence of 24 reference commands. The first 20 references we selected randomly within the range $[-32.5~\mu$\text{m}, $35\mu\text{m}]$. We chose the final four references as $0~\mu$m, $35~\mu$m, $-32.5~\mu$m, and $0~\mu$m, to exercise the full usable range of the stage\footnote{For references larger than 35~$\mu$m, the control signal saturates; for references smaller than -32.5~$\mu$m, the sensor saturates due to a bias in the stage.}. This sequence of references is shown in Fig.~\ref{fig:steps}. Using a sequence of randomly generated references (rather than, e.g., a single reference or several references beginning from rest) has several benefits: $(i)$ it is representative of the type of references seen in a compressive sensing imaging scenario \cite{braker_hardware_2018}; $(ii)$ it eliminates the possibility of cherry picking specific reference values where one control law does; better and $(iii)$ using a \emph{sequence} of references will help to draw out the deleterious effects of imperfections in the hysteresis and drift inversion.
 
 To explore the performance dependence on $\gamma$, we ran a series of experiments and simulations across a grid of $\gamma$'s ranging from $\gamma=10^{-5}$ to $\gamma=400$. 
 Each simulation was run once and each experiment was conducted 8 times. 
@@ -625,7 +625,7 @@ Fig.~\ref{fig:GainS} plots the mean of the total experimental settling times (i.
 The simulation settling times are shown in Fig.~\ref{fig:BW}. Here, the MPC simulations are indicated by the red circles and the SLF simulations are indicated by the black dots.
 For reference, the actual values of the plotted data are shown in Tables~\ref{tab:CS_ts_total} and \ref{tab:CZ_ts_total}. 
 
-Note the $\gamma$s used for CS and CZ differ. Simulations indicated that, with a control horizon of ${N=22}$, the MPC controller would fail to stabilize the system for the largest setpoints if $\gamma$ was taken much smaller than ${10^{-3}}$ (resp., ${10^{-5}}$ ) for CS (resp., CZ). Similarly, due to saturating $\Delta u_k$, the SLF control laws will be unstable for $\gamma$ smaller than about $7.5$ (resp., 3.5) for CS (resp., CZ). We remark on the $\gamma$ values $46.4$ (for CS) and $50.9$ (for CZ) in the next section.
+Note the $\gamma$s used for CS and CZ differ. Simulations indicated that, with a control horizon of ${N=22}$, the MPC controller would fail to stabilize the system for the largest setpoints if $\gamma$ was taken much smaller than ${10^{-3}}$ (resp., ${10^{-5}}$) for CS (resp., CZ). Similarly, due to saturating $\Delta u_k$, the SLF control laws will be unstable for $\gamma$ smaller than about $7.5$ (resp., 3.5) for CS (resp., CZ). We remark on the $\gamma$ values $46.4$ (for CS) and $50.9$ (for CZ) in the next subsection.
 
 
 For the smallest tested values of $\gamma$, Fig.~\ref{fig:min_gam_traj} shows zoomed-in experimental trajectories of the four controllers for references 5 and 24 (circled in Fig.~\ref{fig:steps}). The fastest experimental settling times occur for $\gamma=100$ for the CS scheme and $\gamma=25$ for the CZ scheme. Zoomed-in experimental trajectories for these values of $\gamma$ are shown in Fig.\ref{fig:rob_gam_traj}, also for references 5 and 24.
@@ -639,7 +639,7 @@ These trends can be explained by analyzing how robustness depends on $\gamma$. F
 Although the decrease and subsequent increase in total settling time roughly follows the $|\mathcal{S}_I(1)|$ vs $\gamma$ curve, the fastest experimental settling times do not exactly match to the minima of $|\mathcal{S}_I(1)|$.
 
 \begin{table*}
-  \caption{Total settling times for (a) the constant-$\sigma$ and (b) chooze-$\zeta$ state weighting schemes. The second and third columns of each table are the simulation results while the fourth and fifth columns are the average of 8 experimental runs. SLF was not run for the smallest $\gamma$ values, as indicated by the dashes. All times are in milliseconds.}
+  \caption{Total settling times for (a) the constant-$\sigma$ and (b) choose-$\zeta$ state weighting schemes. The second and third columns of each table are the simulation results while the fourth and fifth columns are the average of 8 experimental runs. SLF was not run for the smallest $\gamma$ values, as indicated by the dashes. All times are in milliseconds.}
   \begin{minipage}{1\textwidth}
     \begin{subtable}{0.5\textwidth}
       \centering
@@ -664,13 +664,13 @@ Although the decrease and subsequent increase in total settling time roughly fol
   \begin{minipage}{1\textwidth}
     \vspace{1em}
     \includesvg[scale=1]{figures/GainS_TS_vs_gamma_both.svg}
-    \captionof{figure}{(left) constant-$\sigma$. (right) chooze-$\zeta$. The black (SLF) and red (MPC) dots with error bars are the sample means of the total settling times for different values of $\gamma$ and are plotted against the left axes. The error bars represent one standard deviation. The solid black curve is the DC-gain of the integrated sensitivity function $\mathcal{S}_I(1)$ evaluated at different values of $\gamma$, plotted against the right axes.}
+    \captionof{figure}{(left) constant-$\sigma$. (right) choose-$\zeta$. The black (SLF) and red (MPC) dots with error bars are the sample means of the total settling times for different values of $\gamma$ and are plotted against the left axes. The error bars represent one standard deviation. The solid black curve is the DC-gain of the integrated sensitivity function $\mathcal{S}_I(1)$ evaluated at different values of $\gamma$, plotted against the right axes.}
     \label{fig:GainS}
   \end{minipage}
   \begin{minipage}{1\textwidth}
     \vspace{1em}
     \includesvg[scale=1]{figures/BW_TS_vs_gamma_both.svg}
-    \captionof{figure}{(left) constant-$\sigma$. (right) chooze-$\zeta$. The red circles (MPC) and black dots (SLF) are the total simulated settling times for different values of $\gamma$ and are plotted against the left axes. The solid black curve is the closed-loop 3~dB bandwidth evaluated for different values of $\gamma$, plotted against the right axes.}
+    \captionof{figure}{(left) constant-$\sigma$. (right) choose-$\zeta$. The red circles (MPC) and black dots (SLF) are the total simulated settling times for different values of $\gamma$ and are plotted against the left axes. The solid black curve is the closed-loop 3~dB bandwidth evaluated for different values of $\gamma$, plotted against the right axes.}
     \label{fig:BW}
   \end{minipage}  
 \end{table*}
