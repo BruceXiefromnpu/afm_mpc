@@ -47,20 +47,63 @@ nyquist(L_cz)
 figure(2)
 nyquist(L_cs)
 %%
-[re, im] = nyquist(L_cz);
+[re, im, w] = nyquist(L_cz);
+[gm, pm, wcg, wcp] = margin(L_cz)
+gm_abs = 10^(gm/20)
+[re, im, w] = nyquist(L_cz, sort([w; wcg; wcp]));
+
+idx_wcg = w(w==wcg);
+idx_wcp = w(w==wcp);
+L_wcp = squeeze(freqresp(L_cz, wcp));
+L_wcg = squeeze(freqresp(L_cz, wcg));
+
+
 re = re(:);
 im = im(:);
 
-t = [0:0.01:2*pi]'
+t = [0:0.01:2*pi]';
 x = cos(t);
 y = sin(t);
 
 figure(3); clf
+subplot(2,2,1)
 plot(re, im)
 hold on
 grid on
 plot(re, -im, '--')
 plot(x,y, ':k')
+legend('$\omega >0$', '$\omega<0$')
+title('Nyquist diagriam')
+
+subplot(2,2,2)
+plot(re, im)
+hold on
+grid on
+plot(re, -im, '--')
+plot(x,y, ':k')
+plot([-1], 0, 'rx', 'MarkerSize', 5)
+plot([0 real(L_wcp)], [0, imag(L_wcp)], '-k')
+plot([real(L_wcp)], [imag(L_wcp)], '.', 'MarkerSize', 15)
+ylim([-4, 4])
+xlim([-4, 4])
+
+title('Nyquist diagram (zoomed)')
+
+ax = subplot(2,2,[3,4]), cla
+margin(L_cz)
+grid on, hold on
+% bode(1/(1+L_cz))
+% [mx, wmx] = norm(1/(1+L_cz), Inf)
+% plot(ax, wmx, 20*log10(mx), 'x')
+
+axs = get(gcf, 'Children');
+ylim(axs(3), [-50, 35]);
+ylim(axs(2), [-360, 720]);
+
+% subplot(2,2,4)
+% rlocus(L_cz)
+
+
 %%
 t = [0:0.01:2*pi]';
 x = cos(t);
@@ -91,9 +134,47 @@ rlocus(k*g)
 subplot(2,2,4)
 bode(k*g)
 grid  on
+%%
+
+t = [0:0.01:2*pi]';
+x = cos(t);
+y = sin(t);
 
 
+g = zpk([0.25], [-.25+j, -.25-j], .75);
+% g = zpk([-.025+1.2j, -.025-1.2j], [-.1+j, -.1-j, 0 ], 2);
+k = 1;
 
+[re, im] = nyquist(k*g);
+re = re(:);
+im = im(:);
+figure(4); clf
 
+subplot(1,2,1)
+margin(g)
 
+subplot(1,2,2);
+nyquist(g)
 
+isstable(feedback(g, 1))
+
+figure(5)
+rlocus(g)
+%%
+plot(re, im)
+hold on
+plot(re, -im, '--')
+plot(x,y, ':k')
+grid on
+
+subplot(2,2,3)
+rlocus(k*g)
+
+subplot(2,2,4)
+bode(k*g)
+grid  on
+
+margin(g)
+grid on
+
+isstable(feedback(g,1))
