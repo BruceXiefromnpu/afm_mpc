@@ -9,7 +9,7 @@ This folder contains the scripts used to generate the figures in the paper. It d
 - Figure 6: ~plot_FRF_xdir.m~.
 - Figure 7: ~plot_lqr_locus_choosezeta.m~ and ~plot_lqr_locus_constsigma.m~.
 - Figure 8: ~plot_experiment_vs_sim.m~
-- Table II: ~'table_ts_means.m~.
+- Table II: ~table_ts_means.m~.
 - Figures 9 and 10: ~plot_gmpm_gainS_both_schemes_newts.m~.
 - Figure 11: ~plot_experiment_vs_sim.m~
 - Figure 12: ~plot_gmpm_gainS_both_schemes_newts.m~.
