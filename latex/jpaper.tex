@@ -29,9 +29,8 @@
 % \mathtoolsset{showonlyrefs=true}
 
 \usepackage[inkscapelatex=false, inkscapepath=svgsubpath, inkscapeexe=/home/arnold/matlab/afm_mpc_journal/latex/svg2pdf.py]{svg}
-
-
 % \usepackage[inkscapelatex=false, inkscapepath=svgsubpath]{svg}
+
 \usepackage{subcaption}
 \usepackage{xspace, dsfont}
 \usepackage{mathtools}
@@ -71,6 +70,7 @@
 % \newcommand{\ubp}{\ensuremath{\bar{u}^+ }\xspace}
 % \newcommand{\ubm}{\ensuremath{\bar{u}^- }\xspace}
 
+\usepackage{url}
 
 \begin{document}
 \title{A Comparison of Tracking Step Inputs with a Piezo Stage Using MPC and Saturated LQG Control}
@@ -80,6 +80,7 @@
     R. A.  Braker (corresponding author roger.braker@colorado.edu) is a graduate student and
     L.Y. Pao (pao@colorado.edu) is the Palmer Endowed Professor.}
   \thanks{This work was supported in part by the US National Science Foundation (NSF Grant CMMI-1234980), Agilent Technologies, Inc., and the Hanse Wissenschaftskolleg in Delmenhorst, Germany.}
+  \thanks{The source code for both the simulations and experiments in this paper is available at \texttt{https://github.com/rabraker/afm\_mpc\_tcst}.}
 }
 
 \maketitle

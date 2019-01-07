@@ -1,0 +1,16 @@
+* Contents
+This folder contains the scripts used to generate the figures in the paper. It depends on the simulation, experimental, and system identification data.
+
+- Figures 1 and 2 are not generated from a script.
+- Figure 3 (and 6): ~plot_FRF_xdir.m~.
+- Table I and its small figure are generated from ~table_pzdata.m~.
+- Figure 4: ~plot_fit_drift.m~, which will also fit the drift model.
+- Figure 5:  ~plot_hyst_sat_fit.m~, which will also fit the hysteresis model. 
+- Figure 6: ~plot_FRF_xdir.m~.
+- Figure 7: ~plot_lqr_locus_choosezeta.m~ and ~plot_lqr_locus_constsigma.m~.
+- Figure 8: ~plot_experiment_vs_sim.m~
+- Table II: ~'table_ts_means.m~.
+- Figures 9 and 10: ~plot_gmpm_gainS_both_schemes_newts.m~.
+- Figure 11: ~plot_experiment_vs_sim.m~
+- Figure 12: ~plot_gmpm_gainS_both_schemes_newts.m~.
+
