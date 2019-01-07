@@ -3,8 +3,8 @@ clc
 
 saveon = false;
 
-addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions'))
-addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions', 'canon'))
+addpath(fullfile(PATHS.step_exp(), 'functions'))
+addpath(fullfile(PATHS.step_exp(), 'functions', 'canon'))
 if ~ispc
 addpath('~/gradschool/sysID/matlab/functions')
 else

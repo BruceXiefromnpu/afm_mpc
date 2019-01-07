@@ -5,8 +5,8 @@ saveon = true;
 hash_opts = struct('Method', 'MD5', 'Format', 'hex', 'Input', 'file');
 
 % load('hystID_data_4-30-2018_01.mat')
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
+addpath(fullfile(PATHS.step_exp(), 'functions'))
+addpath(fullfile(PATHS.step_exp(), 'functions', 'canon'))
 
 [plants, ~, MF] = CanonPlants.plants_ns14(9,2);
 

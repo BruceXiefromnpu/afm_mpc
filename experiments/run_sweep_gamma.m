@@ -1,7 +1,3 @@
-% Implement augmented state space integral control with shift register to
-% 'estimate' the delay states.
-
-
 clear all
 
 
@@ -13,9 +9,9 @@ refTrajName      = 'ref_traj_track.csv';
 outputDataName = 'exp01outputBOTH.csv';
 % Build data paths
 
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'));
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions' , 'canon'));
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', '/models'));
+addpath(fullfile(PATHS.step_exp(), 'functions'));
+addpath(fullfile(PATHS.step_exp(), 'functions' , 'canon'));
+addpath(fullfile(PATHS.step_exp(), '/models'));
 % PATH_sim_model       = pwd;  % for simulink simulations
 
 % ---- Paths for shuffling data to labview and back. ------

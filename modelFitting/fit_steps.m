@@ -1,6 +1,6 @@
 
-addpath(fullfile(getMatPath, 'afm_mpc_journal/functions'))
-addpath(fullfile(getMatPath, 'afm_mpc_journal/functions/canon'))
+addpath(fullfile(PATHS.step_exp(), 'functions'))
+addpath(fullfile(PATHS.step_exp(), 'functions/canon'))
 addpath('hysteresis')
 fprintf('============================================\n')
 % hyst_file = 'hystID_data_5-4-2018_01.mat';

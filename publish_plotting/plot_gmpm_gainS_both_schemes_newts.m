@@ -1,8 +1,8 @@
 % This script plots the LQR based root locus for the "lowgain"
 % version of things.
 
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
+addpath(fullfile(PATHS.MPCJ_root(), 'functions'))
+addpath(fullfile(PATHS.MPCJ_root(), 'functions', 'canon'))
 addpath('~/gradschool/sysID/matlab/functions/')
 
 clear, clc

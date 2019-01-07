@@ -4,7 +4,7 @@ clc
 
 %%
 % ------------------- Fit Hysteresis + Sat -------------------------------------
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'));
+addpath(fullfile(PATHS.step_exp(), 'functions'));
 modelFit_file = fullfile(PATHS.sysid, 'FRF_data', 'x-axis_sines_infoFourierCoef_5-30-2018-01.mat');
 
 load(modelFit_file)

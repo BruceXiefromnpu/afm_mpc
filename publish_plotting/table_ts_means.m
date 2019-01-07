@@ -1,5 +1,5 @@
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions', 'canon'))
+addpath(fullfile(PATHS.step_exp(), 'functions'))
+addpath(fullfile(PATHS.step_exp(), 'functions', 'canon'))
 
 clear
 exp_path = fullfile(PATHS.step_exp, 'many_steps_sweep_gamma_21-Sep-2018_01');

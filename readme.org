@@ -17,6 +17,16 @@ This repository contains the code used in our paper "A Comparison of Tracking St
 - ~sandbox~: Only look in here if you are brave.
 * Usage
 In theory, all the figures and manuscript pdf can be built by typing ~make~ in the root directory. Unfortunately, this does not run the experiments, but relies on saved data.
+** Configuration
+To succesfully run the scripts, you must do a small amount of configuration. The file ~functions/PATHS.m~ is class with a bunch of static methods which return paths, e.g., of where to save figures or where the experimental data is located. The methods ~PATHS.exp()~ and ~PATHS.MPCJ_root()~ provide the base paths from which all others are derived. You should edit these two methods such that
+- PATHS.exp() returns the location where you saved the accompanying data set.
+- PATHS.MPCJ_root() returns the path to the root of the repository. For example, on my machine
+#+BEGIN_SRC: octave
+>> PATHS.MPCJ_root
+ans =
+
+    '/home/arnold/matlab/afm_mpc_journal'
+#+END_SRC
 * Dependencies
 This repository has several dependencies. To the best of my knowledege, these are:
 

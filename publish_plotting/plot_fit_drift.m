@@ -1,7 +1,7 @@
 % --------------------- Now, Fit the drift model -----------------
 clear
-addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions'))
-addpath(fullfile(getMatPath, 'afm_mpc_journal', 'functions', 'canon'))
+addpath(fullfile(PATHS.MPCJ_root(), 'functions'))
+addpath(fullfile(PATHS.MPCJ_root(), 'functions', 'canon'))
 
 saveon = true;
 [plants, frf_data, MF] = CanonPlants.plants_ns14(9, 2);

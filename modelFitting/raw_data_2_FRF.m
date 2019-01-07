@@ -13,7 +13,9 @@ if ispc
   rmpath('C:\Users\arnold\Documents\MATLAB\miscScripts\system_id\')
   addpath('C:\Users\arnold\Documents\labview\sysID\matlab\functions')
 else
-  rmpath(fullfile(getMatPath(), 'toolboxes', 'system_id'))
+  try
+    rmpath(fullfile(getMatPath(), 'toolboxes', 'system_id'))
+  end
   addpath('/home/arnold/gradschool/sysID/matlab/functions')
 end
 

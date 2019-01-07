@@ -7,7 +7,7 @@
 % is to plot the min-gamma on the same figure and rob-gamma on a different
 % figure, rather than CS on one figure and CZ on the other figure. 
 
-addpath(fullfile(getMatPath(), 'afm_mpc_journal', 'functions'))
+addpath(fullfile(PATHS.MPCJ_root(), 'functions'))
 
 clear
 saveon = true;

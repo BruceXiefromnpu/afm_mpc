@@ -1,6 +1,3 @@
-% Implement augmented state space integral control with shift register to
-% 'estimate' the delay states.
-
 clc
 clear all
 %  close all
