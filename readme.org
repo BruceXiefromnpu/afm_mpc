@@ -1,0 +1,42 @@
+* Introduction
+This repository contains the code used in our paper "A Comparison of Tracking Step Inputs with a Piezo Stage Using MPC and Saturated LQG Control."
+
+** Summary of folders
+
+- ~experiments~: This folder contains the matlab code used to run the experimental and simulation results. The relavent script is ~run_sweep_gamma.m~, which produced both the simulation experimental results. The first part of the script runs the simulations. The second part drives LabView via ActiveX to run the experiments. 
+
+- ~publish_plotting~: This folder contains all of the code used to produce the figures in the manuscript.
+
+- ~labview~: This folder contains all of the LabView code. This includes our implementation of the FGM and linear state feedback.
+- ~models~: Just contains a bunch of simulink models.
+- ~functions~: Contains a bunch of Matlab classes and functions. This needs to be added to your path to succesfully run pretty much anything in here.
+- ~modelFitting~: This folder contains the code used to fit the drift, hysteresis and vibrational state space models. 
+
+- ~unit_tests~: Contains some unit tests. Unfortuanately, coverage is poor.
+- ~latex~: Contains source for the manuscript itself.
+- ~sandbox~: Only look in here if you are brave.
+
+* Dependencies
+This repository has several dependencies. To the best of my knowledege, these are:
+
+** Matlab
+-~sysID~ (availibale via ~git clone https://git.rabraker.com/sysID.git~) is a set of LabView and Matlab tools I have written to faciliate system identification. This contains both the swept sines code as well as the code to fit the transfer function via logrithmic cost.
+
+- [[https://projects.coin-or.org/qpOASES][qpOASES]] (Optional) This contains the quadratic programming solver used in some of the exploratory analysis. For the type of condensed MPC problem we considered, this solver is about an order or magnitude faster than the native Matlab solver. However, none of the results in the paper directly rely on this.
+** LabView
+The LabView code depends on
+- ~utils_lib~ (availible via ~git clone https://git.rabraker.com/utils_lib.git~) is a small set of LabView utility functions I have written that are used across multiple projects, which is why they are in a separate repo. 
+- [[https://github.com/JKISoftware/JKI-VI-Tester][VI Tester]] from JKI. This is only needed if you want to run the LabView unit tests.
+- [[https://sourceforge.net/projects/opengtoolkit/][openG]] is a really useful set of extensions to LabView.
+- [[http://www.ni.com/download/labview-control-design-and-simulation-module-2017/6715/en/][NI Control Design and Simulation Module]]
+If you find that I have missed some, please let me know so I can update this list.
+
+
+ 
+├── compare_maximum_ref_dumaxp_Ipow_constsigma.m
+├── compare_maximum_ref_dumaxp_Ipow_highgain.m
+├── compare_maximum_ref_dumaxp_Ipow_lowgain.m
+├── data
+├── many_steps_data_rand_30-Aug-2018_01
+├── publish_plotting
+├── ss_dist_sensitivity

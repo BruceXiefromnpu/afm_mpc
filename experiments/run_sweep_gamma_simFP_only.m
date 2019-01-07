@@ -242,7 +242,7 @@ for idx_gam = 1:length(gam_s)
   plot(gam_iter, ts_sum_sim_results(idx_gam, 2), 'x')
   hold on, grid on, drawnow()
   % --------------------------------------------------------------------- %
-  % --------------------- MPC, fgm fixed-point -------------------------- %
+  % --------------------- MPC, fgm floating-point ----------------------- %
   if do_sim_mpcfp
 
     
