@@ -2,26 +2,32 @@ SHELL=/bin/bash
 filename=jpaper
 OPTS = --shell-escape
 
-pdf:
-	echo "in PDF-latex"
-	pdflatex ${OPTS} ${filename}.tex
-	bibtex ${filename}||true
-	pdflatex ${OPTS} ${filename}.tex
-	pdflatex ${OPTS} ${filename}.tex
+.PHONY: clean clean_inkscape clean figures clean_all pdf
+
+
+pdf:${filename}.pdf
+
+${filename}.pdf:${filename}.tex
+	@echo "Building PDF from"
+	pdflatex ${OPTS} ${^:.tex=}
+	bibtex $^||true
+	pdflatex ${OPTS} ${^:.tex=}
+	pdflatex ${OPTS} ${^:.tex=}
 
 
 clean:
-	rm -f ${filename}.{ps,pdf,log,aux,out,dvi,bbl,blg}
-	rm -f tmp1.qdf tmp2.qdf
-	rm -rf auto/
-	rm -rf ltximg/
-	rm -rf jpaper.prv
-	rm -f *.log
+	@rm -f ${filename}.{ps,pdf,log,aux,out,dvi,bbl,blg}
+	@rm -f tmp1.qdf tmp2.qdf
+	@rm -rf auto/
+	@rm -rf ltximg/
+	@rm -rf jpaper.prv
+	@rm -f *.log
+
 clean_inkscape:
-	rm -f -r figures/svg-inkscape/*
+	@rm -rf figures/svg-inkscape/*
 
 clean_figures:
-	rm -f figures/drift_fit.svg
+	@rm -f figures/*.svg
 
 clean_all:clean clean_inkscape clean_figures
-	echo "stuff"
+	@echo "Cleaning all figures"
