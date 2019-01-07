@@ -1,14 +1,14 @@
 * Introduction
-This repository contains the code used in our paper "A Comparison of Tracking Step Inputs with a Piezo Stage Using MPC and Saturated LQG Control."
+This repository contains the code used in our paper "A Comparison of Tracking Step Inputs with a Piezo Stage Using MPC and Saturated LQG Control," recently submitted to the IEEE Transaction on Control Systems Technology.
 
 ** Summary of folders
 
-- ~experiments~: This folder contains the matlab code used to run the experimental and simulation results. The relavent script is ~run_sweep_gamma.m~, which produced both the simulation experimental results. The first part of the script runs the simulations. The second part drives LabView via ActiveX to run the experiments. 
+- ~experiments~: This folder contains the Matlab code used to run the experiments and simulations. The relavent script is ~run_sweep_gamma.m~, which produced both the simulation experimental results. The first part of the script runs the simulations. The second part drives LabView via ActiveX to run the experiments. 
 
 - ~publish_plotting~: This folder contains all of the code used to produce the figures in the manuscript.
 
 - ~labview~: This folder contains all of the LabView code. This includes our implementation of the FGM and linear state feedback.
-- ~models~: Just contains a bunch of simulink models.
+- ~models~: Just contains Simulink models used in the simulations.
 - ~functions~: Contains a bunch of Matlab classes and functions. This folder and its sub-folder ~canon~ need to be added to your Matlab path to succesfully run pretty much anything in here.
 - ~modelFitting~: This folder contains the code used to fit the drift, hysteresis and vibrational state space models. 
 
@@ -16,37 +16,46 @@ This repository contains the code used in our paper "A Comparison of Tracking St
 - ~latex~: Contains source for the manuscript itself.
 - ~sandbox~: Only look in here if you are brave.
 * Usage
-In theory, all the figures and manuscript pdf can be built by typing ~make~ in the root directory. Unfortunately, this does not run the experiments, but relies on saved data.
+In theory, all the figures and manuscript pdf can be built (on linux) by typing ~make~ in the root directory. Unfortunately, this does not run the experiments, but relies on saved data.
 ** Configuration
-- Download the data set from https://rabraker.com/publication_data/data_tcst.zip. This file is about 800 megabytes and github doesn't like it when you store such large amounts of data (and it also violates the principle of only putting human generated items in a repo). Unzip this file somewhere, probably inside the checkout repo.
+To succesfully run the scripts, you must do a small amount of configuration.
+- Download the data set from https://rabraker.com/publication_data/data_tcst.zip. This file is about 800 megabytes. It is not included in this repo because (1)github doesn't like it when you store such large amounts of data and (2) it violates the principle of only putting human generated items in a repo. Unzip this file somewhere, probably inside the checkout repo (it is already ignore in ~.gitignore~). 
 
-- Setup a couple paths. To succesfully run the scripts, you must do a small amount of configuration. The file ~functions/PATHS.m~ is class with a bunch of static methods which return paths, e.g., of where to save figures or where the experimental data is located. The methods ~PATHS.exp()~ and ~PATHS.MPCJ_root()~ provide the base paths from which all others are derived. You should edit these two methods such that
-- PATHS.exp() returns the location where you saved the accompanying data set.
-- PATHS.MPCJ_root() returns the path to the root of the repository. For example, on my machine
-#+BEGIN_SRC: octave
->> PATHS.MPCJ_root
-ans =
+- Setup a couple paths. The file ~functions/PATHS.m~ is class with a bunch of static methods which return paths, e.g., of where to save figures or where the experimental data is located. The methods ~PATHS.exp()~ and ~PATHS.MPCJ_root()~ provide the base paths from which all others are derived. You should edit these two methods such that
+  - ~PATHS.exp()~ returns the location where you saved the accompanying data set.
+  - ~PATHS.MPCJ_root()~ returns the path to the root of the repository. For example, on my machine
+  #+BEGIN_SRC octave
+  >> PATHS.exp()
+  ans = 
+    '/media/labserver/mpc-journal'
+  >> ls(PATHS.exp())
+  ans = 
+    step-exps
+    sysID
 
+  >> PATHS.MPCJ_root()
+  ans =
     '/home/arnold/matlab/afm_mpc_journal'
-#+END_SRC
+  #+END_SRC
 * Dependencies
 This repository has several dependencies. To the best of my knowledege, these are:
 
 ** Matlab
--~sysID~ (availibale via ~git clone https://git.rabraker.com/sysID.git~) is a set of LabView and Matlab tools I have written to faciliate system identification. This contains both the swept sines code as well as the code to fit the transfer function via logrithmic cost. The ~functions~ folder in this repo should be on your matlab path.
+- ~sysID~ (availibale via ~git clone https://git.rabraker.com/sysID.git~) is a set of LabView and Matlab tools I have written to faciliate system identification. This contains both the swept sines code as well as the code to fit the transfer function via logarithmic cost. The ~functions~ folder in this repo should be on your Matlab path.
 
 - [[https://projects.coin-or.org/qpOASES][qpOASES]] (Optional) This contains the quadratic programming solver used in some of the exploratory analysis. For the type of condensed MPC problem we considered, this solver is about an order or magnitude faster than the native Matlab solver. However, none of the results in the paper directly rely on this.
 ** LabView
 The LabView code depends on
 - ~utils_lib~ (availible via ~git clone https://git.rabraker.com/utils_lib.git~) is a small set of LabView utility functions I have written that are used across multiple projects, which is why they are in a separate repo. 
-- [[https://github.com/JKISoftware/JKI-VI-Tester][VI Tester]] from JKI. This is only needed if you want to run the LabView unit tests.
+- [[https://github.com/JKISoftware/JKI-VI-Tester][VI Tester]] from JKI (optional). This is only needed if you want to run the LabView unit tests.
 - [[https://sourceforge.net/projects/opengtoolkit/][openG]] is a really useful set of extensions to LabView.
 - [[http://www.ni.com/download/labview-control-design-and-simulation-module-2017/6715/en/][NI Control Design and Simulation Module]]
-If you find that I have missed some, please let me know so I can update this list.
 
 ** Latex
-All of the figures generated by the matlab scripts are saved as .svg files. Conversion to pdf format for latex is accomplished with the [[https://www.ctan.org/pkg/svg][svg]] from CTAN. This Latex package in turn relies on Inkscape. Inkscape produces a pdf that latex doesn't like too much because of something about page groups. Thus, in the latex file, I set ~inkscapeexe=/home/arnold/matlab/afm_mpc_journal/latex/svg2pdf.py~, which filters out the offending parts of the pdf. If you don't have python, that can be removed and you'll just get a bunch errors/warnings but the pdf will still build.
+You can, of course see all the packages used in ~jpaper.tex~. I think the only oddball package is ~svg~. All of the figures generated by the Matlab scripts are saved as .svg files. Conversion to pdf format for Latex is accomplished with the [[https://www.ctan.org/pkg/svg][svg]] from CTAN. This Latex package in turn relies on Inkscape. Inkscape produces a pdf that latex doesn't like too much because of something about page groups. Thus, in the latex file, I set ~inkscapeexe=/home/arnold/matlab/afm_mpc_journal/latex/svg2pdf.py~, which filters out the offending parts of the pdf. If you don't have python, that can be removed and you'll just get a bunch errors/warnings but the pdf should still build.
+
+If you find that I have missed some, please let me know so I can update this list.
 
 * TODO
-- Figure a more robust way to release the data than on my personal webserver. 
+- Figure a more robust (i.e., reliable long term) way to release the data than on my personal webserver. 
  
