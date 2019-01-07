@@ -4,6 +4,17 @@ LATEX_ROOT=latex
 FIG_ROOT=${LATEX_ROOT}/figures
 
 MATLAB=matlab -nodesktop -nosplash -r
+INIT_CMD = addpath functions;
+ML_CMD         = "try;                                   \
+					${INIT_CMD}                          \
+					run $^                               \
+						catch E;                         \
+						fprintf('%s', E.message);        \
+						exit(1);                         \
+				  end;                                   \
+				  exit(0);"
+
+
 SCRIPT_ROOT=publish_plotting
 
 fig_FRF=${FIG_ROOT}/G_uz2stage_Eres.svg ${FIG_ROOT}/G_pow_and_current.svg
@@ -61,32 +72,31 @@ pdf:${assets}
 
 ${fig_drift}: ${m_drift}
 	#echo "IN DRIFT"
-	${MATLAB} "run $<; exit"
-	#matlab -nodesktop -nosplash -r "run ${m_drift}; exit;"
+	${MATLAB} ${ML_CMD}
 
 ${fig_hyst}: ${m_hyst}
-	${MATLAB} "run $<; exit;"
+	${MATLAB} ${ML_CMD}
 
 ${fig_FRF}: ${m_FRF}
-	${MATLAB} "run ${m_FRF}; exit;"
+	${MATLAB} ${ML_CMD}
 
 ${fig_gvib} ${tbl_gvib}: ${m_gvib}
-	${MATLAB} "run ${m_gvib}; exit;"
+	${MATLAB} ${ML_CMD}
 
 ${fig_locusCS}: ${m_locusCS}
-	${MATLAB} "run $<; exit;"
+	${MATLAB} ${ML_CMD}
 
 ${fig_locusCZ}: ${m_locusCZ}
-	${MATLAB} "run $<; exit;"
+	${MATLAB} ${ML_CMD}
 
 ${tbl_tsmeans}: ${m_tsmeans}
-	${MATLAB} "run $<; exit;"
+	${MATLAB} ${ML_CMD}
 
 ${fig_SBWgmpm}: ${m_SBWgmpm}
-	${MATLAB} "run $<; exit;"
+	${MATLAB} ${ML_CMD}
 
 ${fig_exp}: ${m_exp}
-	${MATLAB} "run $<; exit;"
+	${MATLAB} ${ML_CMD}
 
 read:
 	okular ${filename}.pdf &
