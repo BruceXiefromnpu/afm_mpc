@@ -56,6 +56,7 @@ You can, of course see all the packages used in ~jpaper.tex~. I think the only o
 
 If you find that I have missed some, please let me know so I can update this list.
 
+
 * TODO
-- Figure a more robust (i.e., reliable long term) way to release the data than on my personal webserver. 
+- Figure out a more robust (i.e., reliable long term) way to release the data than on my personal webserver. 
  
