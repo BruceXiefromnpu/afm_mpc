@@ -9,7 +9,7 @@ This repository contains the code used in our paper "A Comparison of Tracking St
 
 - ~labview~: This folder contains all of the LabView code. This includes our implementation of the FGM and linear state feedback.
 - ~models~: Just contains Simulink models used in the simulations.
-- ~functions~: Contains a bunch of Matlab classes and functions. This folder and its sub-folder ~canon~ need to be added to your Matlab path to succesfully run pretty much anything in here.
+- ~functions~: Contains a bunch of Matlab classes and functions. This folder and its sub-folder ~canon~ need to be added to your Matlab path to succesfully run pretty much anything in here. Most of the scripts will add these two folders to the path themselves, provides ~PATHS~ is properly configured as described below.
 - ~modelFitting~: This folder contains the code used to fit the drift, hysteresis and vibrational state space models. 
 
 - ~unit_tests~: Contains some unit tests. Unfortuanately, coverage is poor.

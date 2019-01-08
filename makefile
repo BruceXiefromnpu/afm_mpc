@@ -112,4 +112,3 @@ clean_figures:
 	cd ${LATEX_ROOT} && make clean_figures
 
 clean_all:clean clean_inkscape clean_figures
-	echo "stuff"
