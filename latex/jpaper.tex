@@ -313,7 +313,7 @@ where $w_s$ and $w_H$ are vectors of weights. The $i$th elementary play operator
 In contrast, the saturation operator has no memory. The input-output relationship of the $i$th elementary saturation operator with associated threshold $d_S^i$ is defined as
 \begin{align}
   \mu_k=
-  S^i(\xi_k| d_S^i) &=
+  S^i(p_k| d_S^i) &=
   \begin{cases}
     \max\{p_k - d_S^i, 0\} & d_S^i >0\nonumber\\
     p_k & d_S^i = 0\nonumber\\
@@ -704,7 +704,7 @@ Ultimately, the fastest experimental settling time which we can acheive for eith
 
 
 \subsection{Possible Objections}
-We envision three main criticisms to these results and analysis. First, one might rightly point out that both MPC and SLF are in general non-linear, making the classical metrics like PM, GM and $|\mathcal{S}_I(1)|$ inapplicable. However, for any setpoint, both SLF and MPC behave linearly in a neighborhood around that setpoint. In other words, while the beginning of a setpoint tracking maneuver may saturate the SLF controller or put the MPC on its constraint boundary, the latter part of that same maneuver will be governed by linear dynamics. In that sense, the metrics GM and PM and the DC-gain of the integrated sensitivity still provide some insight, which we believe is manifested, e.g., in the correlation between overall settling time and $|\mathcal{S}_I(1)|$.
+We envision three main criticisms to these results and analysis. First, one might rightly point out that both MPC and SLF are in general, non-linear, making the classical metrics like PM, GM and $|\mathcal{S}_I(1)|$ inapplicable. However, for any setpoint, both SLF and MPC behave linearly in a neighborhood around that setpoint. In other words, while the beginning of a setpoint tracking maneuver may saturate the SLF controller or put the MPC on its constraint boundary, the latter part of that same maneuver will be governed by linear dynamics. In that sense, the metrics GM and PM and the DC-gain of the integrated sensitivity still provide some insight, which we believe is manifested, e.g., in the correlation between overall settling time and $|\mathcal{S}_I(1)|$.
 
 A related objection is that the relatively poor GMs and PMs could be improved through a loop transfer recovery (LTR) method. However, the classic method as proposed in \cite{doyle_robustness_1979} does not translate directly to discrete-time. Most efforts at obtaining LTR-like results for discrete-time assume that $(i)$ a current estimator is used and $(ii)$ $CB\neq 0$ \cite{Maciejowski_asymptotic_1985,guaracy_discrete_2015,ishihara_loop_1986}. When considering MPC, especially at high sample rates, we need to use a prediction estimator, since computing the control action requires a significant portion of the sample period. Also, for our system model, $CB=0$, because the relative degree is 12. These two factors preclude discrete-time LTR. Even if these issues could be circumvented, we must bear in mind that, in contrast to the continuous-time case, the full-state feedback discrete-time LQR controller does not have a guaranteed infinite gain margin nor a guaranteed phase margin greater than $60^{\circ}$. Rather, the guaranteed bounds for GM and PM depend on the DARE solution $P$~\cite[p. 136]{andersson_moore}, which in turn depends on $\gamma$. 
 
