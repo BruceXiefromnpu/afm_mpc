@@ -41,11 +41,12 @@ To succesfully run the scripts, you must do a small amount of configuration.
 This repository has several dependencies. To the best of my knowledege, these are:
 
 ** Matlab
+ The repo needs a working installation of Matlab. Due to the Simulink files, this needs to be R2018b or later.
 - ~sysID~ (availibale via ~git clone https://git.rabraker.com/sysID.git~) is a set of LabView and Matlab tools I have written to faciliate system identification. This contains both the swept sines code as well as the code to fit the transfer function via logarithmic cost. The ~functions~ folder in this repo should be on your Matlab path.
 
 - [[https://projects.coin-or.org/qpOASES][qpOASES]] (Optional) This contains the quadratic programming solver used in some of the exploratory analysis. For the type of condensed MPC problem we considered, this solver is about an order or magnitude faster than the native Matlab solver. However, none of the results in the paper directly rely on this.
 ** LabView
-The LabView code depends on
+The experimental code is written in LabView 2017. The LabView code depends on
 - ~utils_lib~ (availible via ~git clone https://git.rabraker.com/utils_lib.git~) is a small set of LabView utility functions I have written that are used across multiple projects, which is why they are in a separate repo. 
 - [[https://github.com/JKISoftware/JKI-VI-Tester][VI Tester]] from JKI (optional). This is only needed if you want to run the LabView unit tests.
 - [[https://sourceforge.net/projects/opengtoolkit/][openG]] is a really useful set of extensions to LabView.
@@ -58,5 +59,5 @@ If you find that I have missed some, please let me know so I can update this lis
 
 
 * TO-DO
-- Figure out a more robust (i.e., reliable long term) way to release the data than on my personal webserver. 
+- Figure out a more robust (i.e., reliable/long-term) way to release the data than on my personal webserver. 
  
